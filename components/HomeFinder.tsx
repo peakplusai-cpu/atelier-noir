@@ -28,8 +28,8 @@ export function HomeFinder({ cars }: { cars: Car[] }) {
         <div className="hud">
           <i />
           <div className="hud-note">
-            24.1477° N<br />
-            120.6736° E
+                24.116670° N<br />
+                120.655845° E
           </div>
         </div>
         <div className="finder-panel">
