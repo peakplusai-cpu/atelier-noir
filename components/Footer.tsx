@@ -12,25 +12,31 @@ export function Footer({ staff }: { staff: Staff[] }) {
             <span className="wordmark-en">Atelier Noir · Taipei</span>
           </div>
           <p className="footer-note">
-            私人珍藏，僅接受預約鑑賞。請由下列顧問中擇一開啟 LINE，告知屬意車款與希望時段。
+            {staff.length
+              ? "私人珍藏，僅接受預約鑑賞。請由下列顧問中擇一開啟 LINE，告知屬意車款與希望時段。"
+              : "私人珍藏，僅接受預約鑑賞。真實業務 LINE 設定完成後，聯絡方式才會在此公開。"}
           </p>
         </div>
         <div>
           <p className="engraved">選擇顧問 · LINE</p>
-          <ul className="staff-list">
-            {staff.map((person) => {
-              const href = resolveLineUrl(person.lineUrl, person.lineId);
-              return (
-                <li key={person.id}>
-                  <a href={href || "/inquiry"} target={href ? "_blank" : undefined} rel="noreferrer">
-                    <span className="name">{person.displayName}</span>
-                    <span className="role">{person.role}</span>
-                    <span className="go">開啟對話</span>
-                  </a>
-                </li>
-              );
-            })}
-          </ul>
+          {staff.length ? (
+            <ul className="staff-list">
+              {staff.map((person) => {
+                const href = resolveLineUrl(person.lineUrl, person.lineId);
+                return (
+                  <li key={person.id}>
+                    <a href={href} target="_blank" rel="noreferrer">
+                      <span className="name">{person.displayName}</span>
+                      <span className="role">{person.role}</span>
+                      <span className="go">開啟官方 LINE</span>
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="empty-line">尚未設定公開聯絡人。</p>
+          )}
         </div>
       </div>
       <div className="colophon">

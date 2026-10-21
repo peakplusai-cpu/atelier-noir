@@ -22,6 +22,9 @@ export async function upsertStaff(formData: FormData) {
   const lineUrlRaw = String(formData.get("lineUrl") ?? "").trim();
   const note = String(formData.get("note") ?? "").trim();
   const sortOrder = Number(formData.get("sortOrder") ?? 0);
+  if (!lineId && !lineUrlRaw) {
+    redirect("/admin/staff?error=line");
+  }
   const lineUrl = resolveLineUrl(lineUrlRaw, lineId);
   const store = await getStore();
   const existing = store.staff.find((person) => person.id === id);

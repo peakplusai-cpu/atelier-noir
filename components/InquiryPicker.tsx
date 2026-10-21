@@ -9,6 +9,10 @@ export function InquiryPicker({ staff, carLabel }: { staff: Staff[]; carLabel: s
   const current = useMemo(() => staff.find((s) => s.id === selected), [staff, selected]);
   const href = current ? resolveLineUrl(current.lineUrl, current.lineId) : "";
 
+  if (!staff.length) {
+    return <p className="empty-line">尚未設定真實業務 LINE，暫時無法線上預約。</p>;
+  }
+
   return (
     <form
       onSubmit={(event) => {
@@ -37,7 +41,7 @@ export function InquiryPicker({ staff, carLabel }: { staff: Staff[]; carLabel: s
       </ul>
       <div style={{ marginTop: 36, display: "flex", gap: 18, flexWrap: "wrap", alignItems: "center" }}>
         <button className="btn" type="submit" disabled={!href}>
-          前往 LINE 對話
+          前往官方 LINE
         </button>
         {carLabel ? <span className="mute">請告知：{carLabel}</span> : null}
       </div>
