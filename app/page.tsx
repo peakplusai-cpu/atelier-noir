@@ -1,5 +1,6 @@
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
+import { Intro } from "@/components/Intro";
 import { HomeFinder } from "@/components/HomeFinder";
 import { getStore } from "@/lib/store";
 
@@ -12,6 +13,7 @@ export default async function HomePage() {
 
   return (
     <>
+      <Intro />
       <Header />
       <HomeFinder cars={published} />
       <Footer staff={staff} />
