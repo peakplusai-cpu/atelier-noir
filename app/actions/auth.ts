@@ -5,7 +5,7 @@ import { adminExists, createSession, destroySession, hashPassword, verifyPasswor
 import { getStore, saveStore } from "@/lib/store";
 
 export async function setupAdmin(formData: FormData) {
-  if (adminExists()) {
+  if (await adminExists()) {
     redirect("/admin/login");
   }
   const password = String(formData.get("password") ?? "");
@@ -16,19 +16,19 @@ export async function setupAdmin(formData: FormData) {
   if (password !== confirm) {
     redirect("/admin/setup?error=mismatch");
   }
-  const store = getStore();
+  const store = await getStore();
   store.admin = {
     passwordHash: hashPassword(password),
     createdAt: new Date().toISOString(),
   };
-  saveStore(store);
+  await saveStore(store);
   await createSession();
   redirect("/admin");
 }
 
 export async function loginAdmin(formData: FormData) {
   const password = String(formData.get("password") ?? "");
-  const store = getStore();
+  const store = await getStore();
   if (!store.admin || !verifyPassword(password, store.admin.passwordHash)) {
     redirect("/admin/login?error=invalid");
   }

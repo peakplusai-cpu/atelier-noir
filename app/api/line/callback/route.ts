@@ -37,14 +37,14 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL("/admin/staff?error=profile", request.url));
   }
   const profile = (await profileRes.json()) as { userId?: string; displayName?: string };
-  const store = getStore();
+  const store = await getStore();
   const staff = store.staff.find((person) => person.id === staffId);
   if (staff && profile.userId) {
     staff.lineUserId = profile.userId;
     if (!staff.lineId && profile.displayName) {
       staff.note = staff.note || `LINE：${profile.displayName}`;
     }
-    saveStore(store);
+    await saveStore(store);
   }
   return NextResponse.redirect(new URL("/admin/staff?bound=1", request.url));
 }

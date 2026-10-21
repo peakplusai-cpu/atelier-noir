@@ -7,7 +7,7 @@ import { adminExists, isAuthenticated } from "@/lib/auth";
 export const dynamic = "force-dynamic";
 
 export default async function DeskLayout({ children }: { children: React.ReactNode }) {
-  if (!adminExists()) redirect("/admin/setup");
+  if (!(await adminExists())) redirect("/admin/setup");
   if (!(await isAuthenticated())) redirect("/admin/login");
 
   const headerList = await headers();

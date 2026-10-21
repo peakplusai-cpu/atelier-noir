@@ -11,7 +11,7 @@ export default async function InquiryPage({
   searchParams: Promise<{ car?: string }>;
 }) {
   const { car: slug } = await searchParams;
-  const store = getStore();
+  const store = await getStore();
   const staff = [...store.staff].sort((a, b) => a.sortOrder - b.sortOrder);
   const car = slug ? store.cars.find((item) => item.slug === slug && item.published) : undefined;
 

@@ -4,8 +4,8 @@ import { getStore } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
-export default function AdminHome() {
-  const store = getStore();
+export default async function AdminHome() {
+  const store = await getStore();
   const published = store.cars.filter((car) => car.published).length;
   const hidden = store.cars.length - published;
 

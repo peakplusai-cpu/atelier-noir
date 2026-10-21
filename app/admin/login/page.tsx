@@ -9,7 +9,7 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
-  if (!adminExists()) redirect("/admin/setup");
+  if (!(await adminExists())) redirect("/admin/setup");
   const { error } = await searchParams;
 
   return (

@@ -10,7 +10,7 @@ export default async function StaffPage({
   searchParams: Promise<{ bound?: string; error?: string }>;
 }) {
   const { bound, error } = await searchParams;
-  const staff = [...getStore().staff].sort((a, b) => a.sortOrder - b.sortOrder);
+  const staff = [...(await getStore()).staff].sort((a, b) => a.sortOrder - b.sortOrder);
   const canBind = lineLoginEnabled();
 
   return (

@@ -36,7 +36,7 @@ export async function createSession(): Promise<string> {
     sameSite: "lax",
     path: "/",
     maxAge: THIRTY_DAYS / 1000,
-    secure: false,
+    secure: process.env.NODE_ENV === "production",
   });
   return token;
 }
@@ -60,6 +60,7 @@ export async function isAuthenticated(): Promise<boolean> {
   return Number(exp) > Date.now();
 }
 
-export function adminExists(): boolean {
-  return Boolean(getStore().admin);
+export async function adminExists(): Promise<boolean> {
+  const store = await getStore();
+  return Boolean(store.admin);
 }

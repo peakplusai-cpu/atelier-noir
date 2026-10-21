@@ -23,7 +23,7 @@ export async function upsertStaff(formData: FormData) {
   const note = String(formData.get("note") ?? "").trim();
   const sortOrder = Number(formData.get("sortOrder") ?? 0);
   const lineUrl = resolveLineUrl(lineUrlRaw, lineId);
-  const store = getStore();
+  const store = await getStore();
   const existing = store.staff.find((person) => person.id === id);
   if (existing) {
     existing.displayName = displayName;
@@ -45,7 +45,7 @@ export async function upsertStaff(formData: FormData) {
       createdAt: new Date().toISOString(),
     });
   }
-  saveStore(store);
+  await saveStore(store);
   revalidatePath("/");
   revalidatePath("/inquiry");
   revalidatePath("/admin/staff");
@@ -55,9 +55,9 @@ export async function upsertStaff(formData: FormData) {
 export async function deleteStaff(formData: FormData) {
   await requireAuth();
   const id = String(formData.get("id") ?? "");
-  const store = getStore();
+  const store = await getStore();
   store.staff = store.staff.filter((person) => person.id !== id);
-  saveStore(store);
+  await saveStore(store);
   revalidatePath("/");
   revalidatePath("/inquiry");
   revalidatePath("/admin/staff");

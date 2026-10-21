@@ -5,8 +5,8 @@ import { getStore } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
-export default function AdminCarsPage() {
-  const cars = getStore().cars;
+export default async function AdminCarsPage() {
+  const cars = (await getStore()).cars;
 
   return (
     <>

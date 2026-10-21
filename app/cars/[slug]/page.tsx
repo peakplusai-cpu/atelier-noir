@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function CarPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const store = getStore();
+  const store = await getStore();
   const car = store.cars.find((item) => item.slug === slug && item.published);
   if (!car) notFound();
   const staff = [...store.staff].sort((a, b) => a.sortOrder - b.sortOrder);

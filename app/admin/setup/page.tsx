@@ -9,7 +9,7 @@ export default async function SetupPage({
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
-  if (adminExists()) redirect("/admin/login");
+  if (await adminExists()) redirect("/admin/login");
   const { error } = await searchParams;
   const message =
     error === "short" ? "密碼至少八碼。" : error === "mismatch" ? "兩次輸入不一致。" : "";

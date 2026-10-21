@@ -61,7 +61,7 @@ function parseCar(formData: FormData, existing?: Car): Omit<Car, "id" | "created
 
 export async function createCar(formData: FormData) {
   await requireAuth();
-  const store = getStore();
+  const store = await getStore();
   const parsed = parseCar(formData);
   if (store.cars.some((car) => car.slug === parsed.slug)) {
     parsed.slug = `${parsed.slug}-${uid("x").slice(-4)}`;
@@ -71,7 +71,7 @@ export async function createCar(formData: FormData) {
     id: uid("car"),
     createdAt: new Date().toISOString(),
   });
-  saveStore(store);
+  await saveStore(store);
   revalidatePath("/");
   revalidatePath("/admin");
   redirect("/admin/cars");
@@ -80,7 +80,7 @@ export async function createCar(formData: FormData) {
 export async function updateCar(formData: FormData) {
   await requireAuth();
   const id = String(formData.get("id") ?? "");
-  const store = getStore();
+  const store = await getStore();
   const index = store.cars.findIndex((car) => car.id === id);
   if (index === -1) redirect("/admin/cars");
   const existing = store.cars[index];
@@ -92,7 +92,7 @@ export async function updateCar(formData: FormData) {
     ...existing,
     ...parsed,
   };
-  saveStore(store);
+  await saveStore(store);
   revalidatePath("/");
   revalidatePath(`/cars/${parsed.slug}`);
   revalidatePath("/admin/cars");
@@ -102,12 +102,12 @@ export async function updateCar(formData: FormData) {
 export async function togglePublish(formData: FormData) {
   await requireAuth();
   const id = String(formData.get("id") ?? "");
-  const store = getStore();
+  const store = await getStore();
   const car = store.cars.find((item) => item.id === id);
   if (car) {
     car.published = !car.published;
     car.updatedAt = new Date().toISOString();
-    saveStore(store);
+    await saveStore(store);
   }
   revalidatePath("/");
   revalidatePath("/admin");
@@ -117,9 +117,9 @@ export async function togglePublish(formData: FormData) {
 export async function deleteCar(formData: FormData) {
   await requireAuth();
   const id = String(formData.get("id") ?? "");
-  const store = getStore();
+  const store = await getStore();
   store.cars = store.cars.filter((car) => car.id !== id);
-  saveStore(store);
+  await saveStore(store);
   revalidatePath("/");
   revalidatePath("/admin/cars");
   redirect("/admin/cars");
