@@ -15,7 +15,7 @@ export default async function HomePage() {
     <>
       <Intro />
       <Header />
-      <HomeFinder cars={published} />
+      <HomeFinder cars={published} staff={staff} />
       <Footer staff={staff} />
     </>
   );

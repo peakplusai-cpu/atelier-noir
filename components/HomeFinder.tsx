@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { BuybackLauncher } from "@/components/BuybackLauncher";
 import { HeroReel } from "@/components/HeroReel";
 import { Marquee } from "@/components/Marquee";
 import {
@@ -11,9 +12,9 @@ import {
   type DoorFilter,
 } from "@/lib/catalog";
 import { formatPrice, padIndex, statusLabel } from "@/lib/format";
-import type { Car } from "@/lib/types";
+import type { Car, Staff } from "@/lib/types";
 
-export function HomeFinder({ cars }: { cars: Car[] }) {
+export function HomeFinder({ cars, staff }: { cars: Car[]; staff: Staff[] }) {
   const [brand, setBrand] = useState("");
   const [doors, setDoors] = useState<DoorFilter>(0);
   const [price, setPrice] = useState<(typeof PRICE_RANGES)[number]["id"]>("any");
@@ -92,9 +93,12 @@ export function HomeFinder({ cars }: { cars: Car[] }) {
             </div>
           </fieldset>
 
-          <a className="btn finder-go" href="#collection">
-            查看庫存 {padIndex(matches.length)}
-          </a>
+          <div className="finder-actions">
+            <a className="btn finder-go" href="#collection">
+              查看庫存 {padIndex(matches.length)}
+            </a>
+            <BuybackLauncher staff={staff} />
+          </div>
         </div>
       </section>
 
