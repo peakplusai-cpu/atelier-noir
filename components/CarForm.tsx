@@ -135,7 +135,7 @@ export function CarForm({
         </div>
         <div className="field">
           <label>
-            <input type="checkbox" name="featured" defaultChecked={car?.featured} /> 首頁主視覺
+            <input type="checkbox" name="featured" defaultChecked={car?.featured} /> 精選
           </label>
         </div>
       </div>

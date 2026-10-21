@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { HeroReel } from "@/components/HeroReel";
 import { Marquee } from "@/components/Marquee";
 import {
   brandOptions,
@@ -12,22 +13,17 @@ import {
 import { formatPrice, padIndex, statusLabel } from "@/lib/format";
 import type { Car } from "@/lib/types";
 
-export function HomeFinder({ cars, featured }: { cars: Car[]; featured?: Car }) {
+export function HomeFinder({ cars }: { cars: Car[] }) {
   const [brand, setBrand] = useState("");
   const [doors, setDoors] = useState<DoorFilter>(0);
   const [price, setPrice] = useState<(typeof PRICE_RANGES)[number]["id"]>("any");
   const brands = useMemo(() => brandOptions(cars), [cars]);
   const matches = useMemo(() => filterCars(cars, brand, doors, price), [cars, brand, doors, price]);
-  const cover = featured ?? cars[0];
 
   return (
     <>
-      <section className={`finder${cover ? "" : " finder-void"}`}>
-        {cover?.photos[0] ? (
-          <div className="hero-media">
-            <img src={cover.photos[0].url} alt="" />
-          </div>
-        ) : null}
+      <section className="finder">
+        <HeroReel />
         <div className="hero-shade" />
         <div className="hud">
           <i />
