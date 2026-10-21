@@ -26,8 +26,8 @@ export default async function InquiryPage({
           {!staff.length
             ? "真實業務 LINE 尚未設定。完成設定前，網站不會顯示任何不存在或示範聯絡人。"
             : car
-            ? `您正在詢問 ${car.make} ${car.year} ${car.model}。請選擇一位顧問，系統會帶您前往對方的 LINE 對話。請在訊息中告知車款與希望鑑賞的時段。`
-            : "請選擇一位顧問開啟 LINE。若已有屬意車款，可先從庫存頁進入該車，再發起預約。"}
+            ? `您正在詢問 ${car.make} ${car.year} ${car.model}。請選擇一位顧問，手機將直接打開 LINE 聊天室，並帶入車款訊息。`
+            : "請選擇一位顧問。手機點擊會直接打開 LINE 聊天室；電腦則會開啟 LINE 網頁。"}
         </p>
         <InquiryPicker staff={staff} carLabel={car ? `${car.make} ${car.model}` : ""} />
       </main>

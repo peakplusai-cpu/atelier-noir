@@ -1,6 +1,6 @@
 import Link from "next/link";
+import { LineLaunch } from "@/components/LineLaunch";
 import type { Staff } from "@/lib/types";
-import { resolveLineUrl } from "@/lib/line";
 
 export function Footer({ staff }: { staff: Staff[] }) {
   return (
@@ -21,18 +21,15 @@ export function Footer({ staff }: { staff: Staff[] }) {
           <p className="engraved">選擇顧問 · LINE</p>
           {staff.length ? (
             <ul className="staff-list">
-              {staff.map((person) => {
-                const href = resolveLineUrl(person.lineUrl, person.lineId);
-                return (
-                  <li key={person.id}>
-                    <a href={href} target="_blank" rel="noreferrer">
-                      <span className="name">{person.displayName}</span>
-                      <span className="role">{person.role}</span>
-                      <span className="go">開啟官方 LINE</span>
-                    </a>
-                  </li>
-                );
-              })}
+              {staff.map((person) => (
+                <li key={person.id}>
+                  <LineLaunch lineUrl={person.lineUrl} lineId={person.lineId}>
+                    <span className="name">{person.displayName}</span>
+                    <span className="role">{person.role}</span>
+                    <span className="go">開啟聊天室</span>
+                  </LineLaunch>
+                </li>
+              ))}
             </ul>
           ) : (
             <p className="empty-line">尚未設定公開聯絡人。</p>

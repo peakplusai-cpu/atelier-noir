@@ -16,8 +16,9 @@ export default async function StaffPage({
       <p className="engraved">LINE</p>
       <h1>顧問帳號</h1>
       <p className="mute" style={{ maxWidth: 480, lineHeight: 1.7, marginBottom: 28 }}>
-        每位業務可連接自己的 LINE 官方帳號。請填官方帳號 ID（例如 @yourbrand）
-        或 LINE 官方加好友網址；儲存後才會出現在官網頁尾與預約頁。
+        每位業務請填 LINE 官方帳號的 Basic ID（一定要有 @，例如
+        @carhouse）。客戶用手機點擊會直接打開 LINE App
+        加好友並進入聊天室；電腦瀏覽器仍會顯示 QR，那是 LINE 網頁本身的限制。
       </p>
       {bound ? <p className="flash">LINE 聯絡資料已更新。</p> : null}
       {error ? <p className="flash">LINE 聯絡資料未完成，請確認官方帳號 ID 或網址。</p> : null}
