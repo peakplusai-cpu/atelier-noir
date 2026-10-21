@@ -21,6 +21,7 @@ export type Car = {
   horsepower: number;
   transmission: string;
   drivetrain: string;
+  doors: 2 | 4;
   options: string[];
   story: string;
   status: CarStatus;

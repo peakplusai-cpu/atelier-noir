@@ -6,6 +6,7 @@ import { isAuthenticated } from "@/lib/auth";
 import { slugify } from "@/lib/format";
 import { uid } from "@/lib/id";
 import { getStore, saveStore } from "@/lib/store";
+import { parseDoors } from "@/lib/catalog";
 import type { Car, CarStatus, Photo } from "@/lib/types";
 
 async function requireAuth() {
@@ -46,6 +47,7 @@ function parseCar(formData: FormData, existing?: Car): Omit<Car, "id" | "created
     horsepower: Number(formData.get("horsepower") ?? 0),
     transmission: String(formData.get("transmission") ?? "").trim(),
     drivetrain: String(formData.get("drivetrain") ?? "").trim(),
+    doors: parseDoors(formData.get("doors")),
     options: optionsRaw
       .split(/[\n,]/)
       .map((item) => item.trim())

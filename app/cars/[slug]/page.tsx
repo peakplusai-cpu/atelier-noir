@@ -62,6 +62,10 @@ export default async function CarPage({ params }: { params: Promise<{ slug: stri
             <dd>{car.model}</dd>
           </div>
           <div>
+            <dt>車門</dt>
+            <dd>{car.doors === 2 ? "雙門" : "四門"}</dd>
+          </div>
+          <div>
             <dt>年份</dt>
             <dd>{car.year}</dd>
           </div>

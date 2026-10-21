@@ -1485,6 +1485,172 @@ img {
   line-height: 0.95;
 }
 
+/* ——— finder ——— */
+
+.finder {
+  position: relative;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+  background: var(--void);
+}
+
+.finder-void {
+  background:
+    linear-gradient(var(--rule) 1px, transparent 1px) 0 0 / 100% 96px,
+    linear-gradient(90deg, var(--rule) 1px, transparent 1px) 0 0 / 96px 100%,
+    var(--void);
+}
+
+.finder-void::after {
+  content: "";
+  position: absolute;
+  top: -10%;
+  bottom: -10%;
+  right: 18%;
+  width: 2px;
+  background: var(--signal);
+  transform: rotate(14deg);
+  pointer-events: none;
+}
+
+.finder .hero-shade {
+  background:
+    linear-gradient(to top, rgba(6, 6, 6, 0.92) 0%, rgba(6, 6, 6, 0.28) 42%, rgba(6, 6, 6, 0.4) 100%),
+    radial-gradient(120% 80% at 70% 30%, transparent 30%, rgba(6, 6, 6, 0.45) 100%);
+}
+
+.finder-panel {
+  position: relative;
+  z-index: 3;
+  padding: 56px var(--pad) 40px;
+  width: 100%;
+}
+
+.finder-title {
+  margin: 0 0 28px;
+  font-family: var(--display);
+  font-weight: 800;
+  font-stretch: 125%;
+  text-transform: uppercase;
+  letter-spacing: -0.05em;
+  line-height: 0.82;
+  font-size: clamp(48px, 8vw, 96px);
+}
+
+.finder-block {
+  border: 0;
+  margin: 0 0 28px;
+  padding: 0;
+}
+
+.finder-block legend {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--bone-dim);
+  margin-bottom: 14px;
+  padding: 0;
+}
+
+.finder-block legend::before {
+  content: "/";
+  color: var(--signal);
+  margin-right: 0.7em;
+}
+
+.finder-brands,
+.finder-prices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.finder-brands button,
+.finder-prices button {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--hairline);
+  color: var(--bone);
+  font-family: var(--display);
+  font-weight: 700;
+  font-stretch: 112%;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  font-size: clamp(18px, 2.3vw, 34px);
+  padding: 14px 18px;
+  cursor: pointer;
+  transition: background 0.3s var(--ease), color 0.3s var(--ease), border-color 0.3s var(--ease);
+}
+
+.finder-prices button {
+  font-family: var(--mono);
+  font-weight: 400;
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  padding: 14px 16px;
+}
+
+.finder-brands button[data-on="true"],
+.finder-prices button[data-on="true"],
+.finder-doors button[data-on="true"] {
+  background: var(--bone);
+  color: var(--void);
+  border-color: var(--bone);
+}
+
+.finder-doors {
+  display: grid;
+  grid-template-columns: 1.2fr 1.2fr 0.7fr;
+  gap: 8px;
+  max-width: 720px;
+}
+
+.finder-doors button {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--hairline);
+  color: var(--bone);
+  text-align: left;
+  padding: 18px 20px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: background 0.3s var(--ease), color 0.3s var(--ease), border-color 0.3s var(--ease);
+}
+
+.finder-doors b {
+  font-family: var(--display);
+  font-weight: 800;
+  font-stretch: 125%;
+  font-size: clamp(28px, 4vw, 48px);
+  letter-spacing: -0.04em;
+  line-height: 0.9;
+}
+
+.finder-doors span {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.finder-go {
+  margin-top: 12px;
+}
+
+.vh {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
 /* ——— motion ——— */
 
 @keyframes drift {
@@ -1593,6 +1759,18 @@ img {
 
   .hero {
     min-height: 600px;
+  }
+
+  .finder-panel {
+    padding-top: 88px;
+  }
+
+  .finder-doors {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .finder-doors button:last-child {
+    grid-column: 1 / -1;
   }
 
   .hud {

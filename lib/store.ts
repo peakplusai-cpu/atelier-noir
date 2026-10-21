@@ -30,7 +30,10 @@ function getJsonStore(): Store {
   jsonCache = {
     admin: parsed.admin ?? null,
     staff: parsed.staff ?? [],
-    cars: parsed.cars ?? [],
+    cars: (parsed.cars ?? []).map((car) => ({
+      ...car,
+      doors: car.doors === 2 ? 2 : 4,
+    })),
     sessions: parsed.sessions ?? [],
   };
   return jsonCache;
@@ -66,6 +69,7 @@ function rowToCar(row: Record<string, unknown>): Car {
     horsepower: Number(row.horsepower ?? 0),
     transmission: String(row.transmission ?? ""),
     drivetrain: String(row.drivetrain ?? ""),
+    doors: Number(row.doors) === 2 ? 2 : 4,
     options: Array.isArray(row.options) ? (row.options as string[]) : [],
     story: String(row.story ?? ""),
     status: (row.status as Car["status"]) || "available",
@@ -144,6 +148,7 @@ async function saveSupabaseStore(store: Store): Promise<void> {
       horsepower: car.horsepower,
       transmission: car.transmission,
       drivetrain: car.drivetrain,
+      doors: car.doors,
       options: car.options,
       story: car.story,
       status: car.status,

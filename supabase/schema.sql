@@ -33,6 +33,7 @@ create table if not exists cars (
   horsepower int not null default 0,
   transmission text not null default '',
   drivetrain text not null default '',
+  doors smallint not null default 4 check (doors in (2, 4)),
   options jsonb not null default '[]'::jsonb,
   story text not null default '',
   status text not null default 'available',

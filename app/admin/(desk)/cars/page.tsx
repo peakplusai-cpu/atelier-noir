@@ -22,6 +22,7 @@ export default async function AdminCarsPage() {
           <tr>
             <th>年份</th>
             <th>車款</th>
+            <th>車門</th>
             <th>標價</th>
             <th>狀態</th>
             <th>公開</th>
@@ -35,6 +36,7 @@ export default async function AdminCarsPage() {
               <td>
                 {car.make} {car.model}
               </td>
+              <td>{car.doors === 2 ? "雙門" : "四門"}</td>
               <td>{formatPrice(car.price)}</td>
               <td>{statusLabel(car.status)}</td>
               <td>

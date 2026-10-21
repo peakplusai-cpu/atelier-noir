@@ -85,6 +85,13 @@ export function CarForm({
           <input id="drivetrain" name="drivetrain" defaultValue={car?.drivetrain} />
         </div>
         <div className="field">
+          <label htmlFor="doors">車門</label>
+          <select id="doors" name="doors" defaultValue={car?.doors ?? 4}>
+            <option value={4}>四門</option>
+            <option value={2}>雙門</option>
+          </select>
+        </div>
+        <div className="field">
           <label htmlFor="status">狀態</label>
           <select id="status" name="status" defaultValue={car?.status ?? "available"}>
             <option value="available">可鑑賞</option>
