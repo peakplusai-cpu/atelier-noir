@@ -6,6 +6,8 @@ public/uploads/*
 .env
 .env.*
 !.env.example
+.vercel
 *.tmp
 *.tsbuildinfo
 agent-tools/
+.env*
