@@ -104,9 +104,10 @@ img {
 
 .wordmark-zh {
   font-family: var(--display);
-  font-size: 22px;
-  letter-spacing: 0.42em;
-  margin-left: 0.21em;
+  font-size: 18px;
+  letter-spacing: 0.22em;
+  margin-left: 0.11em;
+  text-transform: uppercase;
 }
 
 .wordmark-en {

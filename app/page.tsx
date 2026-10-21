@@ -41,7 +41,7 @@ export default async function HomePage() {
           <YSlash />
           <div className="hero-copy reveal">
             <p className="engraved hero-kicker">Private collection</p>
-            <h1>玄藏</h1>
+            <h1>Car House</h1>
             <h2>僅員工上架之車輛公開</h2>
             <hr className="hairline" />
             <p className="hero-meta">

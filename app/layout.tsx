@@ -3,8 +3,8 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "玄藏 Atelier Noir",
-    template: "%s · 玄藏",
+    default: "Car House",
+    template: "%s · Car House",
   },
   description: "私人珍藏豪華車，預約鑑賞。",
 };

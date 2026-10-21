@@ -10,8 +10,8 @@ export function Header() {
     <>
       <header className="site-header">
         <Link href="/" className="wordmark" onClick={() => setOpen(false)}>
-          <span className="wordmark-zh">玄藏</span>
-          <span className="wordmark-en">Atelier Noir</span>
+          <span className="wordmark-zh">Car House</span>
+          <span className="wordmark-en">Taipei</span>
         </Link>
         <nav className="nav">
           <Link href="/#collection">庫存</Link>
