@@ -36,7 +36,22 @@ export default async function HomePage() {
             </p>
           </div>
         </section>
-      ) : null}
+      ) : (
+        <section className="hero hero-void">
+          <YSlash />
+          <div className="hero-copy reveal">
+            <p className="engraved hero-kicker">Private collection</p>
+            <h1>玄藏</h1>
+            <h2>僅員工上架之車輛公開</h2>
+            <hr className="hairline" />
+            <p className="hero-meta">
+              <span>台北</span>
+              <span>預約制</span>
+              <span>目前無可鑑賞車款</span>
+            </p>
+          </div>
+        </section>
+      )}
 
       <section className="section" id="collection">
         <div className="section-head">
@@ -46,20 +61,24 @@ export default async function HomePage() {
           </div>
           <p className="engraved">{padIndex(published.length)} 輛上架</p>
         </div>
-        <ol className="catalog">
-          {published.map((car, i) => (
-            <li key={car.id}>
-              <Link href={`/cars/${car.slug}`}>
-                <span className="idx">{padIndex(i + 1)}</span>
-                <span className="make">{car.make}</span>
-                <span className="model">
-                  {car.year} {car.model}
-                </span>
-                <span className="price">{formatPrice(car.price)}</span>
-              </Link>
-            </li>
-          ))}
-        </ol>
+        {published.length ? (
+          <ol className="catalog">
+            {published.map((car, i) => (
+              <li key={car.id}>
+                <Link href={`/cars/${car.slug}`}>
+                  <span className="idx">{padIndex(i + 1)}</span>
+                  <span className="make">{car.make}</span>
+                  <span className="model">
+                    {car.year} {car.model}
+                  </span>
+                  <span className="price">{formatPrice(car.price)}</span>
+                </Link>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="empty-line">尚無上架車輛。由員工後台新增並公開後，才會出現於此。</p>
+        )}
       </section>
 
       {published.map((car, i) => (

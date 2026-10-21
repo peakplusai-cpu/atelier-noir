@@ -164,6 +164,18 @@ img {
   overflow: hidden;
 }
 
+.hero-void {
+  background: var(--void);
+}
+
+.empty-line {
+  margin: 48px 0 0;
+  color: var(--mute);
+  letter-spacing: 0.08em;
+  line-height: 1.8;
+  max-width: 36ch;
+}
+
 .hero-media,
 .cine {
   position: absolute;
