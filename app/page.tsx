@@ -27,8 +27,8 @@ export default async function HomePage() {
             <div className="hud">
               <i />
               <div className="hud-note">
-                25.0330° N<br />
-                121.5654° E
+                24.1477° N<br />
+                120.6736° E
               </div>
             </div>
             <div className="hero-body">
@@ -77,13 +77,13 @@ export default async function HomePage() {
               <h1 className="hero-title" style={{ "--units": 8 } as CSSProperties}>
                 <span>Car House</span>
               </h1>
-              <p className="hero-model">台北 / 預約制 / 僅員工上架之車輛公開</p>
+              <p className="hero-model">台中 / 預約制 / 僅員工上架之車輛公開</p>
             </div>
           </div>
           <dl className="telemetry">
             <div>
               <dt>Base · 據點</dt>
-              <dd>台北</dd>
+              <dd>台中</dd>
             </div>
             <div>
               <dt>Access · 方式</dt>
