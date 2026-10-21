@@ -11,7 +11,7 @@ export function Header() {
       <header className="site-header">
         <Link href="/" className="wordmark" onClick={() => setOpen(false)}>
           <span className="wordmark-zh">Car House</span>
-          <span className="wordmark-en">Taipei</span>
+          <span className="wordmark-en">TPE</span>
         </Link>
         <nav className="nav">
           <Link href="/#collection">庫存</Link>
@@ -19,12 +19,12 @@ export function Header() {
           <Link href="/admin">員工</Link>
         </nav>
         <button className="nav-toggle" type="button" onClick={() => setOpen(true)}>
-          選單
+          Menu
         </button>
       </header>
       <div className={`mobile-nav${open ? " open" : ""}`}>
         <button className="nav-toggle" type="button" onClick={() => setOpen(false)}>
-          關閉
+          Close
         </button>
         <Link href="/" onClick={() => setOpen(false)}>
           首頁

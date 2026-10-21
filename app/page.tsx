@@ -1,8 +1,9 @@
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
-import { YSlash } from "@/components/YSlash";
-import { formatPrice, padIndex, statusLabel } from "@/lib/format";
+import { Marquee } from "@/components/Marquee";
+import { formatMileage, formatPrice, padIndex, statusLabel, titleUnits } from "@/lib/format";
 import { getStore } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -18,48 +19,97 @@ export default async function HomePage() {
       <Header />
       {featured ? (
         <section className="hero">
-          <div className="hero-media">
-            <img src={featured.photos[0]?.url} alt={`${featured.make} ${featured.model}`} />
+          <div className="hero-stage">
+            <div className="hero-media">
+              <img src={featured.photos[0]?.url} alt={`${featured.make} ${featured.model}`} />
+            </div>
+            <div className="hero-shade" />
+            <div className="hud">
+              <i />
+              <div className="hud-note">
+                25.0330° N<br />
+                121.5654° E
+              </div>
+            </div>
+            <div className="hero-body">
+              <p className="hero-tag">
+                <span className="blip" />
+                本期主打 · {statusLabel(featured.status)}
+              </p>
+              <h1 className="hero-title" style={{ "--units": titleUnits(featured.make) } as CSSProperties}>
+                <span>{featured.make}</span>
+              </h1>
+              <p className="hero-model">
+                {featured.year} / {featured.model}
+              </p>
+            </div>
           </div>
-          <div className="hero-shade" />
-          <YSlash />
-          <div className="hero-copy reveal">
-            <p className="engraved hero-kicker">01 / Collection</p>
-            <h1>{featured.make}</h1>
-            <h2>{featured.model}</h2>
-            <hr className="hairline" />
-            <p className="hero-meta">
-              <span>{featured.year}</span>
-              <span>{featured.color}</span>
-              <span>{featured.mileage.toLocaleString("zh-TW")} km</span>
-              <span>{formatPrice(featured.price)}</span>
-            </p>
-          </div>
+          <dl className="telemetry">
+            <div>
+              <dt>Year · 年份</dt>
+              <dd>{featured.year}</dd>
+            </div>
+            <div>
+              <dt>Odo · 里程</dt>
+              <dd>{formatMileage(featured.mileage)}</dd>
+            </div>
+            <div>
+              <dt>Color · 外色</dt>
+              <dd>{featured.color}</dd>
+            </div>
+            <div>
+              <dt>Price · 標價</dt>
+              <dd>{formatPrice(featured.price)}</dd>
+            </div>
+          </dl>
         </section>
       ) : (
         <section className="hero hero-void">
-          <YSlash />
-          <div className="hero-copy reveal">
-            <p className="engraved hero-kicker">Private collection</p>
-            <h1>Car House</h1>
-            <h2>僅員工上架之車輛公開</h2>
-            <hr className="hairline" />
-            <p className="hero-meta">
-              <span>台北</span>
-              <span>預約制</span>
-              <span>目前無可鑑賞車款</span>
-            </p>
+          <div className="hero-stage">
+            <div className="hud">
+              <i />
+            </div>
+            <div className="hero-body">
+              <p className="hero-tag">
+                <span className="blip" />
+                尚無上架車輛
+              </p>
+              <h1 className="hero-title" style={{ "--units": 8 } as CSSProperties}>
+                <span>Car House</span>
+              </h1>
+              <p className="hero-model">台北 / 預約制 / 僅員工上架之車輛公開</p>
+            </div>
           </div>
+          <dl className="telemetry">
+            <div>
+              <dt>Base · 據點</dt>
+              <dd>台北</dd>
+            </div>
+            <div>
+              <dt>Access · 方式</dt>
+              <dd>預約制</dd>
+            </div>
+            <div>
+              <dt>Stock · 庫存</dt>
+              <dd>00</dd>
+            </div>
+            <div>
+              <dt>Status · 狀態</dt>
+              <dd>籌備中</dd>
+            </div>
+          </dl>
         </section>
       )}
+
+      <Marquee />
 
       <section className="section" id="collection">
         <div className="section-head">
           <div>
-            <p className="engraved">Inventory</p>
-            <h2>本期珍藏</h2>
+            <p className="engraved">Inventory · 本期庫存</p>
+            <h2>Stock</h2>
           </div>
-          <p className="engraved">{padIndex(published.length)} 輛上架</p>
+          <span className="section-count">{padIndex(published.length)}</span>
         </div>
         {published.length ? (
           <ol className="catalog">
@@ -69,9 +119,11 @@ export default async function HomePage() {
                   <span className="idx">{padIndex(i + 1)}</span>
                   <span className="make">{car.make}</span>
                   <span className="model">
-                    {car.year} {car.model}
+                    {car.year} / {car.model}
                   </span>
                   <span className="price">{formatPrice(car.price)}</span>
+                  <span className="arrow">↗</span>
+                  {car.photos[0] ? <img className="row-thumb" src={car.photos[0].url} alt="" /> : null}
                 </Link>
               </li>
             ))}
@@ -82,42 +134,44 @@ export default async function HomePage() {
       </section>
 
       {published.map((car, i) => (
-        <article key={car.id} className={`chapter${i % 2 === 1 ? " reverse" : ""}`}>
-          <div className="chapter-media">
+        <article key={car.id} className="poster">
+          <div className="poster-media">
             <img src={car.photos[0]?.url} alt={`${car.make} ${car.model}`} />
+            <span className="poster-ghost">{padIndex(i + 1)}</span>
           </div>
-          <div className="chapter-copy">
-            <p className="engraved">
-              <span className={`status-dot ${car.status}`} />
-              {statusLabel(car.status)} · {padIndex(i + 1)}
-            </p>
-            <h3>{car.make}</h3>
-            <p className="model-line">
-              {car.year} {car.model}
-            </p>
-            <div className="pinstripe" />
+          <div className="poster-bar">
+            <div>
+              <p className="engraved">
+                <span className={`status-dot ${car.status}`} />
+                {statusLabel(car.status)}
+              </p>
+              <h3>{car.make}</h3>
+              <p className="poster-model">
+                {car.year} / {car.model}
+              </p>
+            </div>
             <dl className="spec-row">
               <div>
-                <dt>外色</dt>
+                <dt>外色 Color</dt>
                 <dd>{car.color}</dd>
               </div>
               <div>
-                <dt>內裝</dt>
+                <dt>內裝 Interior</dt>
                 <dd>{car.interior}</dd>
               </div>
               <div>
-                <dt>動力</dt>
+                <dt>動力 Power</dt>
                 <dd>
                   {car.engine} · {car.horsepower} hp
                 </dd>
               </div>
               <div>
-                <dt>標價</dt>
+                <dt>標價 Price</dt>
                 <dd>{formatPrice(car.price)}</dd>
               </div>
             </dl>
-            <Link className="link-line" href={`/cars/${car.slug}`}>
-              完整詳細
+            <Link className="btn" href={`/cars/${car.slug}`}>
+              完整規格 →
             </Link>
           </div>
         </article>

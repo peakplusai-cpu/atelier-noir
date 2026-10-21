@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { CSSProperties } from "react";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
-import { formatMileage, formatPrice, statusLabel } from "@/lib/format";
+import { formatMileage, formatPrice, statusLabel, titleUnits } from "@/lib/format";
 import { getStore } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -22,17 +23,30 @@ export default async function CarPage({ params }: { params: Promise<{ slug: stri
       <section className="detail-hero">
         {cover ? <img src={cover.url} alt={cover.alt || `${car.make} ${car.model}`} /> : null}
         <div className="detail-shade" />
-        <div className="detail-title reveal">
+        <div className="detail-title">
           <p className="engraved">
             <span className={`status-dot ${car.status}`} />
-            {statusLabel(car.status)} · {car.makeEn}
+            {statusLabel(car.status)}
+            {car.makeEn ? ` · ${car.makeEn}` : ""}
           </p>
-          <h1>{car.make}</h1>
-          <p className="model-line" style={{ fontFamily: "var(--display)", fontStyle: "italic", fontSize: 28 }}>
-            {car.year} {car.model}
+          <h1 style={{ "--units": titleUnits(car.make) } as CSSProperties}>
+            <span>{car.make}</span>
+          </h1>
+          <p className="detail-model">
+            {car.year} / {car.model}
           </p>
         </div>
       </section>
+
+      <div className="price-band">
+        <div>
+          <p className="engraved">Price · 標價</p>
+          <strong>{formatPrice(car.price)}</strong>
+        </div>
+        <Link className="btn" href={`/inquiry?car=${car.slug}`}>
+          預約鑑賞 →
+        </Link>
+      </div>
 
       <section className="sheet">
         <p className="story">{car.story}</p>
@@ -112,17 +126,11 @@ export default async function CarPage({ params }: { params: Promise<{ slug: stri
         </section>
       ) : null}
 
-      <div className="cta-bar">
-        <div>
-          <p className="engraved">Inquiry</p>
-          <p style={{ fontFamily: "var(--display)", fontSize: 28, margin: "8px 0 0" }}>
-            選擇顧問，前往 LINE
-          </p>
-        </div>
-        <Link className="btn" href={`/inquiry?car=${car.slug}`}>
-          預約鑑賞
-        </Link>
-      </div>
+      <Link className="cta-block" href={`/inquiry?car=${car.slug}`}>
+        <p className="engraved">Inquiry · 選擇顧問，前往 LINE</p>
+        <span className="cta-big">預約鑑賞</span>
+        <span className="cta-arrow">→</span>
+      </Link>
       <Footer staff={staff} />
     </>
   );

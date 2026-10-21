@@ -9,7 +9,7 @@ export function Footer({ staff }: { staff: Staff[] }) {
         <div className="footer-brand">
           <div className="wordmark">
             <span className="wordmark-zh">Car House</span>
-            <span className="wordmark-en">Taipei</span>
+            <span className="wordmark-en">TPE</span>
           </div>
           <p className="footer-note">
             {staff.length
@@ -43,6 +43,9 @@ export function Footer({ staff }: { staff: Staff[] }) {
         <span>台北 · 預約制</span>
         <Link href="/admin">員工入口</Link>
       </div>
+      <span className="footer-mega" aria-hidden>
+        Car House
+      </span>
     </footer>
   );
 }
