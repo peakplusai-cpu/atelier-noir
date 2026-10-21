@@ -1,0 +1,42 @@
+"use server";
+
+import { redirect } from "next/navigation";
+import { adminExists, createSession, destroySession, hashPassword, verifyPassword } from "@/lib/auth";
+import { getStore, saveStore } from "@/lib/store";
+
+export async function setupAdmin(formData: FormData) {
+  if (adminExists()) {
+    redirect("/admin/login");
+  }
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm") ?? "");
+  if (password.length < 8) {
+    redirect("/admin/setup?error=short");
+  }
+  if (password !== confirm) {
+    redirect("/admin/setup?error=mismatch");
+  }
+  const store = getStore();
+  store.admin = {
+    passwordHash: hashPassword(password),
+    createdAt: new Date().toISOString(),
+  };
+  saveStore(store);
+  await createSession();
+  redirect("/admin");
+}
+
+export async function loginAdmin(formData: FormData) {
+  const password = String(formData.get("password") ?? "");
+  const store = getStore();
+  if (!store.admin || !verifyPassword(password, store.admin.passwordHash)) {
+    redirect("/admin/login?error=invalid");
+  }
+  await createSession();
+  redirect("/admin");
+}
+
+export async function logoutAdmin() {
+  await destroySession();
+  redirect("/admin/login");
+}
