@@ -37,5 +37,17 @@ npm run dev        # http://localhost:3100
 
 ## 資料與部署
 
-- 資料在 `data/store.json`，上傳圖片在 `data/uploads/`，兩者都不進版控。部署時請把 `data/` 放在持久化磁碟並定期備份（可用 `RADIANT_DATA_FILE` 指定路徑）。
-- 寫入有序列化與原子替換，適合單一實例運行；若要多實例或高流量，請把 `lib/store.ts` 換成資料庫實作。
+沒有設定 Supabase 時，資料存在 `data/store.json`、圖片存在 `data/uploads/`（皆不進版控），適合本機開發或有持久磁碟的單一主機。
+
+設定 `SUPABASE_URL` 與 `SUPABASE_SERVICE_ROLE_KEY` 後，自動改用 Supabase：資料放在 `radiant_store` 資料表（單列 jsonb，寫入以版本號做樂觀鎖，多個執行個體同時下單也不會互相覆蓋或超賣），圖片放在 `radiant-uploads` 公開儲存桶。這是部署到 Vercel 所必需的，因為 Vercel 的檔案系統不能寫入。
+
+### 部署到 Vercel
+
+1. 在 Supabase 建立專案，到 SQL Editor 貼上並執行 `supabase/schema.sql`。
+2. Vercel：Add New → Project → 選此 GitHub repo → **Root Directory 設為 `radiant`**（Framework 會自動偵測為 Next.js）。
+3. Environment Variables 填入 `SUPABASE_URL`、`SUPABASE_SERVICE_ROLE_KEY`、`SITE_ORIGIN`（網域確定後再補也可），Deploy。
+4. 打開 `https://你的網域/admin` 設定後台密碼，再到「設定」填 LINE 資訊。LINE Login 的 Callback URL 要用正式網域。
+
+之後每次推到 `main` 會自動部署，其他分支與 PR 會得到預覽網址。預覽環境若使用同一組 Supabase，會與正式站共用資料，建議預覽另開一個 Supabase 專案或不填金鑰（預覽將無法寫入）。
+
+整份資料是一列 jsonb，適合中小規模；訂單累積到數萬筆時，請改成逐表儲存。

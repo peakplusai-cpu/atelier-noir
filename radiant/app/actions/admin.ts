@@ -117,7 +117,7 @@ export async function saveProduct(_prev: string, form: FormData): Promise<string
       price,
       comparePrice: Math.max(0, Math.round(num(payload.comparePrice))),
       variants,
-      photos: (payload.photos ?? []).filter((u) => typeof u === "string" && u.startsWith("/media/")).slice(0, 12),
+      photos: (payload.photos ?? []).filter((u) => typeof u === "string" && (u.startsWith("/media/") || u.startsWith("https://"))).slice(0, 12),
       status: status as Product["status"],
       featured: Boolean(payload.featured),
       updatedAt: now,

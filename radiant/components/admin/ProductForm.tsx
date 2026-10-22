@@ -67,6 +67,23 @@ export function ProductForm({ product }: { product?: Product }) {
     })),
   });
 
+  async function shrink(file: File): Promise<File> {
+    if (file.type === "image/gif" || !file.type.startsWith("image/")) return file;
+    try {
+      const bitmap = await createImageBitmap(file);
+      const scale = Math.min(1, 2000 / Math.max(bitmap.width, bitmap.height));
+      if (scale === 1 && file.size < 1_500_000) return file;
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(bitmap.width * scale);
+      canvas.height = Math.round(bitmap.height * scale);
+      canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", 0.9));
+      return blob ? new File([blob], file.name.replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" }) : file;
+    } catch {
+      return file;
+    }
+  }
+
   async function upload(files: FileList | null) {
     if (!files?.length) return;
     setUploading(true);
@@ -74,7 +91,7 @@ export function ProductForm({ product }: { product?: Product }) {
     const urls: string[] = [];
     for (const file of Array.from(files)) {
       const body = new FormData();
-      body.append("file", file);
+      body.append("file", await shrink(file));
       const res = await fetch("/api/upload", { method: "POST", body });
       const json = (await res.json()) as { url?: string; error?: string };
       if (json.url) urls.push(json.url);
