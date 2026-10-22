@@ -928,34 +928,20 @@ img {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: clamp(8px, 2.4vw, 40px);
   margin: clamp(28px, 5vw, 64px) 0 0;
   user-select: none;
 }
 
 .footer-logos img {
   display: block;
-  width: min(44vw, 640px);
+  width: min(78vw, 920px);
   height: auto;
   mix-blend-mode: screen;
 }
 
-.footer-logos .x {
-  font-family: var(--display);
-  font-weight: 300;
-  font-stretch: 100%;
-  font-size: clamp(32px, 6vw, 88px);
-  line-height: 1;
-  color: var(--signal);
-}
-
 @media (max-width: 720px) {
-  .footer-logos {
-    flex-direction: column;
-    gap: 0;
-  }
   .footer-logos img {
-    width: min(92vw, 520px);
+    width: min(94vw, 560px);
   }
 }
 

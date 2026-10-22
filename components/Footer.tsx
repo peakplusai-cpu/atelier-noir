@@ -41,10 +41,6 @@ export function Footer({ staff }: { staff: Staff[] }) {
         <Link href="/admin">員工入口</Link>
       </div>
       <div className="footer-logos">
-        <img src="/brand/anson-top-car.jpg" alt="Anson Top Car" width={1254} height={705} loading="lazy" />
-        <span className="x" aria-hidden>
-          ×
-        </span>
         <img src="/brand/brian-garage.jpg" alt="布萊恩車庫 Imported car sales" width={1774} height={887} loading="lazy" />
       </div>
     </footer>
