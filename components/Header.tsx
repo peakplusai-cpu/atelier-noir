@@ -10,7 +10,7 @@ export function Header() {
     <>
       <header className="site-header">
         <Link href="/" className="wordmark" onClick={() => setOpen(false)}>
-          <span className="wordmark-zh">Car House</span>
+          <span className="wordmark-zh">Bryan&apos;s Garage</span>
           <span className="wordmark-en">TXG</span>
         </Link>
         <nav className="nav">

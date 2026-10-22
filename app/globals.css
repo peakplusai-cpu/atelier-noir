@@ -142,10 +142,11 @@ img {
   font-family: var(--display);
   font-weight: 800;
   font-stretch: 125%;
-  font-size: 17px;
-  letter-spacing: -0.01em;
+  font-size: 15px;
+  letter-spacing: -0.02em;
   text-transform: uppercase;
   line-height: 1;
+  white-space: nowrap;
 }
 
 .wordmark-en {
@@ -2164,10 +2165,10 @@ html.intro-seen .intro {
   font-family: var(--font-display, "Archivo", sans-serif);
   font-stretch: 125%;
   font-weight: 800;
-  letter-spacing: 0.42em;
-  font-size: clamp(14px, 2vw, 22px);
+  letter-spacing: 0.22em;
+  font-size: clamp(13px, 1.8vw, 20px);
   color: #fff;
-  padding-left: 0.42em;
+  padding-left: 0.22em;
 }
 .intro-sub {
   font-family: "JetBrains Mono", monospace;

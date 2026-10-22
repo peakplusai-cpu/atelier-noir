@@ -8,7 +8,7 @@ export function Footer({ staff }: { staff: Staff[] }) {
       <div className="footer-grid">
         <div className="footer-brand">
           <div className="wordmark">
-            <span className="wordmark-zh">Car House</span>
+            <span className="wordmark-zh">Bryan&apos;s Garage</span>
             <span className="wordmark-en">TXG</span>
           </div>
           <p className="footer-note">

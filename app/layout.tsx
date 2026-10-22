@@ -3,8 +3,8 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Car House",
-    template: "%s · Car House",
+    default: "Bryan's Garage",
+    template: "%s · Bryan's Garage",
   },
   description: "私人珍藏豪華車，預約鑑賞。",
 };

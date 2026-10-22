@@ -86,7 +86,7 @@ export function Intro() {
       </svg>
 
       <div className="intro-caption">
-        <span className="intro-mark">CAR HOUSE</span>
+        <span className="intro-mark">BRYAN&apos;S GARAGE</span>
         <span className="intro-sub">TAICHUNG · TXG</span>
       </div>
 

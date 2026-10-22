@@ -1,4 +1,4 @@
-const WORDS = ["Car House", "Taichung", "By Appointment", "預約鑑賞"];
+const WORDS = ["Bryan's Garage", "Taichung", "By Appointment", "預約鑑賞"];
 
 export function Marquee() {
   const run = WORDS.map((word) => (
