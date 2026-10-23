@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { INTRO_TOTAL, STROKES } from "@/lib/maybach-lines";
+import { INTRO_TOTAL, STROKES } from "@/lib/intro-lettering";
 
 const STORAGE_KEY = "ch-intro-seen";
 const EXIT_MS = 1100;
@@ -57,10 +57,10 @@ export function Intro() {
       onClick={() => setSkipping(true)}
       aria-hidden
     >
-      <svg className="intro-art" viewBox="0 0 1600 600" preserveAspectRatio="xMidYMid meet">
+      <svg className="intro-art" viewBox="0 0 1600 520" preserveAspectRatio="xMidYMid meet">
         <defs>
           <filter id="intro-glow" x="-5%" y="-5%" width="110%" height="110%">
-            <feGaussianBlur stdDeviation="1.6" result="b" />
+            <feGaussianBlur stdDeviation="0.8" result="b" />
             <feMerge>
               <feMergeNode in="b" />
               <feMergeNode in="SourceGraphic" />
@@ -86,7 +86,6 @@ export function Intro() {
       </svg>
 
       <div className="intro-caption">
-        <span className="intro-mark">BRYAN&apos;S GARAGE</span>
         <span className="intro-sub">TAICHUNG · TXG</span>
       </div>
 
