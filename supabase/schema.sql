@@ -33,7 +33,7 @@ create table if not exists cars (
   horsepower int not null default 0,
   transmission text not null default '',
   drivetrain text not null default '',
-  doors smallint not null default 4 check (doors in (2, 4)),
+  doors smallint not null default 4 check (doors in (2, 4, 5)),
   options jsonb not null default '[]'::jsonb,
   story text not null default '',
   status text not null default 'available',
@@ -43,6 +43,9 @@ create table if not exists cars (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table cars drop constraint if exists cars_doors_check;
+alter table cars add constraint cars_doors_check check (doors in (2, 4, 5));
 
 alter table admin enable row level security;
 alter table staff enable row level security;

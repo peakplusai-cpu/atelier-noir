@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
+import { parseDoors } from "./catalog";
 import type { Admin, Car, Staff, Store } from "./types";
 import { seedStore } from "./seed";
 import { supabaseAdmin, supabaseConfigured } from "./supabase";
@@ -32,7 +33,7 @@ function getJsonStore(): Store {
     staff: parsed.staff ?? [],
     cars: (parsed.cars ?? []).map((car) => ({
       ...car,
-      doors: car.doors === 2 ? 2 : 4,
+      doors: parseDoors(car.doors),
     })),
     sessions: parsed.sessions ?? [],
   };
@@ -69,7 +70,7 @@ function rowToCar(row: Record<string, unknown>): Car {
     horsepower: Number(row.horsepower ?? 0),
     transmission: String(row.transmission ?? ""),
     drivetrain: String(row.drivetrain ?? ""),
-    doors: Number(row.doors) === 2 ? 2 : 4,
+    doors: parseDoors(row.doors),
     options: Array.isArray(row.options) ? (row.options as string[]) : [],
     story: String(row.story ?? ""),
     status: (row.status as Car["status"]) || "available",

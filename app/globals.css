@@ -1669,9 +1669,9 @@ img {
 
 .finder-doors {
   display: grid;
-  grid-template-columns: 1.2fr 1.2fr 0.7fr;
+  grid-template-columns: 1fr 1fr 1fr 0.75fr;
   gap: 8px;
-  max-width: 720px;
+  max-width: 880px;
 }
 
 .finder-doors button {
@@ -1964,10 +1964,6 @@ img {
 
   .finder-doors {
     grid-template-columns: 1fr 1fr;
-  }
-
-  .finder-doors button:last-child {
-    grid-column: 1 / -1;
   }
 
   .hud {

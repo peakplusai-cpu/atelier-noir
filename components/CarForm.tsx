@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { DOOR_OPTIONS } from "@/lib/catalog";
 import type { Car } from "@/lib/types";
 
 export function CarForm({
@@ -87,8 +88,11 @@ export function CarForm({
         <div className="field">
           <label htmlFor="doors">車門</label>
           <select id="doors" name="doors" defaultValue={car?.doors ?? 4}>
-            <option value={4}>四門</option>
-            <option value={2}>雙門</option>
+            {DOOR_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </select>
         </div>
         <div className="field">

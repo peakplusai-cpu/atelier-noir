@@ -1,6 +1,13 @@
 import type { Car } from "./types";
 
-export type DoorFilter = 2 | 4 | 0;
+export type DoorCount = Car["doors"];
+export type DoorFilter = DoorCount | 0;
+
+export const DOOR_OPTIONS: { value: DoorCount; label: string; code: string }[] = [
+  { value: 2, label: "雙門", code: "02" },
+  { value: 4, label: "四門", code: "04" },
+  { value: 5, label: "五門", code: "05" },
+];
 
 export type BrandOption = {
   id: string;
@@ -64,6 +71,14 @@ export function filterCars(
   });
 }
 
-export function parseDoors(value: unknown): 2 | 4 {
-  return Number(value) === 2 ? 2 : 4;
+export function parseDoors(value: unknown): DoorCount {
+  const n = Number(value);
+  if (n === 2 || n === 5) return n;
+  return 4;
+}
+
+export function doorLabel(doors: number): string {
+  if (doors === 2) return "雙門";
+  if (doors === 5) return "五門";
+  return "四門";
 }

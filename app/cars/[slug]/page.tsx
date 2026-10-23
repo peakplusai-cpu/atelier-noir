@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { CSSProperties } from "react";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
+import { doorLabel } from "@/lib/catalog";
 import { formatMileage, formatPrice, statusLabel, titleUnits } from "@/lib/format";
 import { getStore } from "@/lib/store";
 
@@ -63,7 +64,7 @@ export default async function CarPage({ params }: { params: Promise<{ slug: stri
           </div>
           <div>
             <dt>車門</dt>
-            <dd>{car.doors === 2 ? "雙門" : "四門"}</dd>
+            <dd>{doorLabel(car.doors)}</dd>
           </div>
           <div>
             <dt>年份</dt>

@@ -7,6 +7,8 @@ import { HeroReel } from "@/components/HeroReel";
 import { Marquee } from "@/components/Marquee";
 import {
   brandOptions,
+  DOOR_OPTIONS,
+  doorLabel,
   filterCars,
   PRICE_RANGES,
   type DoorFilter,
@@ -62,14 +64,17 @@ export function HomeFinder({ cars, staff }: { cars: Car[]; staff: Staff[] }) {
           <fieldset className="finder-block">
             <legend>車門</legend>
             <div className="finder-doors">
-              <button type="button" data-on={doors === 2} onClick={() => setDoors(2)}>
-                <b>02</b>
-                <span>雙門</span>
-              </button>
-              <button type="button" data-on={doors === 4} onClick={() => setDoors(4)}>
-                <b>04</b>
-                <span>四門</span>
-              </button>
+              {DOOR_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  data-on={doors === option.value}
+                  onClick={() => setDoors(option.value)}
+                >
+                  <b>{option.code}</b>
+                  <span>{option.label}</span>
+                </button>
+              ))}
               <button type="button" data-on={doors === 0} onClick={() => setDoors(0)}>
                 <b>ALL</b>
                 <span>不限</span>
@@ -120,7 +125,7 @@ export function HomeFinder({ cars, staff }: { cars: Car[]; staff: Staff[] }) {
                   <span className="idx">{padIndex(i + 1)}</span>
                   <span className="make">{car.make}</span>
                   <span className="model">
-                    {car.year} / {car.doors === 2 ? "雙門" : "四門"} / {car.model}
+                    {car.year} / {doorLabel(car.doors)} / {car.model}
                   </span>
                   <span className="price">{formatPrice(car.price)}</span>
                   <span className="arrow">↗</span>
@@ -148,7 +153,7 @@ export function HomeFinder({ cars, staff }: { cars: Car[]; staff: Staff[] }) {
             <div>
               <p className="engraved">
                 <span className={`status-dot ${car.status}`} />
-                {statusLabel(car.status)} · {car.doors === 2 ? "雙門" : "四門"}
+                {statusLabel(car.status)} · {doorLabel(car.doors)}
               </p>
               <h3>{car.make}</h3>
               <p className="poster-model">

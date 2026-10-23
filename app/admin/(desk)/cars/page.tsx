@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { togglePublish } from "@/app/actions/cars";
+import { doorLabel } from "@/lib/catalog";
 import { formatPrice, statusLabel } from "@/lib/format";
 import { getStore } from "@/lib/store";
 
@@ -36,7 +37,7 @@ export default async function AdminCarsPage() {
               <td>
                 {car.make} {car.model}
               </td>
-              <td>{car.doors === 2 ? "雙門" : "四門"}</td>
+              <td>{doorLabel(car.doors)}</td>
               <td>{formatPrice(car.price)}</td>
               <td>{statusLabel(car.status)}</td>
               <td>
