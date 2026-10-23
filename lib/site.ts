@@ -1,4 +1,5 @@
-export const SITE_URL = "https://atelier-noir-dun.vercel.app";
+export const SITE_URL = "https://bryancar.com";
+export const SITE_URL_ALIAS = "https://atelier-noir-dun.vercel.app";
 export const SITE_NAME = "Bryan's Garage";
 export const SITE_NAME_ZH = "布萊恩車庫";
 export const SITE_DESCRIPTION = "台中進口車買賣、預約鑑賞 LINE";
@@ -15,6 +16,7 @@ export const jsonLdAutoDealer = {
   name: SITE_NAME,
   alternateName: SITE_NAME_ZH,
   url: SITE_URL,
+  sameAs: [SITE_URL_ALIAS],
   image: `${SITE_URL}/og.jpg`,
   description: SITE_DESCRIPTION,
   address: {
