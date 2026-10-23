@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FILLS, INTRO_TOTAL, MASK, SWASH } from "@/lib/intro-lettering";
+import { FILLS, FILL_TRANSFORM, INTRO_TOTAL, MASKS, VIEW_W } from "@/lib/intro-logo";
 
 const STORAGE_KEY = "ch-intro-seen";
 const EXIT_MS = 1100;
+const HOLD = 0.8;
+const CROP_Y = 120;
+const CROP_H = 570;
 
 export function Intro() {
   const [mounted, setMounted] = useState(true);
@@ -25,7 +28,7 @@ export function Intro() {
 
     root.classList.add("intro-lock");
     root.classList.remove("intro-seen");
-    const timer = window.setTimeout(finish, (INTRO_TOTAL + 1.2) * 1000 + EXIT_MS);
+    const timer = window.setTimeout(finish, (INTRO_TOTAL + HOLD) * 1000 + EXIT_MS + 100);
 
     function finish() {
       sessionStorage.setItem(STORAGE_KEY, "1");
@@ -53,43 +56,43 @@ export function Intro() {
   return (
     <div
       className={`intro${skipping ? " is-skipping" : ""}`}
-      style={{ ["--exit-delay" as string]: `${INTRO_TOTAL + 1.2}s` }}
+      style={{
+        ["--exit-delay" as string]: `${INTRO_TOTAL + HOLD}s`,
+        ["--caption-delay" as string]: `${INTRO_TOTAL - 0.5}s`,
+      }}
       onClick={() => setSkipping(true)}
       aria-hidden
     >
-      <svg className="intro-art" viewBox="0 0 1600 600" preserveAspectRatio="xMidYMid meet">
+      <svg
+        className="intro-art"
+        viewBox={`0 ${CROP_Y} ${VIEW_W} ${CROP_H}`}
+        preserveAspectRatio="xMidYMid meet"
+      >
         <defs>
-          <mask id="intro-write" maskUnits="userSpaceOnUse" x="0" y="0" width="1600" height="600">
-            <rect width="1600" height="600" fill="#000" />
-            <path
-              d={MASK.d}
-              pathLength={1}
-              className="intro-stroke"
-              strokeWidth={MASK.width}
-              style={{
-                ["--delay" as string]: `${MASK.delay}s`,
-                ["--dur" as string]: `${MASK.dur}s`,
-                ["--peak" as string]: 1,
-              }}
-            />
+          <mask id="intro-write" maskUnits="userSpaceOnUse" x="0" y={CROP_Y} width={VIEW_W} height={CROP_H}>
+            <rect x="0" y={CROP_Y} width={VIEW_W} height={CROP_H} fill="#000" />
+            {MASKS.map((m, i) => (
+              <path
+                key={i}
+                d={m.d}
+                pathLength={1}
+                className="intro-stroke"
+                strokeWidth={m.width}
+                style={{
+                  ["--delay" as string]: `${m.delay}s`,
+                  ["--dur" as string]: `${m.dur}s`,
+                }}
+              />
+            ))}
           </mask>
         </defs>
         <g mask="url(#intro-write)" className="intro-fill">
-          {FILLS.map((d, i) => (
-            <path key={i} d={d} />
-          ))}
+          <g transform={FILL_TRANSFORM} fillRule="evenodd">
+            {FILLS.map((d, i) => (
+              <path key={i} d={d} />
+            ))}
+          </g>
         </g>
-        <path
-          d={SWASH.d}
-          pathLength={1}
-          className="intro-stroke"
-          strokeWidth={SWASH.width}
-          style={{
-            ["--delay" as string]: `${SWASH.delay}s`,
-            ["--dur" as string]: `${SWASH.dur}s`,
-            ["--peak" as string]: SWASH.opacity ?? 1,
-          }}
-        />
       </svg>
 
       <div className="intro-caption">
