@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { FILLS, FILL_TRANSFORM, INTRO_TOTAL, MASKS, VIEW_W } from "@/lib/intro-logo";
 
 const STORAGE_KEY = "ch-intro-seen";
-const EXIT_MS = 1100;
-const HOLD = 0.8;
+const EXIT_MS = 900;
+const HOLD = 0.5;
 const CROP_Y = 120;
 const CROP_H = 570;
 
@@ -58,7 +58,7 @@ export function Intro() {
       className={`intro${skipping ? " is-skipping" : ""}`}
       style={{
         ["--exit-delay" as string]: `${INTRO_TOTAL + HOLD}s`,
-        ["--caption-delay" as string]: `${INTRO_TOTAL - 0.5}s`,
+        ["--caption-delay" as string]: `${INTRO_TOTAL - 0.9}s`,
       }}
       onClick={() => setSkipping(true)}
       aria-hidden
