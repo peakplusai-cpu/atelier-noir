@@ -47,6 +47,13 @@ create table if not exists cars (
 alter table cars drop constraint if exists cars_doors_check;
 alter table cars add constraint cars_doors_check check (doors in (2, 4, 5));
 
+create table if not exists site_settings (
+  id int primary key default 1 check (id = 1),
+  instagram text not null default '',
+  updated_at timestamptz not null default now()
+);
+
+alter table site_settings enable row level security;
 alter table admin enable row level security;
 alter table staff enable row level security;
 alter table cars enable row level security;

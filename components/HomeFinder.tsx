@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { BuybackLauncher } from "@/components/BuybackLauncher";
 import { HeroReel } from "@/components/HeroReel";
+import { InstagramButton } from "@/components/InstagramButton";
 import { Marquee } from "@/components/Marquee";
 import {
   brandOptions,
@@ -16,7 +17,15 @@ import {
 import { formatPrice, padIndex, statusLabel } from "@/lib/format";
 import type { Car, Staff } from "@/lib/types";
 
-export function HomeFinder({ cars, staff }: { cars: Car[]; staff: Staff[] }) {
+export function HomeFinder({
+  cars,
+  staff,
+  instagram,
+}: {
+  cars: Car[];
+  staff: Staff[];
+  instagram: string;
+}) {
   const [brand, setBrand] = useState("");
   const [doors, setDoors] = useState<DoorFilter>(0);
   const [price, setPrice] = useState<(typeof PRICE_RANGES)[number]["id"]>("any");
@@ -103,6 +112,7 @@ export function HomeFinder({ cars, staff }: { cars: Car[]; staff: Staff[] }) {
               查看庫存 {padIndex(matches.length)}
             </a>
             <BuybackLauncher staff={staff} />
+            <InstagramButton username={instagram} />
           </div>
         </div>
       </section>

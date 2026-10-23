@@ -1,8 +1,11 @@
 import Link from "next/link";
+import { InstagramButton } from "@/components/InstagramButton";
 import { LineLaunch } from "@/components/LineLaunch";
+import { getSettings } from "@/lib/settings";
 import type { Staff } from "@/lib/types";
 
-export function Footer({ staff }: { staff: Staff[] }) {
+export async function Footer({ staff }: { staff: Staff[] }) {
+  const { instagram } = await getSettings();
   return (
     <footer className="site-footer">
       <div className="footer-grid">
@@ -16,6 +19,11 @@ export function Footer({ staff }: { staff: Staff[] }) {
               ? "私人珍藏，僅接受預約鑑賞。請由下列顧問中擇一開啟 LINE，告知屬意車款與希望時段。"
               : "私人珍藏，僅接受預約鑑賞。真實業務 LINE 設定完成後，聯絡方式才會在此公開。"}
           </p>
+          {instagram ? (
+            <div className="footer-ig">
+              <InstagramButton username={instagram} />
+            </div>
+          ) : null}
         </div>
         <div>
           <p className="engraved">選擇顧問 · LINE</p>

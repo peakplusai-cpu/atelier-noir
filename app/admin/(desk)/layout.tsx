@@ -17,6 +17,7 @@ export default async function DeskLayout({ children }: { children: React.ReactNo
     { href: "/admin", label: "總覽" },
     { href: "/admin/cars", label: "庫存" },
     { href: "/admin/staff", label: "顧問 LINE" },
+    { href: "/admin/settings", label: "官網設定" },
   ];
 
   return (
