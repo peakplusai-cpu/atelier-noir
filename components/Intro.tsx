@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { INTRO_TOTAL, STROKES } from "@/lib/intro-lettering";
+import { FILLS, INTRO_TOTAL, MASK, SWASH } from "@/lib/intro-lettering";
 
 const STORAGE_KEY = "ch-intro-seen";
 const EXIT_MS = 1100;
@@ -57,32 +57,39 @@ export function Intro() {
       onClick={() => setSkipping(true)}
       aria-hidden
     >
-      <svg className="intro-art" viewBox="0 0 1600 520" preserveAspectRatio="xMidYMid meet">
+      <svg className="intro-art" viewBox="0 0 1600 600" preserveAspectRatio="xMidYMid meet">
         <defs>
-          <filter id="intro-glow" x="-5%" y="-5%" width="110%" height="110%">
-            <feGaussianBlur stdDeviation="0.8" result="b" />
-            <feMerge>
-              <feMergeNode in="b" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
-        <g filter="url(#intro-glow)">
-          {STROKES.map((s, i) => (
+          <mask id="intro-write" maskUnits="userSpaceOnUse" x="0" y="0" width="1600" height="600">
+            <rect width="1600" height="600" fill="#000" />
             <path
-              key={i}
-              d={s.d}
+              d={MASK.d}
               pathLength={1}
               className="intro-stroke"
-              strokeWidth={s.width}
+              strokeWidth={MASK.width}
               style={{
-                ["--delay" as string]: `${s.delay}s`,
-                ["--dur" as string]: `${s.dur}s`,
-                ["--peak" as string]: s.opacity ?? 1,
+                ["--delay" as string]: `${MASK.delay}s`,
+                ["--dur" as string]: `${MASK.dur}s`,
+                ["--peak" as string]: 1,
               }}
             />
+          </mask>
+        </defs>
+        <g mask="url(#intro-write)" className="intro-fill">
+          {FILLS.map((d, i) => (
+            <path key={i} d={d} />
           ))}
         </g>
+        <path
+          d={SWASH.d}
+          pathLength={1}
+          className="intro-stroke"
+          strokeWidth={SWASH.width}
+          style={{
+            ["--delay" as string]: `${SWASH.delay}s`,
+            ["--dur" as string]: `${SWASH.dur}s`,
+            ["--peak" as string]: SWASH.opacity ?? 1,
+          }}
+        />
       </svg>
 
       <div className="intro-caption">
