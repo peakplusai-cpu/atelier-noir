@@ -1,0 +1,30 @@
+import type { MetadataRoute } from "next";
+import { SITE_URL } from "@/lib/site";
+import { getStore } from "@/lib/store";
+
+export const dynamic = "force-dynamic";
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const now = new Date();
+  const entries: MetadataRoute.Sitemap = [
+    { url: SITE_URL, lastModified: now, changeFrequency: "weekly", priority: 1 },
+    { url: `${SITE_URL}/inquiry`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
+  ];
+
+  try {
+    const store = await getStore();
+    for (const car of store.cars) {
+      if (!car.published) continue;
+      entries.push({
+        url: `${SITE_URL}/cars/${car.slug}`,
+        lastModified: car.updatedAt ? new Date(car.updatedAt) : now,
+        changeFrequency: "weekly",
+        priority: 0.8,
+      });
+    }
+  } catch {
+    // Public pages still belong in the map if inventory is unreachable.
+  }
+
+  return entries;
+}
