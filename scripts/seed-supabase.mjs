@@ -1,10 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
-import { readFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const store = JSON.parse(readFileSync(join(root, "data", "store.json"), "utf8"));
+const demoPath = join(root, "supabase", "demo-seed.json");
+const storePath = join(root, "data", "store.json");
+const settingsPath = join(root, "data", "settings.json");
+
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!url || !key) {
@@ -12,34 +15,50 @@ if (!url || !key) {
   process.exit(1);
 }
 
+const demo = existsSync(demoPath) ? JSON.parse(readFileSync(demoPath, "utf8")) : { cars: [], staff: [], settings: {} };
+const local = existsSync(storePath) ? JSON.parse(readFileSync(storePath, "utf8")) : null;
+const localSettings = existsSync(settingsPath) ? JSON.parse(readFileSync(settingsPath, "utf8")) : {};
+
+const cars = (local?.cars?.length ? local.cars : demo.cars).filter(
+  (car) => car?.slug && !String(car.slug).startsWith("http")
+);
+const staff = local?.staff?.length ? local.staff : demo.staff;
+const settings = {
+  lineUrl: localSettings.lineUrl || demo.settings?.lineUrl || process.env.NEXT_PUBLIC_LINE_URL || "",
+  instagramUrl:
+    localSettings.instagramUrl || demo.settings?.instagramUrl || process.env.NEXT_PUBLIC_INSTAGRAM_URL || "",
+};
+
 const db = createClient(url, key, { auth: { persistSession: false } });
 
-if (store.admin) {
+if (local?.admin) {
   const { error } = await db.from("admin").upsert({
     id: 1,
-    password_hash: store.admin.passwordHash,
-    created_at: store.admin.createdAt,
+    password_hash: local.admin.passwordHash,
+    created_at: local.admin.createdAt,
   });
   if (error) throw error;
 }
 
-const { error: staffErr } = await db.from("staff").upsert(
-  store.staff.map((person) => ({
-    id: person.id,
-    display_name: person.displayName,
-    role: person.role,
-    line_url: person.lineUrl,
-    line_id: person.lineId,
-    note: person.note,
-    line_user_id: person.lineUserId,
-    sort_order: person.sortOrder,
-    created_at: person.createdAt,
-  }))
-);
-if (staffErr) throw staffErr;
+if (staff.length) {
+  const { error } = await db.from("staff").upsert(
+    staff.map((person) => ({
+      id: person.id,
+      display_name: person.displayName,
+      role: person.role,
+      line_url: person.lineUrl,
+      line_id: person.lineId,
+      note: person.note,
+      line_user_id: person.lineUserId,
+      sort_order: person.sortOrder,
+      created_at: person.createdAt,
+    }))
+  );
+  if (error) throw error;
+}
 
 const { error: carsErr } = await db.from("cars").upsert(
-  store.cars.map((car) => ({
+  cars.map((car) => ({
     id: car.id,
     slug: car.slug,
     make: car.make,
@@ -54,7 +73,12 @@ const { error: carsErr } = await db.from("cars").upsert(
     horsepower: car.horsepower,
     transmission: car.transmission,
     drivetrain: car.drivetrain,
-    options: car.options,
+    doors: car.doors,
+    body_type: car.bodyType,
+    displacement: car.displacement,
+    options: car.options ?? [],
+    specs: car.specs ?? [],
+    equipment: car.equipment ?? [],
     story: car.story,
     status: car.status,
     published: car.published,
@@ -65,4 +89,14 @@ const { error: carsErr } = await db.from("cars").upsert(
   }))
 );
 if (carsErr) throw carsErr;
-console.log("seeded", store.cars.length, "cars", store.staff.length, "staff");
+
+const { error: setErr } = await db.from("site_settings").upsert({
+  id: 1,
+  instagram: "",
+  line_url: settings.lineUrl,
+  instagram_url: settings.instagramUrl,
+  updated_at: new Date().toISOString(),
+});
+if (setErr) throw setErr;
+
+console.log("seeded", cars.length, "cars", staff.length, "staff");

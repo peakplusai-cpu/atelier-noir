@@ -1,4 +1,5 @@
--- 玄藏 Atelier Noir — independent schema. Do not run against other projects.
+-- Canonical schema. Same contents as supabase/migrations/20261024_anson_top_car.sql
+-- Apply in the Supabase SQL editor.
 
 create table if not exists admin (
   id int primary key default 1 check (id = 1),
@@ -33,7 +34,7 @@ create table if not exists cars (
   horsepower int not null default 0,
   transmission text not null default '',
   drivetrain text not null default '',
-  doors smallint not null default 4 check (doors in (2, 4, 5)),
+  doors smallint not null default 4,
   body_type text not null default 'sedan',
   displacement text not null default '',
   options jsonb not null default '[]'::jsonb,
@@ -48,6 +49,11 @@ create table if not exists cars (
   updated_at timestamptz not null default now()
 );
 
+alter table cars add column if not exists body_type text not null default 'sedan';
+alter table cars add column if not exists displacement text not null default '';
+alter table cars add column if not exists specs jsonb not null default '[]'::jsonb;
+alter table cars add column if not exists equipment jsonb not null default '[]'::jsonb;
+
 alter table cars drop constraint if exists cars_doors_check;
 alter table cars add constraint cars_doors_check check (doors in (2, 4, 5));
 
@@ -59,17 +65,28 @@ create table if not exists site_settings (
   updated_at timestamptz not null default now()
 );
 
-alter table site_settings enable row level security;
+alter table site_settings add column if not exists line_url text not null default '';
+alter table site_settings add column if not exists instagram_url text not null default '';
+
 alter table admin enable row level security;
 alter table staff enable row level security;
 alter table cars enable row level security;
+alter table site_settings enable row level security;
 
 drop policy if exists staff_public_read on staff;
-create policy staff_public_read on staff for select using (true);
+create policy staff_public_read on staff for select to anon, authenticated using (true);
 
 drop policy if exists cars_public_read on cars;
-create policy cars_public_read on cars for select using (published = true);
+create policy cars_public_read on cars for select to anon, authenticated using (published = true);
+
+drop policy if exists settings_public_read on site_settings;
+create policy settings_public_read on site_settings for select to anon, authenticated using (true);
 
 insert into storage.buckets (id, name, public)
 values ('uploads', 'uploads', true)
-on conflict (id) do nothing;
+on conflict (id) do update set public = true;
+
+drop policy if exists uploads_public_read on storage.objects;
+create policy uploads_public_read on storage.objects
+  for select to anon, authenticated
+  using (bucket_id = 'uploads');

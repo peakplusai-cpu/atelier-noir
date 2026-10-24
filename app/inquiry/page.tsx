@@ -3,7 +3,7 @@ import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { InquiryPicker } from "@/components/InquiryPicker";
 import { getSettings } from "@/lib/settings";
-import { getStore } from "@/lib/store";
+import { getPublishedCar, listPublicStaff } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
@@ -13,9 +13,11 @@ export default async function InquiryPage({
   searchParams: Promise<{ car?: string }>;
 }) {
   const { car: slug } = await searchParams;
-  const [store, settings] = await Promise.all([getStore(), getSettings()]);
-  const staff = [...store.staff].sort((a, b) => a.sortOrder - b.sortOrder);
-  const car = slug ? store.cars.find((item) => item.slug === slug && item.published) : undefined;
+  const [staff, settings, car] = await Promise.all([
+    listPublicStaff(),
+    getSettings(),
+    slug ? getPublishedCar(slug) : Promise.resolve(undefined),
+  ]);
 
   return (
     <>

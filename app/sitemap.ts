@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/site";
-import { getStore } from "@/lib/store";
+import { listPublishedCars } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
@@ -12,9 +12,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   try {
-    const store = await getStore();
-    for (const car of store.cars) {
-      if (!car.published) continue;
+    const cars = await listPublishedCars();
+    for (const car of cars) {
       entries.push({
         url: `${SITE_URL}/cars/${car.slug}`,
         lastModified: car.updatedAt ? new Date(car.updatedAt) : now,

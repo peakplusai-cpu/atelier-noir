@@ -3,7 +3,7 @@ import { join } from "path";
 import { NextResponse } from "next/server";
 import { isAuthenticated } from "@/lib/auth";
 import { uid } from "@/lib/id";
-import { supabaseAdmin, supabaseConfigured } from "@/lib/supabase";
+import { supabaseAdmin, supabaseAdminConfigured } from "@/lib/supabase";
 
 export async function POST(request: Request) {
   if (!(await isAuthenticated())) {
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
   const name = `${uid("up")}.${ext}`;
   const buffer = Buffer.from(await file.arrayBuffer());
 
-  if (supabaseConfigured()) {
+  if (supabaseAdminConfigured()) {
     const db = supabaseAdmin();
     const { error } = await db.storage.from("uploads").upload(name, buffer, {
       contentType: file.type || "image/jpeg",

@@ -5,16 +5,18 @@ import { Header } from "@/components/Header";
 import { bodyLabel, doorLabel } from "@/lib/catalog";
 import { formatMileage, formatPrice, statusLabel } from "@/lib/format";
 import { getSettings } from "@/lib/settings";
-import { getStore } from "@/lib/store";
+import { getPublishedCar, listPublicStaff } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 
 export default async function CarPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const [store, settings] = await Promise.all([getStore(), getSettings()]);
-  const car = store.cars.find((item) => item.slug === slug && item.published);
+  const [car, staff, settings] = await Promise.all([
+    getPublishedCar(slug),
+    listPublicStaff(),
+    getSettings(),
+  ]);
   if (!car) notFound();
-  const staff = [...store.staff].sort((a, b) => a.sortOrder - b.sortOrder);
   const cover = car.photos[0];
   const rest = car.photos.slice(1);
   const equipment = car.equipment.length ? car.equipment : car.options;

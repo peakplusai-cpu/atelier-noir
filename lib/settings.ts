@@ -1,6 +1,12 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
-import { supabaseAdmin, supabaseConfigured } from "./supabase";
+import {
+  supabaseAdmin,
+  supabaseAdminConfigured,
+  supabaseAnonConfigured,
+  supabaseConfigured,
+  supabasePublic,
+} from "./supabase";
 
 export type SiteSettings = {
   lineUrl: string;
@@ -34,7 +40,8 @@ function normalize(partial: Partial<SiteSettings> & { instagram?: string }): Sit
 export async function getSettings(): Promise<SiteSettings> {
   if (supabaseConfigured()) {
     try {
-      const { data, error } = await supabaseAdmin()
+      const db = supabaseAnonConfigured() ? supabasePublic() : supabaseAdmin();
+      const { data, error } = await db
         .from("site_settings")
         .select("instagram, line_url, instagram_url")
         .eq("id", 1)
@@ -73,7 +80,7 @@ function persist(settings: SiteSettings): void {
 }
 
 export async function saveSettings(settings: SiteSettings): Promise<void> {
-  if (supabaseConfigured()) {
+  if (supabaseAdminConfigured()) {
     const { error } = await supabaseAdmin()
       .from("site_settings")
       .upsert({
@@ -85,6 +92,9 @@ export async function saveSettings(settings: SiteSettings): Promise<void> {
       });
     if (error) throw error;
     return;
+  }
+  if (supabaseConfigured()) {
+    throw new Error("Saving contact URLs needs SUPABASE_SERVICE_ROLE_KEY");
   }
   persist(settings);
 }
