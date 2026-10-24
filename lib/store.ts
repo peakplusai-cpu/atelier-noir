@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "fs";
 import { dirname, join } from "path";
-import { parseDoors } from "./catalog";
-import type { Admin, Car, Staff, Store } from "./types";
+import { parseBodyType, parseDoors } from "./catalog";
+import type { Admin, Car, SpecRow, Staff, Store } from "./types";
 import { seedStore } from "./seed";
 import { supabaseAdmin, supabaseConfigured } from "./supabase";
 export { uid } from "./id";
@@ -31,10 +31,7 @@ function getJsonStore(): Store {
   jsonCache = {
     admin: parsed.admin ?? null,
     staff: parsed.staff ?? [],
-    cars: (parsed.cars ?? []).map((car) => ({
-      ...car,
-      doors: parseDoors(car.doors),
-    })),
+    cars: (parsed.cars ?? []).map(normalizeCar),
     sessions: parsed.sessions ?? [],
   };
   return jsonCache;
@@ -54,32 +51,55 @@ function rowToStaff(row: Record<string, unknown>): Staff {
   };
 }
 
-function rowToCar(row: Record<string, unknown>): Car {
+function asSpecs(value: unknown): SpecRow[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((row) => {
+      if (!row || typeof row !== "object") return null;
+      const rec = row as { label?: unknown; value?: unknown };
+      const label = String(rec.label ?? "").trim();
+      if (!label) return null;
+      return { label, value: String(rec.value ?? "") };
+    })
+    .filter((row): row is SpecRow => Boolean(row));
+}
+
+function normalizeCar(car: Partial<Car> & Record<string, unknown>): Car {
+  const options = Array.isArray(car.options) ? car.options.map(String) : [];
+  const equipment = Array.isArray(car.equipment) ? car.equipment.map(String) : options;
   return {
-    id: String(row.id),
-    slug: String(row.slug),
-    make: String(row.make),
-    makeEn: String(row.make_en ?? ""),
-    model: String(row.model),
-    year: Number(row.year),
-    price: Number(row.price),
-    mileage: Number(row.mileage ?? 0),
-    color: String(row.color ?? ""),
-    interior: String(row.interior ?? ""),
-    engine: String(row.engine ?? ""),
-    horsepower: Number(row.horsepower ?? 0),
-    transmission: String(row.transmission ?? ""),
-    drivetrain: String(row.drivetrain ?? ""),
-    doors: parseDoors(row.doors),
-    options: Array.isArray(row.options) ? (row.options as string[]) : [],
-    story: String(row.story ?? ""),
-    status: (row.status as Car["status"]) || "available",
-    published: Boolean(row.published),
-    featured: Boolean(row.featured),
-    photos: Array.isArray(row.photos) ? (row.photos as Car["photos"]) : [],
-    createdAt: String(row.created_at ?? ""),
-    updatedAt: String(row.updated_at ?? ""),
+    id: String(car.id),
+    slug: String(car.slug),
+    make: String(car.make ?? ""),
+    makeEn: String(car.makeEn ?? car.make_en ?? ""),
+    model: String(car.model ?? ""),
+    year: Number(car.year ?? 0),
+    price: Number(car.price ?? 0),
+    mileage: Number(car.mileage ?? 0),
+    color: String(car.color ?? ""),
+    interior: String(car.interior ?? ""),
+    engine: String(car.engine ?? ""),
+    displacement: String(car.displacement ?? car.engine ?? ""),
+    horsepower: Number(car.horsepower ?? 0),
+    transmission: String(car.transmission ?? ""),
+    drivetrain: String(car.drivetrain ?? ""),
+    doors: parseDoors(car.doors),
+    bodyType: parseBodyType(car.bodyType ?? car.body_type),
+    options,
+    specs: asSpecs(car.specs),
+    equipment,
+    story: String(car.story ?? ""),
+    status: (car.status as Car["status"]) || "available",
+    published: Boolean(car.published),
+    featured: Boolean(car.featured),
+    photos: Array.isArray(car.photos) ? (car.photos as Car["photos"]) : [],
+    createdAt: String(car.createdAt ?? car.created_at ?? ""),
+    updatedAt: String(car.updatedAt ?? car.updated_at ?? ""),
   };
+}
+
+function rowToCar(row: Record<string, unknown>): Car {
+  return normalizeCar(row);
 }
 
 async function getSupabaseStore(): Promise<Store> {
@@ -150,7 +170,11 @@ async function saveSupabaseStore(store: Store): Promise<void> {
       transmission: car.transmission,
       drivetrain: car.drivetrain,
       doors: car.doors,
+      body_type: car.bodyType,
+      displacement: car.displacement,
       options: car.options,
+      specs: car.specs,
+      equipment: car.equipment,
       story: car.story,
       status: car.status,
       published: car.published,

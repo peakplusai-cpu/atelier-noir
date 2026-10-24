@@ -10,7 +10,7 @@ export default function NotFound() {
         <h1>此車未公開</h1>
         <p className="inquiry-lead">頁面不存在，或車輛已下架。</p>
         <Link className="btn" href="/">
-          回到珍藏
+          回到庫存
         </Link>
       </main>
     </>

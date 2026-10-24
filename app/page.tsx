@@ -16,7 +16,7 @@ export default async function HomePage() {
     <>
       <Intro />
       <Header />
-      <HomeFinder cars={published} staff={staff} instagram={settings.instagram} />
+      <HomeFinder cars={published} lineUrl={settings.lineUrl} instagramUrl={settings.instagramUrl} />
       <Footer staff={staff} />
     </>
   );

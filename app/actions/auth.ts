@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { adminExists, createSession, destroySession, hashPassword, verifyPassword } from "@/lib/auth";
+import { adminExists, createSession, destroySession, hashPassword, passwordMatches } from "@/lib/auth";
 import { getStore, saveStore } from "@/lib/store";
 
 export async function setupAdmin(formData: FormData) {
@@ -29,7 +29,7 @@ export async function setupAdmin(formData: FormData) {
 export async function loginAdmin(formData: FormData) {
   const password = String(formData.get("password") ?? "");
   const store = await getStore();
-  if (!store.admin || !verifyPassword(password, store.admin.passwordHash)) {
+  if (!passwordMatches(password, store.admin?.passwordHash)) {
     redirect("/admin/login?error=invalid");
   }
   await createSession();

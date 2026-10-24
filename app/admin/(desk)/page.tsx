@@ -15,7 +15,7 @@ export default async function AdminHome() {
       <h1>總覽</h1>
       <p className="mute" style={{ marginBottom: 48, maxWidth: 420, lineHeight: 1.7 }}>
         {store.cars.length} 輛在庫，{published} 輛上架，{hidden} 輛未公開。{store.staff.length}{" "}
-        位顧問的 LINE 已出現在官網頁尾與預約頁。
+        位顧問。LINE / Instagram 請到「聯絡設定」。
       </p>
       <div className="row-actions" style={{ marginBottom: 48 }}>
         <Link className="btn" href="/admin/cars/new">

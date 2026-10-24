@@ -1,24 +1,16 @@
 import { cookies } from "next/headers";
-import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "crypto";
+import { hashPassword, verifyPassword } from "./password";
 import { getStore } from "./store";
+
+export { hashPassword, verifyPassword };
 
 const COOKIE = "atelier_session";
 const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
-const SECRET = process.env.SESSION_SECRET || "atelier-noir-local-session";
+const SECRET = process.env.SESSION_SECRET || "anson-top-car-local-session";
 
-export function hashPassword(password: string): string {
-  const salt = randomBytes(16).toString("hex");
-  const hash = scryptSync(password, salt, 64).toString("hex");
-  return `${salt}:${hash}`;
-}
-
-export function verifyPassword(password: string, stored: string): boolean {
-  const [salt, hash] = stored.split(":");
-  if (!salt || !hash) return false;
-  const test = scryptSync(password, salt, 64);
-  const expected = Buffer.from(hash, "hex");
-  if (expected.length !== test.length) return false;
-  return timingSafeEqual(expected, test);
+export function envAdminPassword(): string {
+  return process.env.ADMIN_PASSWORD || "";
 }
 
 function sign(value: string): string {
@@ -61,6 +53,14 @@ export async function isAuthenticated(): Promise<boolean> {
 }
 
 export async function adminExists(): Promise<boolean> {
+  if (envAdminPassword()) return true;
   const store = await getStore();
   return Boolean(store.admin);
+}
+
+export function passwordMatches(password: string, storedHash?: string | null): boolean {
+  const envPass = envAdminPassword();
+  if (envPass && password === envPass) return true;
+  if (storedHash && verifyPassword(password, storedHash)) return true;
+  return false;
 }

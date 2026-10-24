@@ -1,9 +1,16 @@
 export type CarStatus = "available" | "reserved" | "sold";
 
+export type BodyType = "sedan" | "suv" | "hatchback" | "coupe" | "wagon" | "mpv" | "sports";
+
 export type Photo = {
   id: string;
   url: string;
   alt: string;
+};
+
+export type SpecRow = {
+  label: string;
+  value: string;
 };
 
 export type Car = {
@@ -18,11 +25,15 @@ export type Car = {
   color: string;
   interior: string;
   engine: string;
+  displacement: string;
   horsepower: number;
   transmission: string;
   drivetrain: string;
   doors: 2 | 4 | 5;
+  bodyType: BodyType;
   options: string[];
+  specs: SpecRow[];
+  equipment: string[];
   story: string;
   status: CarStatus;
   published: boolean;

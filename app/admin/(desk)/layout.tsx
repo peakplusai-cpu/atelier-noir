@@ -17,14 +17,14 @@ export default async function DeskLayout({ children }: { children: React.ReactNo
     { href: "/admin", label: "總覽" },
     { href: "/admin/cars", label: "庫存" },
     { href: "/admin/staff", label: "顧問 LINE" },
-    { href: "/admin/settings", label: "官網設定" },
+    { href: "/admin/settings", label: "聯絡設定" },
   ];
 
   return (
     <div className="admin-shell">
       <aside className="admin-side">
         <Link href="/" className="wordmark">
-          <span className="wordmark-zh">Bryan&apos;s Garage</span>
+          <span className="wordmark-zh">安森頂車</span>
           <span className="wordmark-en">Staff</span>
         </Link>
         <nav>

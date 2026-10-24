@@ -3,10 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isAuthenticated } from "@/lib/auth";
+import { parseBodyType, parseDoors, parseSpecs } from "@/lib/catalog";
 import { slugify } from "@/lib/format";
 import { uid } from "@/lib/id";
 import { getStore, saveStore } from "@/lib/store";
-import { parseDoors } from "@/lib/catalog";
 import type { Car, CarStatus, Photo } from "@/lib/types";
 
 async function requireAuth() {
@@ -15,14 +15,24 @@ async function requireAuth() {
   }
 }
 
+function parseList(raw: string): string[] {
+  return raw
+    .split(/[\n,]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 function parseCar(formData: FormData, existing?: Car): Omit<Car, "id" | "createdAt"> {
   const make = String(formData.get("make") ?? "").trim();
   const makeEn = String(formData.get("makeEn") ?? "").trim();
   const model = String(formData.get("model") ?? "").trim();
   const year = Number(formData.get("year") ?? 0);
   const requestedSlug = String(formData.get("slug") ?? "").trim();
-  const slug = slugify(requestedSlug || `${makeEn || make}-${model}-${year}`) || uid("car");
-  const optionsRaw = String(formData.get("options") ?? "");
+  const slugSource =
+    !requestedSlug || /^https?:\/\//i.test(requestedSlug)
+      ? `${makeEn || make}-${model}-${year}`
+      : requestedSlug;
+  const slug = slugify(slugSource) || uid("car");
   const photoUrls = String(formData.get("photoUrls") ?? "")
     .split("\n")
     .map((line) => line.trim())
@@ -32,6 +42,7 @@ function parseCar(formData: FormData, existing?: Car): Omit<Car, "id" | "created
     url,
     alt: existing?.photos[index]?.alt || `${make} ${model}`,
   }));
+  const equipment = parseList(String(formData.get("equipment") ?? formData.get("options") ?? ""));
 
   return {
     slug,
@@ -44,14 +55,15 @@ function parseCar(formData: FormData, existing?: Car): Omit<Car, "id" | "created
     color: String(formData.get("color") ?? "").trim(),
     interior: String(formData.get("interior") ?? "").trim(),
     engine: String(formData.get("engine") ?? "").trim(),
+    displacement: String(formData.get("displacement") ?? "").trim(),
     horsepower: Number(formData.get("horsepower") ?? 0),
     transmission: String(formData.get("transmission") ?? "").trim(),
     drivetrain: String(formData.get("drivetrain") ?? "").trim(),
     doors: parseDoors(formData.get("doors")),
-    options: optionsRaw
-      .split(/[\n,]/)
-      .map((item) => item.trim())
-      .filter(Boolean),
+    bodyType: parseBodyType(formData.get("bodyType")),
+    options: equipment,
+    specs: parseSpecs(String(formData.get("specs") ?? "")),
+    equipment,
     story: String(formData.get("story") ?? "").trim(),
     status: (String(formData.get("status") ?? "available") as CarStatus) || "available",
     published: formData.get("published") === "on" || formData.get("published") === "true",
@@ -104,10 +116,11 @@ export async function updateCar(formData: FormData) {
 export async function togglePublish(formData: FormData) {
   await requireAuth();
   const id = String(formData.get("id") ?? "");
+  const next = String(formData.get("next") ?? "");
   const store = await getStore();
   const car = store.cars.find((item) => item.id === id);
   if (car) {
-    car.published = !car.published;
+    car.published = next === "1" ? true : next === "0" ? false : !car.published;
     car.updatedAt = new Date().toISOString();
     await saveStore(store);
   }

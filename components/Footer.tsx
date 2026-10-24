@@ -1,55 +1,47 @@
 import Link from "next/link";
-import { InstagramButton } from "@/components/InstagramButton";
+import { ContactButtons } from "@/components/ContactButtons";
 import { LineLaunch } from "@/components/LineLaunch";
 import { getSettings } from "@/lib/settings";
 import type { Staff } from "@/lib/types";
 
 export async function Footer({ staff }: { staff: Staff[] }) {
-  const { instagram } = await getSettings();
+  const settings = await getSettings();
   return (
     <footer className="site-footer">
       <div className="footer-grid">
-        <div className="footer-brand">
+        <div>
           <div className="wordmark">
-            <span className="wordmark-zh">Bryan&apos;s Garage</span>
-            <span className="wordmark-en">TXG</span>
+            <span className="wordmark-zh">安森頂車</span>
+            <span className="wordmark-en">Anson Top Car</span>
           </div>
           <p className="footer-note">
-            {staff.length
-              ? "私人珍藏，僅接受預約鑑賞。請由下列顧問中擇一開啟 LINE，告知屬意車款與希望時段。"
-              : "私人珍藏，僅接受預約鑑賞。真實業務 LINE 設定完成後，聯絡方式才會在此公開。"}
+            嚴選中古車，實車在店、實價標示。賞車、估價、貸款請直接 LINE
+            或 Instagram 私訊，我們會盡快回覆。
           </p>
-          {instagram ? (
-            <div className="footer-ig">
-              <InstagramButton username={instagram} />
-            </div>
-          ) : null}
+          <ContactButtons lineUrl={settings.lineUrl} instagramUrl={settings.instagramUrl} />
         </div>
         <div>
-          <p className="engraved">選擇顧問 · LINE</p>
+          <p className="engraved">顧問</p>
           {staff.length ? (
             <ul className="staff-list">
               {staff.map((person) => (
                 <li key={person.id}>
-                  <LineLaunch lineUrl={person.lineUrl} lineId={person.lineId}>
+                  <LineLaunch lineUrl={person.lineUrl || settings.lineUrl} lineId={person.lineId}>
                     <span className="name">{person.displayName}</span>
                     <span className="role">{person.role}</span>
-                    <span className="go">開啟聊天室</span>
+                    <span className="go">LINE</span>
                   </LineLaunch>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="empty-line">尚未設定公開聯絡人。</p>
+            <p className="empty-line">可使用上方 LINE / Instagram 與我們聯繫。</p>
           )}
         </div>
       </div>
       <div className="colophon">
-        <span>台中 · 預約制</span>
+        <span>台中 · 預約賞車</span>
         <Link href="/admin">員工入口</Link>
-      </div>
-      <div className="footer-logos">
-        <img src="/brand/brian-garage.jpg" alt="布萊恩車庫 Imported car sales" width={1774} height={887} loading="lazy" />
       </div>
     </footer>
   );

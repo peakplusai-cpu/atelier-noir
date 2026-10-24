@@ -34,7 +34,11 @@ create table if not exists cars (
   transmission text not null default '',
   drivetrain text not null default '',
   doors smallint not null default 4 check (doors in (2, 4, 5)),
+  body_type text not null default 'sedan',
+  displacement text not null default '',
   options jsonb not null default '[]'::jsonb,
+  specs jsonb not null default '[]'::jsonb,
+  equipment jsonb not null default '[]'::jsonb,
   story text not null default '',
   status text not null default 'available',
   published boolean not null default false,
@@ -50,6 +54,8 @@ alter table cars add constraint cars_doors_check check (doors in (2, 4, 5));
 create table if not exists site_settings (
   id int primary key default 1 check (id = 1),
   instagram text not null default '',
+  line_url text not null default '',
+  instagram_url text not null default '',
   updated_at timestamptz not null default now()
 );
 

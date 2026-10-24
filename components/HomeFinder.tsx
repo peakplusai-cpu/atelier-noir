@@ -2,200 +2,158 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { BuybackLauncher } from "@/components/BuybackLauncher";
+import { ContactButtons } from "@/components/ContactButtons";
 import { HeroReel } from "@/components/HeroReel";
-import { InstagramButton } from "@/components/InstagramButton";
-import { Marquee } from "@/components/Marquee";
 import {
+  BODY_TYPES,
+  YEAR_RANGES,
   brandOptions,
-  DOOR_OPTIONS,
-  doorLabel,
+  bodyLabel,
   filterCars,
   PRICE_RANGES,
-  type DoorFilter,
 } from "@/lib/catalog";
-import { formatPrice, padIndex, statusLabel } from "@/lib/format";
-import type { Car, Staff } from "@/lib/types";
+import { formatMileage, formatPrice, padIndex, statusLabel } from "@/lib/format";
+import type { Car } from "@/lib/types";
 
 export function HomeFinder({
   cars,
-  staff,
-  instagram,
+  lineUrl,
+  instagramUrl,
 }: {
   cars: Car[];
-  staff: Staff[];
-  instagram: string;
+  lineUrl: string;
+  instagramUrl: string;
 }) {
   const [brand, setBrand] = useState("");
-  const [doors, setDoors] = useState<DoorFilter>(0);
+  const [body, setBody] = useState("");
   const [price, setPrice] = useState<(typeof PRICE_RANGES)[number]["id"]>("any");
+  const [year, setYear] = useState<(typeof YEAR_RANGES)[number]["id"]>("any");
   const brands = useMemo(() => brandOptions(cars), [cars]);
-  const matches = useMemo(() => filterCars(cars, brand, doors, price), [cars, brand, doors, price]);
+  const matches = useMemo(
+    () => filterCars(cars, brand, body, price, year),
+    [cars, brand, body, price, year]
+  );
 
   return (
     <>
-      <section className="finder">
-        <HeroReel />
+      <section className="hero">
+        <HeroReel cars={cars.filter((car) => car.featured)} />
         <div className="hero-shade" />
-        <div className="hud">
-          <i />
-          <div className="hud-note">
-                24.116670° N<br />
-                120.655845° E
-          </div>
-        </div>
-        <div className="finder-panel">
-          <p className="hero-tag">
-            <span className="blip" />
-            台中 · 先選條件
-          </p>
-          <h1 className="finder-title">指定品牌</h1>
-
-          <fieldset className="finder-block">
-            <legend className="vh">指定品牌</legend>
-            <div className="finder-brands">
-              <button type="button" data-on={brand === ""} onClick={() => setBrand("")}>
-                全部
-              </button>
-              {brands.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  data-on={brand === item.id}
-                  onClick={() => setBrand(item.id)}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-          </fieldset>
-
-          <fieldset className="finder-block">
-            <legend>車門</legend>
-            <div className="finder-doors">
-              {DOOR_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  data-on={doors === option.value}
-                  onClick={() => setDoors(option.value)}
-                >
-                  <b>{option.code}</b>
-                  <span>{option.label}</span>
-                </button>
-              ))}
-              <button type="button" data-on={doors === 0} onClick={() => setDoors(0)}>
-                <b>ALL</b>
-                <span>不限</span>
-              </button>
-            </div>
-          </fieldset>
-
-          <fieldset className="finder-block">
-            <legend>價格區間</legend>
-            <div className="finder-prices">
-              {PRICE_RANGES.map((range) => (
-                <button
-                  key={range.id}
-                  type="button"
-                  data-on={price === range.id}
-                  onClick={() => setPrice(range.id)}
-                >
-                  {range.label}
-                </button>
-              ))}
-            </div>
-          </fieldset>
-
-          <div className="finder-actions">
-            <a className="btn finder-go" href="#collection">
-              查看庫存 {padIndex(matches.length)}
+        <div className="hero-copy">
+          <p className="engraved">台中 · 嚴選中古車</p>
+          <h1>安森頂車</h1>
+          <p className="lead">實車在店、標價公開。挑車、賞車、過戶，LINE 一則訊息即可開始。</p>
+          <div className="hero-actions">
+            <a className="btn btn-ghost" href="#inventory" style={{ color: "#fff", borderColor: "#fff" }}>
+              瀏覽庫存
             </a>
-            <BuybackLauncher staff={staff} />
-            <InstagramButton username={instagram} />
+            <ContactButtons lineUrl={lineUrl} instagramUrl={instagramUrl} inverted />
           </div>
         </div>
       </section>
 
-      <Marquee />
+      <section className="filter-bar" id="inventory">
+        <p className="engraved">Inventory</p>
+        <h2>在庫車輛</h2>
+        <div className="filter-row">
+          <span>廠牌</span>
+          <button type="button" data-on={brand === ""} onClick={() => setBrand("")}>
+            全部
+          </button>
+          {brands.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              data-on={brand === item.id}
+              onClick={() => setBrand(item.id)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+        <div className="filter-row">
+          <span>車型</span>
+          <button type="button" data-on={body === ""} onClick={() => setBody("")}>
+            全部
+          </button>
+          {BODY_TYPES.filter((item) => cars.some((car) => car.bodyType === item.id)).map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              data-on={body === item.id}
+              onClick={() => setBody(item.id)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+        <div className="filter-row">
+          <span>價格</span>
+          {PRICE_RANGES.map((range) => (
+            <button
+              key={range.id}
+              type="button"
+              data-on={price === range.id}
+              onClick={() => setPrice(range.id)}
+            >
+              {range.label}
+            </button>
+          ))}
+        </div>
+        <div className="filter-row">
+          <span>年份</span>
+          {YEAR_RANGES.map((range) => (
+            <button
+              key={range.id}
+              type="button"
+              data-on={year === range.id}
+              onClick={() => setYear(range.id)}
+            >
+              {range.label}
+            </button>
+          ))}
+        </div>
+      </section>
 
-      <section className="section" id="collection">
+      <section className="section">
         <div className="section-head">
           <div>
-            <p className="engraved">Inventory · 本期庫存</p>
-            <h2>Stock</h2>
+            <p className="engraved">符合條件</p>
+            <h2>{padIndex(matches.length)} 輛</h2>
           </div>
-          <span className="section-count">{padIndex(matches.length)}</span>
         </div>
         {matches.length ? (
-          <ol className="catalog">
-            {matches.map((car, i) => (
-              <li key={car.id}>
+          <ul className="grid">
+            {matches.map((car) => (
+              <li className="card" key={car.id}>
                 <Link href={`/cars/${car.slug}`}>
-                  <span className="idx">{padIndex(i + 1)}</span>
-                  <span className="make">{car.make}</span>
-                  <span className="model">
-                    {car.year} / {doorLabel(car.doors)} / {car.model}
-                  </span>
-                  <span className="price">{formatPrice(car.price)}</span>
-                  <span className="arrow">↗</span>
-                  {car.photos[0] ? <img className="row-thumb" src={car.photos[0].url} alt="" /> : null}
+                  <div className="card-media">
+                    {car.photos[0] ? (
+                      <img src={car.photos[0].url} alt={`${car.make} ${car.model}`} />
+                    ) : null}
+                  </div>
+                  <div className="card-meta">
+                    <p className="card-sub">
+                      {car.year} · {bodyLabel(car.bodyType)} · {statusLabel(car.status)}
+                    </p>
+                    <h3 className="card-title">
+                      {car.make} {car.model}
+                    </h3>
+                    <p className="card-sub">
+                      {formatMileage(car.mileage)} · {car.displacement || car.engine} · {car.transmission}
+                    </p>
+                    <p className="card-price">{formatPrice(car.price)}</p>
+                  </div>
                 </Link>
               </li>
             ))}
-          </ol>
+          </ul>
         ) : (
           <p className="empty-line">
-            {cars.length
-              ? "此條件目前沒有車輛。可改選品牌、車門或價格區間。"
-              : "尚無上架車輛。由員工後台新增並公開後，才會出現於此。"}
+            {cars.length ? "此條件目前沒有車輛，請放寬廠牌、價格、年份或車型。" : "尚無上架車輛。"}
           </p>
         )}
       </section>
-
-      {matches.map((car, i) => (
-        <article key={car.id} className="poster">
-          <div className="poster-media">
-            <img src={car.photos[0]?.url} alt={`${car.make} ${car.model}`} />
-            <span className="poster-ghost">{padIndex(i + 1)}</span>
-          </div>
-          <div className="poster-bar">
-            <div>
-              <p className="engraved">
-                <span className={`status-dot ${car.status}`} />
-                {statusLabel(car.status)} · {doorLabel(car.doors)}
-              </p>
-              <h3>{car.make}</h3>
-              <p className="poster-model">
-                {car.year} / {car.model}
-              </p>
-            </div>
-            <dl className="spec-row">
-              <div>
-                <dt>外色 Color</dt>
-                <dd>{car.color}</dd>
-              </div>
-              <div>
-                <dt>內裝 Interior</dt>
-                <dd>{car.interior}</dd>
-              </div>
-              <div>
-                <dt>動力 Power</dt>
-                <dd>
-                  {car.engine} · {car.horsepower} hp
-                </dd>
-              </div>
-              <div>
-                <dt>標價 Price</dt>
-                <dd>{formatPrice(car.price)}</dd>
-              </div>
-            </dl>
-            <Link className="btn" href={`/cars/${car.slug}`}>
-              完整規格 →
-            </Link>
-          </div>
-        </article>
-      ))}
     </>
   );
 }

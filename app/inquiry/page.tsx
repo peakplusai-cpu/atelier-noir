@@ -1,6 +1,8 @@
+import { ContactButtons } from "@/components/ContactButtons";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { InquiryPicker } from "@/components/InquiryPicker";
+import { getSettings } from "@/lib/settings";
 import { getStore } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +13,7 @@ export default async function InquiryPage({
   searchParams: Promise<{ car?: string }>;
 }) {
   const { car: slug } = await searchParams;
-  const store = await getStore();
+  const [store, settings] = await Promise.all([getStore(), getSettings()]);
   const staff = [...store.staff].sort((a, b) => a.sortOrder - b.sortOrder);
   const car = slug ? store.cars.find((item) => item.slug === slug && item.published) : undefined;
 
@@ -20,16 +22,19 @@ export default async function InquiryPage({
       <Header />
       <main className="inquiry">
         <p className="engraved">Appointment</p>
-        <h1>選擇顧問</h1>
-        <hr className="hairline" />
+        <h1>預約賞車</h1>
         <p className="inquiry-lead">
-          {!staff.length
-            ? "真實業務 LINE 尚未設定。完成設定前，網站不會顯示任何不存在或示範聯絡人。"
-            : car
-            ? `您正在詢問 ${car.make} ${car.year} ${car.model}。請選擇一位顧問，手機將直接打開 LINE 聊天室，並帶入車款訊息。`
-            : "請選擇一位顧問。手機點擊會直接打開 LINE 聊天室；電腦則會開啟 LINE 網頁。"}
+          {car
+            ? `您正在詢問 ${car.make} ${car.year} ${car.model}。請由 LINE 或 Instagram 與我們聯繫，或選擇顧問開啟聊天室。`
+            : "告訴我們想看的車款與方便時段。LINE、Instagram 皆可。"}
         </p>
-        <InquiryPicker staff={staff} carLabel={car ? `${car.make} ${car.model}` : ""} />
+        <ContactButtons lineUrl={settings.lineUrl} instagramUrl={settings.instagramUrl} />
+        {staff.length ? (
+          <div style={{ marginTop: 48 }}>
+            <p className="engraved">或指定顧問</p>
+            <InquiryPicker staff={staff} carLabel={car ? `${car.make} ${car.model}` : ""} />
+          </div>
+        ) : null}
       </main>
       <Footer staff={staff} />
     </>

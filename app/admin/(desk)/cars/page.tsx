@@ -43,6 +43,7 @@ export default async function AdminCarsPage() {
               <td>
                 <form action={togglePublish}>
                   <input type="hidden" name="id" value={car.id} />
+                  <input type="hidden" name="next" value={car.published ? "0" : "1"} />
                   <button className="btn btn-ghost" type="submit">
                     {car.published ? "下架" : "上架"}
                   </button>

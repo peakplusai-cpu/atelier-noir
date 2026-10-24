@@ -10,30 +10,30 @@ export function Header() {
     <>
       <header className="site-header">
         <Link href="/" className="wordmark" onClick={() => setOpen(false)}>
-          <span className="wordmark-zh">Bryan&apos;s Garage</span>
-          <span className="wordmark-en">TXG</span>
+          <span className="wordmark-zh">安森頂車</span>
+          <span className="wordmark-en">Anson Top Car</span>
         </Link>
         <nav className="nav">
-          <Link href="/#collection">庫存</Link>
-          <Link href="/inquiry">預約</Link>
+          <Link href="/#inventory">庫存</Link>
+          <Link href="/inquiry">預約賞車</Link>
           <Link href="/admin">員工</Link>
         </nav>
         <button className="nav-toggle" type="button" onClick={() => setOpen(true)}>
-          Menu
+          選單
         </button>
       </header>
       <div className={`mobile-nav${open ? " open" : ""}`}>
         <button className="nav-toggle" type="button" onClick={() => setOpen(false)}>
-          Close
+          關閉
         </button>
         <Link href="/" onClick={() => setOpen(false)}>
           首頁
         </Link>
-        <Link href="/#collection" onClick={() => setOpen(false)}>
+        <Link href="/#inventory" onClick={() => setOpen(false)}>
           庫存
         </Link>
         <Link href="/inquiry" onClick={() => setOpen(false)}>
-          預約
+          預約賞車
         </Link>
         <Link href="/admin" onClick={() => setOpen(false)}>
           員工

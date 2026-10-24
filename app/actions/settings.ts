@@ -3,17 +3,23 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isAuthenticated } from "@/lib/auth";
-import { parseInstagram } from "@/lib/instagram";
+import { parseContactUrl } from "@/lib/contacts";
 import { getSettings, saveSettings } from "@/lib/settings";
 
-export async function saveInstagram(formData: FormData) {
+export async function saveContacts(formData: FormData) {
   if (!(await isAuthenticated())) redirect("/admin/login");
-  const parsed = parseInstagram(String(formData.get("instagram") ?? ""));
-  if (!parsed.ok) redirect("/admin/settings?error=instagram");
+  const line = parseContactUrl(String(formData.get("lineUrl") ?? ""), "line");
+  const ig = parseContactUrl(String(formData.get("instagramUrl") ?? ""), "instagram");
+  if (!line.ok) redirect("/admin/settings?error=line");
+  if (!ig.ok) redirect("/admin/settings?error=instagram");
 
-  const current = await getSettings();
   try {
-    await saveSettings({ ...current, instagram: parsed.username });
+    const current = await getSettings();
+    await saveSettings({
+      ...current,
+      lineUrl: line.url,
+      instagramUrl: ig.url,
+    });
   } catch {
     redirect("/admin/settings?error=save");
   }

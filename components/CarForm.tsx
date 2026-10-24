@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { DOOR_OPTIONS } from "@/lib/catalog";
+import { BODY_TYPES, DOOR_OPTIONS, specsToText } from "@/lib/catalog";
 import type { Car } from "@/lib/types";
 
 export function CarForm({
@@ -38,24 +38,24 @@ export function CarForm({
       {car ? <input type="hidden" name="id" value={car.id} /> : null}
       <div className="form-grid">
         <div className="field">
-          <label htmlFor="make">廠牌</label>
-          <input id="make" name="make" required defaultValue={car?.make} />
+          <label htmlFor="make">廠牌（必填）</label>
+          <input id="make" name="make" required autoComplete="off" placeholder="Toyota" defaultValue={car?.make} />
         </div>
         <div className="field">
           <label htmlFor="makeEn">廠牌（英）</label>
-          <input id="makeEn" name="makeEn" defaultValue={car?.makeEn} />
+          <input id="makeEn" name="makeEn" autoComplete="off" placeholder="Toyota" defaultValue={car?.makeEn} />
         </div>
         <div className="field">
-          <label htmlFor="model">車型</label>
-          <input id="model" name="model" required defaultValue={car?.model} />
+          <label htmlFor="model">車型（必填）</label>
+          <input id="model" name="model" required autoComplete="off" placeholder="RAV4" defaultValue={car?.model} />
         </div>
         <div className="field">
-          <label htmlFor="year">年份</label>
-          <input id="year" name="year" type="number" required defaultValue={car?.year} />
+          <label htmlFor="year">年份（必填）</label>
+          <input id="year" name="year" type="number" min="1980" max="2035" required autoComplete="off" placeholder="2021" defaultValue={car?.year} />
         </div>
         <div className="field">
-          <label htmlFor="price">標價（TWD）</label>
-          <input id="price" name="price" type="number" required defaultValue={car?.price} />
+          <label htmlFor="price">標價 TWD（必填）</label>
+          <input id="price" name="price" type="number" min="0" step="1000" required autoComplete="off" placeholder="788000" defaultValue={car?.price} />
         </div>
         <div className="field">
           <label htmlFor="mileage">里程</label>
@@ -70,7 +70,11 @@ export function CarForm({
           <input id="interior" name="interior" defaultValue={car?.interior} />
         </div>
         <div className="field">
-          <label htmlFor="engine">引擎</label>
+          <label htmlFor="displacement">排氣量</label>
+          <input id="displacement" name="displacement" defaultValue={car?.displacement} placeholder="2.0L" />
+        </div>
+        <div className="field">
+          <label htmlFor="engine">引擎說明</label>
           <input id="engine" name="engine" defaultValue={car?.engine} />
         </div>
         <div className="field">
@@ -78,7 +82,7 @@ export function CarForm({
           <input id="horsepower" name="horsepower" type="number" defaultValue={car?.horsepower} />
         </div>
         <div className="field">
-          <label htmlFor="transmission">變速</label>
+          <label htmlFor="transmission">變速箱</label>
           <input id="transmission" name="transmission" defaultValue={car?.transmission} />
         </div>
         <div className="field">
@@ -90,6 +94,16 @@ export function CarForm({
           <select id="doors" name="doors" defaultValue={car?.doors ?? 4}>
             {DOOR_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="bodyType">車身型式</label>
+          <select id="bodyType" name="bodyType" defaultValue={car?.bodyType ?? "sedan"}>
+            {BODY_TYPES.map((option) => (
+              <option key={option.id} value={option.id}>
                 {option.label}
               </option>
             ))}
@@ -108,11 +122,19 @@ export function CarForm({
           <input id="slug" name="slug" defaultValue={car?.slug} />
         </div>
         <div className="field wide">
-          <label htmlFor="options">選配（逗號或換行）</label>
-          <textarea id="options" name="options" defaultValue={car?.options.join("\n")} />
+          <label htmlFor="specs">大小規格（每行：項目｜數值）</label>
+          <textarea id="specs" name="specs" defaultValue={car ? specsToText(car.specs) : ""} placeholder="車長｜4,600 mm" />
         </div>
         <div className="field wide">
-          <label htmlFor="story">故事／說明</label>
+          <label htmlFor="equipment">配備（逗號或換行）</label>
+          <textarea
+            id="equipment"
+            name="equipment"
+            defaultValue={(car?.equipment.length ? car.equipment : car?.options ?? []).join("\n")}
+          />
+        </div>
+        <div className="field wide">
+          <label htmlFor="story">說明</label>
           <textarea id="story" name="story" defaultValue={car?.story} />
         </div>
         <div className="field wide">
@@ -123,13 +145,7 @@ export function CarForm({
             value={photoUrls}
             onChange={(event) => setPhotoUrls(event.target.value)}
           />
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={(event) => onUpload(event.target.files)}
-            style={{ marginTop: 12, color: "var(--mute)" }}
-          />
+          <input type="file" accept="image/*" multiple onChange={(event) => onUpload(event.target.files)} />
           {uploading ? <p className="mute">上傳中…</p> : null}
         </div>
         <div className="field">
@@ -139,7 +155,7 @@ export function CarForm({
         </div>
         <div className="field">
           <label>
-            <input type="checkbox" name="featured" defaultChecked={car?.featured} /> 精選
+            <input type="checkbox" name="featured" defaultChecked={car?.featured} /> 精選（首頁主視覺）
           </label>
         </div>
       </div>
