@@ -17,7 +17,7 @@ export type BrandOption = {
 
 export const HOUSE_BRANDS: BrandOption[] = [
   { id: "bmw", label: "BMW", aliases: ["bmw"] },
-  { id: "mercedes", label: "賓士", aliases: ["mercedes", "benz", "賓士", "amg", "maybach"] },
+  { id: "mercedes", label: "BENZ", aliases: ["賓士", "mercedes", "mercedes-benz", "mercedes benz", "benz", "amg", "maybach"] },
   { id: "audi", label: "Audi", aliases: ["audi"] },
   { id: "porsche", label: "Porsche", aliases: ["porsche", "保時捷"] },
   { id: "ferrari", label: "Ferrari", aliases: ["ferrari", "法拉利"] },
