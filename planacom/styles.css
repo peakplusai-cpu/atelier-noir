@@ -385,12 +385,10 @@ h1 {
   gap: 12px;
 }
 .shot {
-  display: block;
+  margin: 0;
   padding: 8px;
   background: var(--bone);
-  text-decoration: none;
 }
-.shot:hover { outline: 2px solid var(--lacquer); }
 .shot img {
   display: block;
   width: 100%;
