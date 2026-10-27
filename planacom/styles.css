@@ -441,20 +441,7 @@ h1 {
 .footer-row { display: flex; justify-content: space-between; gap: 12px; }
 .footer-row p { margin: 0; }
 
-.now {
-  position: fixed;
-  right: 18px;
-  bottom: 16px;
-  z-index: 35;
-  margin: 0;
-  padding: 6px 10px;
-  background: var(--void);
-  color: var(--bone);
-  border: 1px solid var(--line);
-  font-family: var(--cond);
-  letter-spacing: 0.16em;
-  font-size: 14px;
-}
+section[id] { scroll-margin-top: var(--header); }
 
 @media (max-width: 899px) {
   .wrap { width: min(1180px, calc(100% - 32px)); }
@@ -472,9 +459,24 @@ h1 {
   .num { font-size: 84px; }
   .panel {
     grid-template-columns: 1fr;
-    align-content: end;
-    padding: 110px 24px 48px;
+    align-content: center;
+    min-height: calc(100svh - 120px);
+    padding: 96px 24px 72px;
   }
+  .reel-ui {
+    position: relative;
+    top: auto;
+    left: auto;
+    right: auto;
+    padding: 4px 0 12px;
+    gap: 10px;
+  }
+  section[id] { scroll-margin-top: 128px; }
+  .reel-ui .eyebrow { display: none; }
+  .panel-count,
+  .reel-nav button { white-space: nowrap; flex-shrink: 0; }
+  .reel-nav { margin-left: auto; }
+  .reel-nav button { padding: 0 10px; }
   .v-name {
     writing-mode: horizontal-tb;
     letter-spacing: -0.03em;
