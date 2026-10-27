@@ -62,29 +62,43 @@ button { font-family: inherit; color: inherit; background: none; }
   z-index: 70;
 }
 
-.shutter {
+.intro {
   position: fixed;
   inset: 0;
-  z-index: 60;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  background: var(--void);
   pointer-events: none;
+  animation: intro-out 0.65s cubic-bezier(0.77, 0, 0.18, 1) 2.35s forwards;
 }
-.shutter span {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 50%;
-  background: var(--lacquer);
+.intro-mark { width: min(74vmin, 640px); height: auto; }
+.ink { fill: none; stroke: #fff; }
+.ink-tri {
+  stroke-width: 60;
+  stroke-linecap: butt;
+  stroke-linejoin: miter;
+  stroke-miterlimit: 8;
+  stroke-dasharray: 2044;
+  stroke-dashoffset: 2044;
+  animation: draw 1.05s cubic-bezier(0.45, 0, 0.2, 1) 0.18s forwards;
 }
-.shutter span:first-child {
-  top: 0;
-  animation: shut-up 0.9s cubic-bezier(0.77, 0, 0.18, 1) 0.12s forwards;
+.ink-a {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  animation: draw 0.58s cubic-bezier(0.45, 0, 0.2, 1) forwards;
 }
-.shutter span:last-child {
-  bottom: 0;
-  animation: shut-down 0.9s cubic-bezier(0.77, 0, 0.18, 1) 0.12s forwards;
-}
-@keyframes shut-up { to { transform: translateY(-100%); } }
-@keyframes shut-down { to { transform: translateY(100%); } }
+.ink-a1 { stroke-width: 70; stroke-dasharray: 139; stroke-dashoffset: 139; animation-delay: 1.08s; }
+.ink-a2 { stroke-width: 72; stroke-dasharray: 204; stroke-dashoffset: 204; animation-delay: 1.16s; }
+.ink-a3 { stroke-width: 76; stroke-dasharray: 182; stroke-dashoffset: 182; animation-delay: 1.24s; }
+.ink-a4 { stroke-width: 74; stroke-dasharray: 163; stroke-dashoffset: 163; animation-delay: 1.32s; }
+.ink-a5 { stroke-width: 58; stroke-dasharray: 180; stroke-dashoffset: 180; animation-delay: 1.4s; }
+.ink-a6 { stroke-width: 76; stroke-dasharray: 127; stroke-dashoffset: 127; animation-delay: 1.48s; }
+.ink-a7 { stroke-width: 54; stroke-dasharray: 58; stroke-dashoffset: 58; animation-delay: 1.56s; }
+.ink-full { opacity: 0; animation: ink-full 0.28s ease 2.02s forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+@keyframes ink-full { to { opacity: 1; } }
+@keyframes intro-out { to { opacity: 0; visibility: hidden; } }
 
 .dot {
   position: fixed;
@@ -212,7 +226,7 @@ h1 {
   color: var(--lacquer);
   margin-left: 9vw;
   clip-path: inset(0 100% 0 0);
-  animation: wipe 0.85s cubic-bezier(0.77, 0, 0.18, 1) 0.55s forwards;
+  animation: wipe 0.85s cubic-bezier(0.77, 0, 0.18, 1) 2.45s forwards;
 }
 @keyframes wipe { to { clip-path: inset(0 0 0 0); } }
 
@@ -643,7 +657,7 @@ section[id] { scroll-margin-top: var(--header); }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .shutter { display: none; }
+  .intro { display: none; }
   .line-hot { clip-path: none; animation: none; }
   .marquee-track { animation: none; }
   .reason, .num { transition: none; }
