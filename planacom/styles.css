@@ -371,6 +371,76 @@ h1 {
 .pin:not(.is-active) .pin-track::-webkit-scrollbar { display: none; }
 .pin:not(.is-active) .panel { scroll-snap-align: start; }
 
+.work { padding: 12vh 0 6vh; }
+.work h2 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: clamp(40px, 5.4vw, 72px);
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
+.work-lead {
+  max-width: 36em;
+  margin: 18px 0 28px;
+  color: var(--bone-dim);
+}
+.case {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.78fr) 1.22fr;
+  gap: 28px 40px;
+  align-items: center;
+  padding: 56px 0;
+  border-top: 1px solid var(--line);
+}
+.case:last-child { border-bottom: 1px solid var(--line); }
+.case-kicker {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 10px;
+  font-family: var(--cond);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: var(--lacquer);
+}
+.case-kicker span {
+  font-size: 22px;
+  letter-spacing: 0.08em;
+}
+.case h3 {
+  margin: 0;
+  font-family: var(--cond);
+  font-weight: 700;
+  font-size: clamp(40px, 4.6vw, 68px);
+  line-height: 0.92;
+  letter-spacing: 0.01em;
+}
+.case-place {
+  margin: 10px 0 0;
+  letter-spacing: 0.08em;
+  color: var(--bone-dim);
+}
+.case p:last-of-type { margin: 12px 0 0; }
+.case-link {
+  display: inline-block;
+  margin-top: 16px;
+  text-decoration: none;
+  letter-spacing: 0.14em;
+  border-bottom: 2px solid var(--lacquer);
+}
+.case-link:hover { color: var(--lacquer); }
+.shot {
+  margin: 0;
+  padding: 10px;
+  background: var(--bone);
+}
+.shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 .start { padding: 12vh 0; }
 .steps {
   list-style: none;
@@ -569,7 +639,8 @@ section[id] { scroll-margin-top: var(--header); }
     font-size: 48px;
   }
   .panel-text { max-width: 12em; font-size: 28px; }
-  .steps, .contact-grid, .care { grid-template-columns: 1fr; }
+  .steps, .contact-grid, .care, .case { grid-template-columns: 1fr; }
+  .case { gap: 16px; padding: 36px 0; }
   .ledger { table-layout: auto; }
   .ledger caption { display: block; width: 100%; }
   .ledger thead {
