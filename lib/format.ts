@@ -1,4 +1,4 @@
-import type { CarStatus } from "./types";
+import type { Car, CarStatus } from "./types";
 
 export function formatPrice(n: number): string {
   return new Intl.NumberFormat("zh-TW", {
@@ -6,6 +6,11 @@ export function formatPrice(n: number): string {
     currency: "TWD",
     maximumFractionDigits: 0,
   }).format(n);
+}
+
+/** Show strikethrough original only when it is higher than the sale price. */
+export function hasDiscountPrice(car: Pick<Car, "price" | "originalPrice">): boolean {
+  return car.originalPrice != null && car.originalPrice > car.price;
 }
 
 export function formatMileage(n: number): string {

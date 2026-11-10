@@ -33,6 +33,10 @@ function getJsonStore(): Store {
     staff: parsed.staff ?? [],
     cars: (parsed.cars ?? []).map((car) => ({
       ...car,
+      originalPrice:
+        car.originalPrice === null || car.originalPrice === undefined
+          ? null
+          : Number(car.originalPrice),
       doors: parseDoors(car.doors),
     })),
     sessions: parsed.sessions ?? [],
@@ -63,6 +67,13 @@ function rowToCar(row: Record<string, unknown>): Car {
     model: String(row.model),
     year: Number(row.year),
     price: Number(row.price),
+    originalPrice: (() => {
+      if (row.original_price === null || row.original_price === undefined || row.original_price === "") {
+        return null;
+      }
+      const n = Number(row.original_price);
+      return Number.isFinite(n) ? n : null;
+    })(),
     mileage: Number(row.mileage ?? 0),
     color: String(row.color ?? ""),
     interior: String(row.interior ?? ""),
@@ -142,6 +153,7 @@ async function saveSupabaseStore(store: Store): Promise<void> {
       model: car.model,
       year: car.year,
       price: car.price,
+      original_price: car.originalPrice,
       mileage: car.mileage,
       color: car.color,
       interior: car.interior,

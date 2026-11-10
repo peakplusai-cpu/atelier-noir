@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BuybackLauncher } from "@/components/BuybackLauncher";
 import { HeroReel } from "@/components/HeroReel";
 import { InstagramButton } from "@/components/InstagramButton";
 import { Marquee } from "@/components/Marquee";
+import { PriceTag } from "@/components/PriceTag";
 import {
   brandOptions,
   DOOR_OPTIONS,
@@ -14,7 +15,7 @@ import {
   PRICE_RANGES,
   type DoorFilter,
 } from "@/lib/catalog";
-import { formatPrice, padIndex, statusLabel } from "@/lib/format";
+import { padIndex, statusLabel } from "@/lib/format";
 import type { Car, Staff } from "@/lib/types";
 
 export function HomeFinder({
@@ -29,8 +30,17 @@ export function HomeFinder({
   const [brand, setBrand] = useState("");
   const [doors, setDoors] = useState<DoorFilter>(0);
   const [price, setPrice] = useState<(typeof PRICE_RANGES)[number]["id"]>("any");
+  const [openId, setOpenId] = useState<string | null>(null);
   const brands = useMemo(() => brandOptions(cars), [cars]);
   const matches = useMemo(() => filterCars(cars, brand, doors, price), [cars, brand, doors, price]);
+
+  useEffect(() => {
+    setOpenId(null);
+  }, [brand, doors, price]);
+
+  function toggleRow(id: string) {
+    setOpenId((current) => (current === id ? null : id));
+  }
 
   return (
     <>
@@ -129,20 +139,54 @@ export function HomeFinder({
         </div>
         {matches.length ? (
           <ol className="catalog">
-            {matches.map((car, i) => (
-              <li key={car.id}>
-                <Link href={`/cars/${car.slug}`}>
-                  <span className="idx">{padIndex(i + 1)}</span>
-                  <span className="make">{car.make}</span>
-                  <span className="model">
-                    {car.year} / {doorLabel(car.doors)} / {car.model}
-                  </span>
-                  <span className="price">{formatPrice(car.price)}</span>
-                  <span className="arrow">↗</span>
-                  {car.photos[0] ? <img className="row-thumb" src={car.photos[0].url} alt="" /> : null}
-                </Link>
-              </li>
-            ))}
+            {matches.map((car, i) => {
+              const open = openId === car.id;
+              return (
+                <li key={car.id} data-open={open}>
+                  <div
+                    className="catalog-row"
+                    data-open={open}
+                    onClick={() => toggleRow(car.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        toggleRow(car.id);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={open}
+                  >
+                    <span className="idx">{padIndex(i + 1)}</span>
+                    <span className="catalog-copy">
+                      <span className="make">{car.makeEn || car.make}</span>
+                      <span className="model">
+                        {car.year} / {doorLabel(car.doors)} / {car.model}
+                      </span>
+                      <PriceTag car={car} className="price" />
+                    </span>
+                    {car.photos[0] ? (
+                      <img
+                        className="row-thumb"
+                        src={car.photos[0].url}
+                        alt=""
+                        data-open={open}
+                      />
+                    ) : (
+                      <span className="row-thumb row-thumb-empty" data-open={open} aria-hidden />
+                    )}
+                    <Link
+                      className="arrow"
+                      href={`/cars/${car.slug}`}
+                      aria-label={`${car.make} ${car.model} 詳情`}
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      ↗
+                    </Link>
+                  </div>
+                </li>
+              );
+            })}
           </ol>
         ) : (
           <p className="empty-line">
@@ -186,8 +230,10 @@ export function HomeFinder({
                 </dd>
               </div>
               <div>
-                <dt>標價 Price</dt>
-                <dd>{formatPrice(car.price)}</dd>
+                <dt>售價 Price</dt>
+                <dd>
+                  <PriceTag car={car} />
+                </dd>
               </div>
             </dl>
             <Link className="btn" href={`/cars/${car.slug}`}>

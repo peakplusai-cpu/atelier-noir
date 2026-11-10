@@ -14,6 +14,7 @@ export type Car = {
   model: string;
   year: number;
   price: number;
+  originalPrice: number | null;
   mileage: number;
   color: string;
   interior: string;

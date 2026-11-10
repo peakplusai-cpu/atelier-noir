@@ -54,7 +54,17 @@ export function CarForm({
           <input id="year" name="year" type="number" required defaultValue={car?.year} />
         </div>
         <div className="field">
-          <label htmlFor="price">標價（TWD）</label>
+          <label htmlFor="originalPrice">原價（TWD，選填）</label>
+          <input
+            id="originalPrice"
+            name="originalPrice"
+            type="number"
+            min={0}
+            defaultValue={car?.originalPrice ?? undefined}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="price">售價（TWD）</label>
           <input id="price" name="price" type="number" required defaultValue={car?.price} />
         </div>
         <div className="field">

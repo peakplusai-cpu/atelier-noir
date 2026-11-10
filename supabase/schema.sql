@@ -26,6 +26,7 @@ create table if not exists cars (
   model text not null,
   year int not null,
   price bigint not null,
+  original_price bigint,
   mileage int not null default 0,
   color text not null default '',
   interior text not null default '',
@@ -46,6 +47,8 @@ create table if not exists cars (
 
 alter table cars drop constraint if exists cars_doors_check;
 alter table cars add constraint cars_doors_check check (doors in (2, 4, 5));
+
+alter table cars add column if not exists original_price bigint;
 
 create table if not exists site_settings (
   id int primary key default 1 check (id = 1),

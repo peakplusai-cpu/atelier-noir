@@ -40,6 +40,12 @@ function parseCar(formData: FormData, existing?: Car): Omit<Car, "id" | "created
     model,
     year,
     price: Number(formData.get("price") ?? 0),
+    originalPrice: (() => {
+      const raw = String(formData.get("originalPrice") ?? "").trim();
+      if (!raw) return null;
+      const n = Number(raw);
+      return Number.isFinite(n) && n > 0 ? n : null;
+    })(),
     mileage: Number(formData.get("mileage") ?? 0),
     color: String(formData.get("color") ?? "").trim(),
     interior: String(formData.get("interior") ?? "").trim(),

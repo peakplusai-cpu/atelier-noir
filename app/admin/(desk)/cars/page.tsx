@@ -24,7 +24,8 @@ export default async function AdminCarsPage() {
             <th>年份</th>
             <th>車款</th>
             <th>車門</th>
-            <th>標價</th>
+            <th>售價</th>
+            <th>原價</th>
             <th>狀態</th>
             <th>公開</th>
             <th></th>
@@ -39,6 +40,7 @@ export default async function AdminCarsPage() {
               </td>
               <td>{doorLabel(car.doors)}</td>
               <td>{formatPrice(car.price)}</td>
+              <td>{car.originalPrice != null ? formatPrice(car.originalPrice) : "—"}</td>
               <td>{statusLabel(car.status)}</td>
               <td>
                 <form action={togglePublish}>

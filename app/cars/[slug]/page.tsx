@@ -3,8 +3,9 @@ import { notFound } from "next/navigation";
 import type { CSSProperties } from "react";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
+import { PriceTag } from "@/components/PriceTag";
 import { doorLabel } from "@/lib/catalog";
-import { formatMileage, formatPrice, statusLabel, titleUnits } from "@/lib/format";
+import { formatMileage, statusLabel, titleUnits } from "@/lib/format";
 import { getStore } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -41,8 +42,10 @@ export default async function CarPage({ params }: { params: Promise<{ slug: stri
 
       <div className="price-band">
         <div>
-          <p className="engraved">Price · 標價</p>
-          <strong>{formatPrice(car.price)}</strong>
+          <p className="engraved">Price · 售價</p>
+          <strong>
+            <PriceTag car={car} />
+          </strong>
         </div>
         <Link className="btn" href={`/inquiry?car=${car.slug}`}>
           預約鑑賞 →
@@ -71,8 +74,10 @@ export default async function CarPage({ params }: { params: Promise<{ slug: stri
             <dd>{car.year}</dd>
           </div>
           <div>
-            <dt>標價</dt>
-            <dd>{formatPrice(car.price)}</dd>
+            <dt>售價</dt>
+            <dd>
+              <PriceTag car={car} />
+            </dd>
           </div>
           <div>
             <dt>里程</dt>

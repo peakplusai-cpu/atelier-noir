@@ -533,35 +533,46 @@ img {
   border-bottom: 1px solid var(--hairline);
 }
 
-.catalog li a {
+.catalog-row {
   position: relative;
   display: grid;
-  grid-template-columns: 64px 1.5fr 1fr auto 40px;
-  gap: 24px;
+  grid-template-columns: 56px minmax(0, 1fr) 0fr 44px;
+  gap: 18px 20px;
   align-items: center;
-  padding: 30px 14px;
+  padding: 18px 12px;
   overflow: hidden;
   isolation: isolate;
-  transition: color 0.4s var(--ease), padding 0.6s var(--ease-out);
+  cursor: pointer;
+  color: var(--bone);
+  transition:
+    color 0.4s var(--ease),
+    padding 0.55s var(--ease-out),
+    min-height 0.55s var(--ease-out),
+    grid-template-columns 0.55s var(--ease-out);
+  min-height: 96px;
 }
 
-.catalog li a::before {
+.catalog-row::before {
   content: "";
   position: absolute;
   inset: 0;
   background: var(--bone);
   transform: scaleY(0);
-  transform-origin: bottom;
-  transition: transform 0.55s var(--ease-out);
+  transform-origin: center;
+  transition: transform 0.5s var(--ease-out);
   z-index: -1;
 }
 
-.catalog li a:hover {
+.catalog-row[data-open="true"] {
   color: var(--void);
-  padding-left: 28px;
+  padding-top: 28px;
+  padding-bottom: 28px;
+  padding-left: 18px;
+  min-height: 196px;
+  grid-template-columns: 56px minmax(0, 1.2fr) minmax(140px, 280px) 44px;
 }
 
-.catalog li a:hover::before {
+.catalog-row[data-open="true"]::before {
   transform: scaleY(1);
 }
 
@@ -570,6 +581,16 @@ img {
   font-size: 12px;
   letter-spacing: 0.1em;
   color: var(--signal);
+  align-self: start;
+  padding-top: 10px;
+}
+
+.catalog-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
 }
 
 .catalog .make {
@@ -577,62 +598,77 @@ img {
   font-weight: 800;
   font-stretch: 125%;
   text-transform: uppercase;
-  font-size: clamp(30px, 5.2vw, 84px);
+  font-size: clamp(26px, 4.6vw, 72px);
   letter-spacing: -0.04em;
-  line-height: 0.95;
+  line-height: 0.92;
   overflow-wrap: anywhere;
 }
 
 .catalog .model {
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--mute);
   transition: color 0.4s var(--ease);
 }
 
-.catalog li a:hover .model {
+.catalog-row[data-open="true"] .model {
   color: #4a4742;
 }
 
-.catalog .price {
+.catalog .price,
+.catalog .price-tag {
   font-family: var(--display);
   font-weight: 700;
-  font-size: clamp(16px, 1.7vw, 24px);
+  font-size: clamp(15px, 1.6vw, 22px);
   letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
 }
 
 .catalog .arrow {
   font-family: var(--mono);
   font-size: 22px;
   text-align: right;
-  transition: transform 0.5s var(--ease-out);
+  justify-self: end;
+  align-self: start;
+  padding-top: 6px;
+  color: inherit;
+  transition: transform 0.5s var(--ease-out), color 0.35s var(--ease);
 }
 
-.catalog li a:hover .arrow {
+.catalog-row[data-open="true"] .arrow {
   transform: translate(4px, -4px);
   color: var(--signal);
 }
 
 .row-thumb {
-  position: absolute;
-  right: 22%;
-  top: 50%;
-  width: 240px;
-  height: 150px;
+  width: 100%;
+  max-width: 280px;
+  height: 0;
   object-fit: cover;
-  transform: translateY(-50%) scale(0.85) rotate(-3deg);
+  justify-self: end;
   opacity: 0;
-  filter: contrast(1.15);
-  transition: opacity 0.4s var(--ease), transform 0.6s var(--ease-out);
+  filter: contrast(1.12);
+  transform: scale(0.92);
+  transition: opacity 0.4s var(--ease), transform 0.55s var(--ease-out), height 0.55s var(--ease-out);
   pointer-events: none;
+  overflow: hidden;
 }
 
-.catalog li a:hover .row-thumb {
+.row-thumb[data-open="true"] {
+  height: 150px;
   opacity: 1;
-  transform: translateY(-50%) scale(1) rotate(-3deg);
+  transform: scale(1);
+}
+
+.row-thumb-empty {
+  display: block;
+  background: transparent;
 }
 
 /* ——— posters ——— */
@@ -1031,6 +1067,30 @@ img {
   font-size: clamp(36px, 6vw, 92px);
   letter-spacing: -0.04em;
   line-height: 0.95;
+  font-variant-numeric: tabular-nums;
+}
+
+.price-tag {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.45em;
+}
+
+.price-was {
+  text-decoration: line-through;
+  opacity: 0.55;
+  font-weight: 600;
+  font-size: 0.62em;
+  letter-spacing: -0.02em;
+}
+
+.price-band .price-was {
+  font-size: 0.42em;
+  font-stretch: 100%;
+}
+
+.price-now {
   font-variant-numeric: tabular-nums;
 }
 
@@ -1899,12 +1959,6 @@ img {
   }
 }
 
-@media (hover: none) {
-  .row-thumb {
-    display: none;
-  }
-}
-
 /* ——— mobile ——— */
 
 @media (max-width: 900px) {
@@ -1995,20 +2049,49 @@ img {
     padding: 72px var(--pad) 80px;
   }
 
-  .catalog li a {
-    grid-template-columns: 36px 1fr auto;
-    gap: 6px 14px;
-    padding: 22px 0;
+  .catalog-row {
+    grid-template-columns: 32px minmax(0, 1fr) 40px;
+    grid-template-areas:
+      "idx copy arrow"
+      "thumb thumb thumb";
+    gap: 8px 12px;
+    padding: 16px 0;
+    min-height: 0;
   }
 
-  .catalog .model,
-  .catalog .price {
-    grid-column: 2;
+  .catalog .idx {
+    grid-area: idx;
+    padding-top: 8px;
+  }
+
+  .catalog-copy {
+    grid-area: copy;
   }
 
   .catalog .arrow {
-    grid-column: 3;
-    grid-row: 1;
+    grid-area: arrow;
+  }
+
+  .row-thumb {
+    grid-area: thumb;
+    max-width: none;
+    justify-self: stretch;
+  }
+
+  .row-thumb[data-open="true"] {
+    height: min(42vw, 180px);
+    margin-top: 4px;
+  }
+
+  .catalog-row[data-open="true"] {
+    padding-top: 18px;
+    padding-bottom: 18px;
+    padding-left: 8px;
+    min-height: 0;
+  }
+
+  .catalog .make {
+    font-size: clamp(24px, 9vw, 40px);
   }
 
   .poster-bar,
