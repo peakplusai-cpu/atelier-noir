@@ -15,7 +15,7 @@ import {
   PRICE_RANGES,
   type DoorFilter,
 } from "@/lib/catalog";
-import { padIndex, statusLabel } from "@/lib/format";
+import { padIndex } from "@/lib/format";
 import type { Car, Staff } from "@/lib/types";
 
 export function HomeFinder({
@@ -142,10 +142,10 @@ export function HomeFinder({
             {matches.map((car, i) => {
               const open = openId === car.id;
               return (
-                <li key={car.id} data-open={open}>
+                <li key={car.id} data-open={open ? "true" : "false"}>
                   <div
                     className="catalog-row"
-                    data-open={open}
+                    data-open={open ? "true" : "false"}
                     onClick={() => toggleRow(car.id)}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" || event.key === " ") {
@@ -165,16 +165,11 @@ export function HomeFinder({
                       </span>
                       <PriceTag car={car} className="price" />
                     </span>
-                    {car.photos[0] ? (
-                      <img
-                        className="row-thumb"
-                        src={car.photos[0].url}
-                        alt=""
-                        data-open={open}
-                      />
-                    ) : (
-                      <span className="row-thumb row-thumb-empty" data-open={open} aria-hidden />
-                    )}
+                    <span className="row-thumb-slot" data-open={open ? "true" : "false"} aria-hidden={!open}>
+                      {car.photos[0] ? (
+                        <img className="row-thumb" src={car.photos[0].url} alt="" />
+                      ) : null}
+                    </span>
                     <Link
                       className="arrow"
                       href={`/cars/${car.slug}`}
@@ -196,52 +191,6 @@ export function HomeFinder({
           </p>
         )}
       </section>
-
-      {matches.map((car, i) => (
-        <article key={car.id} className="poster">
-          <div className="poster-media">
-            <img src={car.photos[0]?.url} alt={`${car.make} ${car.model}`} />
-            <span className="poster-ghost">{padIndex(i + 1)}</span>
-          </div>
-          <div className="poster-bar">
-            <div>
-              <p className="engraved">
-                <span className={`status-dot ${car.status}`} />
-                {statusLabel(car.status)} · {doorLabel(car.doors)}
-              </p>
-              <h3>{car.make}</h3>
-              <p className="poster-model">
-                {car.year} / {car.model}
-              </p>
-            </div>
-            <dl className="spec-row">
-              <div>
-                <dt>外色 Color</dt>
-                <dd>{car.color}</dd>
-              </div>
-              <div>
-                <dt>內裝 Interior</dt>
-                <dd>{car.interior}</dd>
-              </div>
-              <div>
-                <dt>動力 Power</dt>
-                <dd>
-                  {car.engine} · {car.horsepower} hp
-                </dd>
-              </div>
-              <div>
-                <dt>售價 Price</dt>
-                <dd>
-                  <PriceTag car={car} />
-                </dd>
-              </div>
-            </dl>
-            <Link className="btn" href={`/cars/${car.slug}`}>
-              完整規格 →
-            </Link>
-          </div>
-        </article>
-      ))}
     </>
   );
 }
