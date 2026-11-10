@@ -15,7 +15,7 @@ import {
   PRICE_RANGES,
   type DoorFilter,
 } from "@/lib/catalog";
-import { padIndex } from "@/lib/format";
+import { padIndex, statusLabel } from "@/lib/format";
 import type { Car, Staff } from "@/lib/types";
 
 export function HomeFinder({
@@ -191,6 +191,52 @@ export function HomeFinder({
           </p>
         )}
       </section>
+
+      {matches.map((car, i) => (
+        <article key={car.id} className="poster">
+          <div className="poster-media">
+            <img src={car.photos[0]?.url} alt={`${car.make} ${car.model}`} />
+            <span className="poster-ghost">{padIndex(i + 1)}</span>
+          </div>
+          <div className="poster-bar">
+            <div>
+              <p className="engraved">
+                <span className={`status-dot ${car.status}`} />
+                {statusLabel(car.status)} · {doorLabel(car.doors)}
+              </p>
+              <h3>{car.make}</h3>
+              <p className="poster-model">
+                {car.year} / {car.model}
+              </p>
+            </div>
+            <dl className="spec-row">
+              <div>
+                <dt>外色 Color</dt>
+                <dd>{car.color}</dd>
+              </div>
+              <div>
+                <dt>內裝 Interior</dt>
+                <dd>{car.interior}</dd>
+              </div>
+              <div>
+                <dt>動力 Power</dt>
+                <dd>
+                  {car.engine} · {car.horsepower} hp
+                </dd>
+              </div>
+              <div>
+                <dt>售價 Price</dt>
+                <dd>
+                  <PriceTag car={car} />
+                </dd>
+              </div>
+            </dl>
+            <Link className="btn" href={`/cars/${car.slug}`}>
+              完整規格 →
+            </Link>
+          </div>
+        </article>
+      ))}
     </>
   );
 }
