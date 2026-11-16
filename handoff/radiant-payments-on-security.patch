@@ -1,0 +1,1985 @@
+From 50a77a8505087b23eab4511923ba3c8d9f77fcc7 Mon Sep 17 00:00:00 2001
+From: Cursor Agent <cursoragent@cursor.com>
+Date: Mon, 16 Nov 2026 13:52:26 +0000
+Subject: [PATCH] Add NewebPay payment, CVS pickup, and unpaid auto-cancel on
+ top of the security hardening
+
+---
+ .env.example                             |  10 ++
+ README.md                                |   8 +
+ app/actions/admin.ts                     |  16 ++
+ app/admin/(desk)/customers/[id]/page.tsx |  18 ++-
+ app/admin/(desk)/orders/[id]/page.tsx    |  14 +-
+ app/admin/(desk)/orders/page.tsx         |  16 +-
+ app/admin/(desk)/settings/page.tsx       |  26 ++-
+ app/api/checkout/route.ts                |   7 +-
+ app/api/cron/expire-orders/route.ts      |  15 ++
+ app/api/payment/newebpay/notify/route.ts |  11 ++
+ app/api/payment/newebpay/return/route.ts |  27 ++++
+ app/api/payment/newebpay/start/route.ts  |  55 +++++++
+ app/checkout/page.tsx                    |   8 +-
+ app/globals.css                          |  54 ++++++-
+ app/order/[code]/page.tsx                |  45 +++++-
+ components/CheckoutForm.tsx              | 114 +++++++++++--
+ components/OrderReceipt.tsx              |   8 +-
+ components/admin/CancelOrderButton.tsx   |   9 +-
+ components/admin/SettingsForm.tsx        |  90 ++++++++++-
+ lib/checkout.ts                          |  21 ++-
+ lib/cvs.ts                               |   1 +
+ lib/format.ts                            |  24 ++-
+ lib/http.ts                              |   2 +-
+ lib/newebpay.ts                          | 193 ++++++++++++++++++++++
+ lib/orders.ts                            | 198 +++++++++++++++++++++--
+ lib/payment.ts                           |  20 +++
+ lib/store.ts                             |  42 ++++-
+ lib/types.ts                             |  22 ++-
+ tests/checkout.test.ts                   |   4 +
+ tests/payment.test.ts                    | 155 ++++++++++++++++++
+ vercel.json                              |   3 +-
+ 31 files changed, 1178 insertions(+), 58 deletions(-)
+ create mode 100644 app/api/cron/expire-orders/route.ts
+ create mode 100644 app/api/payment/newebpay/notify/route.ts
+ create mode 100644 app/api/payment/newebpay/return/route.ts
+ create mode 100644 app/api/payment/newebpay/start/route.ts
+ create mode 100644 lib/cvs.ts
+ create mode 100644 lib/newebpay.ts
+ create mode 100644 lib/payment.ts
+ create mode 100644 tests/payment.test.ts
+
+diff --git a/.env.example b/.env.example
+index e1bcd3f..c7e8907 100644
+--- a/.env.example
++++ b/.env.example
+@@ -14,5 +14,15 @@ LINE_CHANNEL_ID=
+ LINE_CHANNEL_SECRET=
+ LINE_MESSAGING_TOKEN=
+ 
++# NewebPay (藍新金流) credentials. Prefer env vars over the admin form. Never commit real values.
++# NEWEBPAY_MODE=test | live (test uses ccore.newebpay.com, live uses core.newebpay.com)
++NEWEBPAY_MODE=
++NEWEBPAY_MERCHANT_ID=
++NEWEBPAY_HASH_KEY=
++NEWEBPAY_HASH_IV=
++
++# Optional: protects /api/cron/expire-orders (Vercel Cron sends it as a Bearer token)
++CRON_SECRET=
++
+ # Local-only: where the JSON data file lives (defaults to ./data/store.json)
+ RADIANT_DATA_FILE=
+diff --git a/README.md b/README.md
+index 77dc31c..abc8c32 100644
+--- a/README.md
++++ b/README.md
+@@ -68,6 +68,14 @@ git push -u origin main
+ 
+ 也可用環境變數 `LINE_CHANNEL_ID`、`LINE_CHANNEL_SECRET`、`LINE_MESSAGING_TOKEN`（後台填的值優先）。正式環境請設定 `SITE_ORIGIN`。
+ 
++## 線上付款（藍新金流）、超商取貨、未付款自動取消
++
++- 信用卡與 Apple Pay 走藍新 MPG：結帳送出後導向藍新付款頁，付款結果由藍新以 NotifyURL 通知（簽章與金額都會驗證，重複通知不會重複處理），客人返回網站會看到「付款完成」。
++- 金鑰（商店代號、HashKey、HashIV）建議放 Vercel 環境變數 `NEWEBPAY_MERCHANT_ID`、`NEWEBPAY_HASH_KEY`、`NEWEBPAY_HASH_IV`，也可在後台「設定 → 線上付款」填寫（只存伺服器，不會回傳到瀏覽器）。未通過審核前請用「測試環境」與藍新測試商店的金鑰；正式上線改成正式環境並換上正式金鑰。
++- 超商取貨：客人選 7-ELEVEN / 全家 / 萊爾富，自行填門市名稱與店號。出貨仍由店家手動處理；可另外允許「取貨付款」。
++- 未付款自動取消：訂單成立後超過設定天數（預設 7 天）仍未付款，會自動取消、歸還庫存並以 LINE 通知。每天由 `vercel.json` 的 Cron 執行 `/api/cron/expire-orders`，每次有人下單時也會順帶檢查。取貨付款的訂單不會被自動取消。
++- 客人在訂單已取消後才付款成功時，訂單會標記並通知店家到藍新後台退款。取消已付款的訂單不會自動退款。
++
+ ## 資料
+ 
+ 沒有設定 Supabase 時，資料存在 `data/store.json`、圖片存在 `data/uploads/`（皆不進版控），適合本機開發。
+diff --git a/app/actions/admin.ts b/app/actions/admin.ts
+index 261690d..7f0e435 100644
+--- a/app/actions/admin.ts
++++ b/app/actions/admin.ts
+@@ -268,6 +268,10 @@ export async function saveSettings(_prev: string, form: FormData): Promise<strin
+   } catch {
+     return "自取點資料格式不正確";
+   }
++  const hashKey = str(form, "payHashKey", 80);
++  const hashIV = str(form, "payHashIV", 80);
++  if (hashKey && hashKey.length !== 32) return "HashKey 應為 32 個字元，請重新確認";
++  if (hashIV && hashIV.length !== 16) return "HashIV 應為 16 個字元，請重新確認";
+   await mutate((store) => {
+     const settings = store.settings;
+     settings.shopName = str(form, "shopName", 40) || "Radiant";
+@@ -289,6 +293,18 @@ export async function saveSettings(_prev: string, form: FormData): Promise<strin
+     if (form.get("clearLoginSecret") === "on") settings.loginChannelSecret = "";
+     if (form.get("clearMessagingToken") === "on") settings.messagingToken = "";
+     settings.pickupPoints = sanitizePickupPoints(pickupPoints);
++    settings.cvsEnabled = form.get("cvsEnabled") === "on";
++    settings.cvsCodEnabled = form.get("cvsCodEnabled") === "on";
++    settings.payOnlineEnabled = form.get("payOnlineEnabled") === "on";
++    if (form.has("payMode")) settings.payMode = str(form, "payMode", 8) === "live" ? "live" : "test";
++    if (form.has("payMerchantId")) settings.payMerchantId = str(form, "payMerchantId", 40);
++    if (hashKey) settings.payHashKey = hashKey;
++    if (hashIV) settings.payHashIV = hashIV;
++    if (form.get("clearPayKeys") === "on") {
++      settings.payHashKey = "";
++      settings.payHashIV = "";
++    }
++    settings.unpaidCancelDays = Math.min(60, Math.max(0, Math.round(num(str(form, "unpaidCancelDays", 4)))));
+   });
+   revalidatePath("/", "layout");
+   return "已儲存";
+diff --git a/app/admin/(desk)/customers/[id]/page.tsx b/app/admin/(desk)/customers/[id]/page.tsx
+index a10d62f..700cc18 100644
+--- a/app/admin/(desk)/customers/[id]/page.tsx
++++ b/app/admin/(desk)/customers/[id]/page.tsx
+@@ -2,7 +2,7 @@ import Link from "next/link";
+ import { notFound } from "next/navigation";
+ import { getAdminStore } from "@/lib/auth";
+ import { saveCustomerNote, shipAllForCustomer } from "@/app/actions/admin";
+-import { formatDate, formatPrice, ORDER_STATUS_LABEL, OPEN_STATUSES } from "@/lib/format";
++import { formatDate, formatPrice, fulfillmentLabel, ORDER_STATUS_LABEL, OPEN_STATUSES } from "@/lib/format";
+ import { variantLabel } from "@/lib/variants";
+ import { PrintButton } from "@/components/admin/PrintButton";
+ 
+@@ -37,6 +37,8 @@ export default async function CustomerAdmin({
+   const itemsTotal = open.reduce((s, o) => s + o.subtotal, 0);
+   const shippingTotal = open.reduce((s, o) => s + o.shipping, 0);
+   const addresses = [...new Map(open.map((o) => [`${o.fulfillment}|${o.recipient}|${o.phone}|${o.address}`, o])).values()];
++  const onlinePaid = open.filter((o) => o.paymentMethod === "online" && o.paymentStatus === "paid").reduce((s, o) => s + o.total, 0);
++  const codDue = open.filter((o) => o.paymentMethod === "cod").reduce((s, o) => s + o.total, 0);
+   const notes = open.filter((o) => o.note).map((o) => `${o.code}：${o.note}`);
+   const spent = mine.filter((o) => o.status !== "cancelled").reduce((s, o) => s + o.total, 0);
+ 
+@@ -98,11 +100,23 @@ export default async function CustomerAdmin({
+                   </dd>
+                   <dt>應收總額</dt>
+                   <dd>{formatPrice(itemsTotal + shippingTotal)}</dd>
++                  {onlinePaid > 0 && (
++                    <>
++                      <dt>已線上付款</dt>
++                      <dd>{formatPrice(onlinePaid)}</dd>
++                    </>
++                  )}
++                  {codDue > 0 && (
++                    <>
++                      <dt>取貨付款（到店收）</dt>
++                      <dd>{formatPrice(codDue)}</dd>
++                    </>
++                  )}
+                   <dt>{addresses.length > 1 ? "收件資料（多組）" : "收件資料"}</dt>
+                   <dd>
+                     {addresses.map((o) => (
+                       <div key={o.id} style={{ marginBottom: 6 }}>
+-                        {o.fulfillment === "pickup" ? "自取" : "宅配"}　{o.recipient}　{o.phone}
++                        {fulfillmentLabel(o.fulfillment)}　{o.recipient}　{o.phone}
+                         <br />
+                         {o.address}
+                       </div>
+diff --git a/app/admin/(desk)/orders/[id]/page.tsx b/app/admin/(desk)/orders/[id]/page.tsx
+index b13465a..222cd92 100644
+--- a/app/admin/(desk)/orders/[id]/page.tsx
++++ b/app/admin/(desk)/orders/[id]/page.tsx
+@@ -39,6 +39,13 @@ export default async function OrderAdmin({
+       {error && <div className="notice error" style={{ marginBottom: 24 }}>狀態無法這樣變更。</div>}
+       {cancelled && <div className="notice" style={{ marginBottom: 24 }}>訂單已取消，庫存已加回商品。</div>}
+ 
++      {order.paymentMethod === "online" && order.paymentStatus === "paid" && (
++        <div className="notice" style={{ marginBottom: 24 }}>
++          已線上付款{order.payTradeNo ? `，藍新交易序號 ${order.payTradeNo}` : ""}。
++          {locked ? "此單已取消，請確認已在藍新金流後台完成退款。" : ""}
++        </div>
++      )}
++
+       <div className="form-grid">
+         <OrderReceipt order={order} />
+         <div>
+@@ -110,7 +117,12 @@ export default async function OrderAdmin({
+                 <p style={{ fontSize: 13, color: "var(--muted)", margin: "16px 0 12px" }}>
+                   取消後無法恢復，商品庫存會自動加回。
+                 </p>
+-                <CancelOrderButton orderId={order.id} code={order.code} warnShipped={order.status === "shipped"} />
++                <CancelOrderButton
++                  orderId={order.id}
++                  code={order.code}
++                  warnShipped={order.status === "shipped"}
++                  warnPaid={order.paymentMethod === "online" && order.paymentStatus === "paid"}
++                />
+               </div>
+             )}
+           </section>
+diff --git a/app/admin/(desk)/orders/page.tsx b/app/admin/(desk)/orders/page.tsx
+index db9e807..25dc065 100644
+--- a/app/admin/(desk)/orders/page.tsx
++++ b/app/admin/(desk)/orders/page.tsx
+@@ -1,6 +1,6 @@
+ import Link from "next/link";
+ import { getAdminStore } from "@/lib/auth";
+-import { formatDate, formatPrice, ORDER_STATUS_LABEL, ORDER_STATUSES, OPEN_STATUSES } from "@/lib/format";
++import { formatDate, formatPrice, paymentSummary, ORDER_STATUS_LABEL, ORDER_STATUSES, OPEN_STATUSES } from "@/lib/format";
+ import { CancelOrderButton } from "@/components/admin/CancelOrderButton";
+ import type { OrderStatus } from "@/lib/types";
+ 
+@@ -18,7 +18,7 @@ export default async function OrdersAdmin({ searchParams }: { searchParams: Prom
+     .filter((o) => {
+       if (!q) return true;
+       const c = byId.get(o.customerId);
+-      return `${o.code} ${o.recipient} ${o.phone} ${o.pickupPointName} ${o.address} ${c?.lineName ?? ""} ${c?.lineId ?? ""}`.toLowerCase().includes(q);
++      return `${o.code} ${o.recipient} ${o.phone} ${o.pickupPointName} ${o.address} ${o.cvsStoreName} ${o.cvsStoreCode} ${c?.lineName ?? ""} ${c?.lineId ?? ""}`.toLowerCase().includes(q);
+     })
+     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+ 
+@@ -90,6 +90,9 @@ export default async function OrdersAdmin({ searchParams }: { searchParams: Prom
+                     {o.fulfillment === "pickup" && (
+                       <div style={{ fontSize: 12.5, color: "var(--teal-deep)", marginTop: 2 }}>自取{o.pickupPointName ? ` · ${o.pickupPointName}` : ""}</div>
+                     )}
++                    {o.fulfillment === "cvs" && (
++                      <div style={{ fontSize: 12.5, color: "var(--teal-deep)", marginTop: 2 }}>超商 · {o.address}</div>
++                    )}
+                   </td>
+                   <td style={{ maxWidth: 260, fontSize: 13, color: "var(--muted)" }}>
+                     {o.items.map((i) => `${i.name} ${i.color}×${i.qty}`).join("、")}
+@@ -99,11 +102,18 @@ export default async function OrdersAdmin({ searchParams }: { searchParams: Prom
+                     <span className={`badge${OPEN_STATUSES.includes(o.status) ? " on" : o.status === "cancelled" ? " mute" : ""}`}>
+                       {ORDER_STATUS_LABEL[o.status]}
+                     </span>
++                    {o.status !== "cancelled" && (
++                      <div style={{ marginTop: 4 }}>
++                        <span className={`pay-tag${o.paymentStatus === "paid" ? " paid" : o.paymentMethod === "online" ? " due" : ""}`}>
++                          {paymentSummary(o)}
++                        </span>
++                      </div>
++                    )}
+                   </td>
+                   <td className="num right">{formatPrice(o.total)}</td>
+                   <td>
+                     {o.status !== "cancelled" && o.status !== "completed" && (
+-                      <CancelOrderButton orderId={o.id} code={o.code} compact />
++                      <CancelOrderButton orderId={o.id} code={o.code} compact warnPaid={o.paymentMethod === "online" && o.paymentStatus === "paid"} />
+                     )}
+                   </td>
+                 </tr>
+diff --git a/app/admin/(desk)/settings/page.tsx b/app/admin/(desk)/settings/page.tsx
+index a58b0e6..4b6b37a 100644
+--- a/app/admin/(desk)/settings/page.tsx
++++ b/app/admin/(desk)/settings/page.tsx
+@@ -1,15 +1,27 @@
+ import { getAdminStore } from "@/lib/auth";
+ import { lineConfig, lineLoginEnabled, siteOrigin } from "@/lib/line";
++import { payConfig } from "@/lib/newebpay";
+ import { SettingsForm } from "@/components/admin/SettingsForm";
+ import { TotpPanel } from "@/components/admin/TotpPanel";
+ 
+ export default async function SettingsPage() {
+   const { settings, admin } = await getAdminStore();
+   const cfg = lineConfig(settings);
+-  const { secret: _s, loginChannelSecret: _l, messagingToken: _m, ...safe } = settings;
++  const pay = payConfig(settings);
++  const {
++    secret: _s,
++    loginChannelSecret: _l,
++    messagingToken: _m,
++    payHashKey: _k,
++    payHashIV: _v,
++    ...safe
++  } = settings;
+   void _s;
+   void _l;
+   void _m;
++  void _k;
++  void _v;
++  const origin = await siteOrigin();
+   return (
+     <>
+       <div className="admin-head">
+@@ -22,7 +34,17 @@ export default async function SettingsPage() {
+         settings={safe}
+         hasLoginSecret={Boolean(cfg.loginSecret)}
+         hasMessagingToken={Boolean(cfg.messagingToken)}
+-        callbackUrl={`${await siteOrigin()}/api/line/callback`}
++        callbackUrl={`${origin}/api/line/callback`}
++        pay={{
++          ready: pay.ready,
++          mode: pay.mode,
++          hasKeys: pay.hashKey.length === 32 && pay.hashIV.length === 16,
++          keysFromEnv: pay.fromEnv.hashKey && pay.fromEnv.hashIV,
++          merchantFromEnv: pay.fromEnv.merchantId,
++          modeFromEnv: pay.fromEnv.mode,
++          notifyUrl: `${origin}/api/payment/newebpay/notify`,
++          returnUrl: `${origin}/api/payment/newebpay/return`,
++        }}
+         loginReady={lineLoginEnabled(settings)}
+       />
+       <TotpPanel enabled={Boolean(admin?.totpSecret)} />
+diff --git a/app/api/checkout/route.ts b/app/api/checkout/route.ts
+index 2d81911..5bb0063 100644
+--- a/app/api/checkout/route.ts
++++ b/app/api/checkout/route.ts
+@@ -38,13 +38,18 @@ export async function POST(request: Request) {
+       address: parsed.data.address,
+       fulfillment: parsed.data.fulfillment,
+       pickupPointId: parsed.data.pickupPointId,
++      cvsBrand: parsed.data.cvsBrand,
++      cvsStoreName: parsed.data.cvsStoreName,
++      cvsStoreCode: parsed.data.cvsStoreCode,
++      paymentMethod: parsed.data.paymentMethod,
+       note: parsed.data.note,
+       idempotencyKey: parsed.data.idempotencyKey,
+       identity: identity.identity,
+     });
+     if (!result.ok) return NextResponse.json({ error: result.error }, { status: 409 });
+     await grantReceipt(result.order.code);
+-    return NextResponse.json({ code: result.order.code });
++    const payUrl = result.order.paymentMethod === "online" ? `/api/payment/newebpay/start?code=${result.order.code}` : undefined;
++    return NextResponse.json({ code: result.order.code, payUrl });
+   } catch {
+     console.error("checkout failed");
+     return NextResponse.json({ error: "系統忙碌，請稍後再試" }, { status: 500 });
+diff --git a/app/api/cron/expire-orders/route.ts b/app/api/cron/expire-orders/route.ts
+new file mode 100644
+index 0000000..7d841d6
+--- /dev/null
++++ b/app/api/cron/expire-orders/route.ts
+@@ -0,0 +1,15 @@
++import { NextResponse } from "next/server";
++import { sweepExpiredOrders } from "@/lib/orders";
++import { safeEqual } from "@/lib/auth";
++
++export const dynamic = "force-dynamic";
++
++export async function GET(request: Request) {
++  const secret = process.env.CRON_SECRET;
++  if (secret) {
++    const header = request.headers.get("authorization") ?? "";
++    if (!safeEqual(header, `Bearer ${secret}`)) return new NextResponse("unauthorized", { status: 401 });
++  }
++  const cancelled = await sweepExpiredOrders();
++  return NextResponse.json({ cancelled });
++}
+diff --git a/app/api/payment/newebpay/notify/route.ts b/app/api/payment/newebpay/notify/route.ts
+new file mode 100644
+index 0000000..2ba7d8f
+--- /dev/null
++++ b/app/api/payment/newebpay/notify/route.ts
+@@ -0,0 +1,11 @@
++import { NextResponse } from "next/server";
++import { processCallback } from "@/lib/payment";
++
++export const dynamic = "force-dynamic";
++
++export async function POST(request: Request) {
++  const raw = await request.text().catch(() => "");
++  const result = await processCallback(new URLSearchParams(raw));
++  if (!result.verified) return new NextResponse("invalid", { status: 400 });
++  return new NextResponse("OK", { status: 200 });
++}
+diff --git a/app/api/payment/newebpay/return/route.ts b/app/api/payment/newebpay/return/route.ts
+new file mode 100644
+index 0000000..86f2fc0
+--- /dev/null
++++ b/app/api/payment/newebpay/return/route.ts
+@@ -0,0 +1,27 @@
++import { NextResponse } from "next/server";
++import { processCallback } from "@/lib/payment";
++import { siteOrigin } from "@/lib/line";
++import { grantReceipt } from "@/lib/receipt";
++
++export const dynamic = "force-dynamic";
++
++async function finish(raw: string) {
++  const origin = await siteOrigin();
++  const result = await processCallback(new URLSearchParams(raw));
++  if (!result.verified) return NextResponse.redirect(new URL("/", origin), 303);
++  const { outcome } = result;
++  if (outcome.kind === "unknown") return NextResponse.redirect(new URL("/", origin), 303);
++  const { order } = outcome;
++  await grantReceipt(order.code);
++  const back = new URL(`/order/${order.code}`, origin);
++  back.searchParams.set("pay", outcome.kind === "paid" || outcome.kind === "duplicate" ? "ok" : "failed");
++  return NextResponse.redirect(back, 303);
++}
++
++export async function POST(request: Request) {
++  return finish(await request.text().catch(() => ""));
++}
++
++export async function GET() {
++  return NextResponse.redirect(new URL("/", await siteOrigin()), 303);
++}
+diff --git a/app/api/payment/newebpay/start/route.ts b/app/api/payment/newebpay/start/route.ts
+new file mode 100644
+index 0000000..2c9df1a
+--- /dev/null
++++ b/app/api/payment/newebpay/start/route.ts
+@@ -0,0 +1,55 @@
++import { NextResponse } from "next/server";
++import { getStore } from "@/lib/store";
++import { getLineIdentity, siteOrigin } from "@/lib/line";
++import { hasReceiptGrant } from "@/lib/receipt";
++import { clientIp } from "@/lib/http";
++import { rateLimit } from "@/lib/rate-limit";
++import { startPayment } from "@/lib/orders";
++import { buildMpgForm, payConfig } from "@/lib/newebpay";
++
++export const dynamic = "force-dynamic";
++
++function esc(value: string): string {
++  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
++}
++
++export async function GET(request: Request) {
++  const url = new URL(request.url);
++  const code = (url.searchParams.get("code") ?? "").slice(0, 40);
++  const origin = await siteOrigin();
++  const limit = rateLimit(`pay-start:${clientIp(request.headers)}`, 20, 10 * 60 * 1000);
++  if (!limit.ok) return new NextResponse("請求太頻繁，請稍後再試", { status: 429 });
++
++  const identity = await getLineIdentity();
++  const started = await startPayment(code, {
++    granted: await hasReceiptGrant(code),
++    lineUserId: identity?.userId ?? "",
++  });
++  if (!started.ok) {
++    if (!started.order) return new NextResponse("找不到訂單", { status: 404 });
++    const back = new URL(`/order/${code}`, origin);
++    back.searchParams.set("payerr", started.error);
++    return NextResponse.redirect(back, 303);
++  }
++
++  const { settings } = await getStore();
++  const cfg = payConfig(settings);
++  const names = started.order.items.map((i) => i.name);
++  const itemDesc = names.length > 1 ? `${names[0]} 等 ${names.length} 項` : names[0] ?? "Radiant 訂單";
++  const form = buildMpgForm({
++    cfg,
++    orderNo: started.orderNo,
++    amount: started.order.total,
++    itemDesc: `Radiant ${itemDesc}`,
++    returnUrl: `${origin}/api/payment/newebpay/return`,
++    notifyUrl: `${origin}/api/payment/newebpay/notify`,
++    clientBackUrl: `${origin}/order/${code}`,
++  });
++  const inputs = Object.entries(form.fields)
++    .map(([k, v]) => `<input type="hidden" name="${esc(k)}" value="${esc(v)}">`)
++    .join("");
++  const html = `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>前往付款</title></head><body style="font-family:sans-serif;text-align:center;padding:64px 16px;color:#334"><p>正在前往藍新金流付款頁…</p><form id="pay" method="post" action="${esc(form.action)}">${inputs}<noscript><button type="submit">前往付款</button></noscript></form><script>document.getElementById("pay").submit()</script></body></html>`;
++  return new NextResponse(html, {
++    headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
++  });
++}
+diff --git a/app/checkout/page.tsx b/app/checkout/page.tsx
+index 49e06b5..4d9824c 100644
+--- a/app/checkout/page.tsx
++++ b/app/checkout/page.tsx
+@@ -5,6 +5,7 @@ import { CartPreserveNote } from "@/components/CartPreserveNote";
+ import { getStore } from "@/lib/store";
+ import { getLineIdentity, lineLoginEnabled } from "@/lib/line";
+ import { enabledPickupPoints } from "@/lib/pickup";
++import { payConfig } from "@/lib/newebpay";
+ 
+ export const dynamic = "force-dynamic";
+ export const metadata = { title: "結帳" };
+@@ -21,6 +22,7 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
+   const { settings } = await getStore();
+   const identity = await getLineIdentity();
+   const loginOn = lineLoginEnabled(settings);
++  const onlinePay = payConfig(settings).ready;
+ 
+   return (
+     <>
+@@ -39,7 +41,7 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
+           <section className="gate">
+             <span className="eyebrow">LINE</span>
+             <h2>結帳前請先用 LINE 登入</h2>
+-            <p>我們用 LINE 確認是您本人下單，並用 LINE 通知付款與出貨。網站沒有刷卡，訂單送出後由我們在 LINE 與您確認。</p>
++            <p>我們用 LINE 確認是您本人下單，並用 LINE 通知付款與出貨。{onlinePay ? "可使用信用卡或 Apple Pay 線上付款。" : "訂單送出後由我們在 LINE 與您確認付款。"}</p>
+             <p>購物袋裡的商品會保留，登入後會回到這個結帳頁。</p>
+             <CartPreserveNote />
+             <a href="/api/line/login?next=/checkout" className="btn line-green">
+@@ -52,6 +54,10 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
+             paymentNote={settings.paymentNote}
+             pickupPoints={enabledPickupPoints(settings)}
+             guest={!loginOn}
++            cvsEnabled={settings.cvsEnabled}
++            cvsCodEnabled={settings.cvsCodEnabled}
++            onlinePay={onlinePay}
++            cancelDays={settings.unpaidCancelDays}
+           />
+         )}
+       </main>
+diff --git a/app/globals.css b/app/globals.css
+index 2e707ce..45965c1 100644
+--- a/app/globals.css
++++ b/app/globals.css
+@@ -1170,7 +1170,8 @@ h3 {
+ 
+ .method-switch {
+   display: grid;
+-  grid-template-columns: 1fr 1fr;
++  grid-auto-flow: column;
++  grid-auto-columns: 1fr;
+   border: 1px solid var(--teal);
+   margin-bottom: 32px;
+ }
+@@ -1235,6 +1236,57 @@ h3 {
+   letter-spacing: 0.02em;
+ }
+ 
++.sub-title {
++  font-family: var(--serif-tc);
++  font-size: 20px;
++  margin: 36px 0 18px;
++  letter-spacing: 0.08em;
++}
++
++.brand-switch {
++  display: grid;
++  grid-auto-flow: column;
++  grid-auto-columns: 1fr;
++  gap: 10px;
++  margin-bottom: 20px;
++}
++
++.brand-switch button {
++  min-height: 44px;
++  border: 1px solid var(--teal-soft);
++  background: none;
++  cursor: pointer;
++  color: var(--muted);
++  font-size: 13px;
++  letter-spacing: 0.1em;
++}
++
++.brand-switch button.on {
++  border-color: var(--teal);
++  background: var(--teal-wash);
++  color: var(--teal-deep);
++  font-weight: 500;
++}
++
++.pay-tag {
++  display: inline-block;
++  padding: 2px 10px;
++  border: 1px solid var(--teal-soft);
++  font-size: 12px;
++  letter-spacing: 0.12em;
++  color: var(--teal-deep);
++}
++
++.pay-tag.paid {
++  background: var(--teal-wash);
++  border-color: var(--teal);
++}
++
++.pay-tag.due {
++  border-color: var(--alert);
++  color: var(--alert);
++}
++
+ .point-card {
+   border: 1px solid var(--teal-soft);
+   padding: 18px 20px 8px;
+diff --git a/app/order/[code]/page.tsx b/app/order/[code]/page.tsx
+index f0cfb41..9e20597 100644
+--- a/app/order/[code]/page.tsx
++++ b/app/order/[code]/page.tsx
+@@ -8,6 +8,8 @@ import { getStore } from "@/lib/store";
+ import { getLineIdentity } from "@/lib/line";
+ import { safeEqual } from "@/lib/auth";
+ import { hasReceiptGrant } from "@/lib/receipt";
++import { payConfig } from "@/lib/newebpay";
++import { formatDate } from "@/lib/format";
+ 
+ export const dynamic = "force-dynamic";
+ export const metadata = { title: "訂單明細" };
+@@ -17,10 +19,10 @@ export default async function OrderPage({
+   searchParams,
+ }: {
+   params: Promise<{ code: string }>;
+-  searchParams: Promise<{ t?: string }>;
++  searchParams: Promise<{ t?: string; pay?: string; payerr?: string }>;
+ }) {
+   const { code } = await params;
+-  const { t } = await searchParams;
++  const { t, pay, payerr } = await searchParams;
+   const { orders, customers, settings } = await getStore();
+   const order = orders.find((o) => o.code === code);
+   if (!order) notFound();
+@@ -31,16 +33,51 @@ export default async function OrderPage({
+   const granted = await hasReceiptGrant(order.code);
+   if (!owner && !granted && !(t && safeEqual(t, order.token))) notFound();
+ 
++  const canPay =
++    order.paymentMethod === "online" &&
++    order.paymentStatus !== "paid" &&
++    order.status === "pending" &&
++    payConfig(settings).ready;
++  const deadline =
++    order.status === "pending" && order.paymentStatus !== "paid" && order.paymentMethod !== "cod" && settings.unpaidCancelDays > 0
++      ? formatDate(new Date(new Date(order.createdAt).getTime() + settings.unpaidCancelDays * 86400000).toISOString())
++      : "";
++  const paid = order.paymentMethod === "online" && order.paymentStatus === "paid";
++
+   return (
+     <>
+       <Header />
+       <main className="page narrow">
+         <div className="title-block">
+           <span className="eyebrow">謝謝</span>
+-          <h1>訂單已送出</h1>
++          <h1>{paid ? "付款完成" : "訂單已送出"}</h1>
+         </div>
++        {pay === "ok" && paid && (
++          <div className="notice" style={{ marginBottom: 20 }}>已收到您的付款，謝謝。我們會透過 LINE 通知後續進度。</div>
++        )}
++        {pay === "ok" && !paid && (
++          <div className="notice" style={{ marginBottom: 20 }}>付款結果確認中，請稍後重新整理本頁。</div>
++        )}
++        {(pay === "failed" || payerr) && (
++          <div className="notice error" style={{ marginBottom: 20 }} role="alert">
++            {payerr ? payerr.slice(0, 80) : "付款未完成，您可以重新嘗試付款。"}
++          </div>
++        )}
+         <OrderReceipt order={order} />
+-        {settings.paymentNote && <div className="notice" style={{ marginBottom: 20 }}>{settings.paymentNote}</div>}
++        {canPay && (
++          <div className="notice" style={{ marginBottom: 20 }}>
++            此訂單尚未付款{deadline ? `，請於 ${deadline} 前完成，逾時將自動取消` : ""}。{" "}
++            <a href={`/api/payment/newebpay/start?code=${order.code}`} className="btn solid" style={{ marginLeft: 8 }}>
++              前往付款
++            </a>
++          </div>
++        )}
++        {!canPay && deadline && order.paymentMethod === "offline" && (
++          <div className="notice" style={{ marginBottom: 20 }}>請於 {deadline} 前完成付款，逾時訂單將自動取消。</div>
++        )}
++        {order.paymentMethod === "offline" && settings.paymentNote && (
++          <div className="notice" style={{ marginBottom: 20 }}>{settings.paymentNote}</div>
++        )}
+         {officialLineHref(settings) && (
+           <div className="notice" style={{ marginBottom: 20 }}>
+             請加入{settings.lineOaName ? `「${settings.lineOaName}」` : "我們的 LINE 官方帳號"}，以便收到訂單通知。{" "}
+diff --git a/components/CheckoutForm.tsx b/components/CheckoutForm.tsx
+index 5b9fd8c..54a6a7f 100644
+--- a/components/CheckoutForm.tsx
++++ b/components/CheckoutForm.tsx
+@@ -6,7 +6,8 @@ import { useState } from "react";
+ import { formatPrice } from "@/lib/format";
+ import { clearCart } from "@/lib/cart-client";
+ import { cleanPersonName, normalizeTaiwanPhone } from "@/lib/phone";
+-import type { Fulfillment, PickupPoint } from "@/lib/types";
++import { CVS_BRANDS } from "@/lib/cvs";
++import type { Fulfillment, PaymentMethod, PickupPoint } from "@/lib/types";
+ import { variantLabel } from "@/lib/variants";
+ import { ProductImage } from "./ProductImage";
+ import { SummaryRows, totals, useCart } from "./CartView";
+@@ -24,11 +25,19 @@ export function CheckoutForm({
+   paymentNote,
+   pickupPoints,
+   guest,
++  cvsEnabled,
++  cvsCodEnabled,
++  onlinePay,
++  cancelDays,
+ }: {
+   identity: { name: string } | null;
+   paymentNote: string;
+   pickupPoints: PickupPoint[];
+   guest: boolean;
++  cvsEnabled: boolean;
++  cvsCodEnabled: boolean;
++  onlinePay: boolean;
++  cancelDays: number;
+ }) {
+   const router = useRouter();
+   const { data, reload } = useCart();
+@@ -37,7 +46,15 @@ export function CheckoutForm({
+   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+   const [method, setMethod] = useState<Fulfillment>("delivery");
+   const [pickupId, setPickupId] = useState(pickupPoints[0]?.id ?? "");
++  const [cvsBrand, setCvsBrand] = useState(CVS_BRANDS[0]);
++  const [payment, setPayment] = useState<PaymentMethod>(onlinePay ? "online" : "offline");
+   const pickupOn = pickupPoints.length > 0 && method === "pickup";
++  const cvsOn = cvsEnabled && method === "cvs";
++  const codOn = cvsOn && cvsCodEnabled;
++  const effectivePayment: PaymentMethod = payment === "cod" && !codOn ? (onlinePay ? "online" : "offline") : payment;
++  const methods: { key: Fulfillment; label: string }[] = [{ key: "delivery", label: "宅配" }];
++  if (cvsEnabled) methods.push({ key: "cvs", label: "超商取貨" });
++  if (pickupPoints.length > 0) methods.push({ key: "pickup", label: "自取" });
+ 
+   async function submit(event: React.FormEvent<HTMLFormElement>) {
+     event.preventDefault();
+@@ -50,7 +67,11 @@ export function CheckoutForm({
+     const nextErrors: Record<string, string> = {};
+     if (!cleanPersonName(recipient)) nextErrors.recipient = "請填寫收件人姓名";
+     if (!normalizeTaiwanPhone(phone)) nextErrors.phone = "請填寫有效的台灣電話，例如 0912345678";
+-    if (!pickupOn && address.trim().length < 6) nextErrors.address = "請填寫完整收件地址";
++    const storeName = String(form.get("cvsStoreName") ?? "").trim();
++    const storeCode = String(form.get("cvsStoreCode") ?? "").trim();
++    if (!pickupOn && !cvsOn && address.trim().length < 6) nextErrors.address = "請填寫完整收件地址";
++    if (cvsOn && !storeName) nextErrors.cvsStoreName = "請填寫門市名稱";
++    if (cvsOn && !/^[A-Za-z0-9-]{3,20}$/.test(storeCode)) nextErrors.cvsStoreCode = "請填寫正確的店號";
+     if (pickupOn && !pickupId) nextErrors.pickup = "請選擇自取地點";
+     setFieldErrors(nextErrors);
+     if (Object.keys(nextErrors).length) return;
+@@ -64,14 +85,18 @@ export function CheckoutForm({
+           items: data.lines.map((line) => ({ productId: line.productId, variantId: line.variantId, qty: line.qty })),
+           recipient,
+           phone,
+-          address: pickupOn ? "" : address,
++          address: pickupOn || cvsOn ? "" : address,
+           note: form.get("note"),
+-          fulfillment: pickupOn ? "pickup" : "delivery",
++          fulfillment: pickupOn ? "pickup" : cvsOn ? "cvs" : "delivery",
+           pickupPointId: pickupOn ? pickupId : "",
++          cvsBrand: cvsOn ? cvsBrand : "",
++          cvsStoreName: cvsOn ? storeName : "",
++          cvsStoreCode: cvsOn ? storeCode : "",
++          paymentMethod: effectivePayment,
+           idempotencyKey: idempotencyKey(),
+         }),
+       });
+-      const json = (await res.json()) as { code?: string; error?: string };
++      const json = (await res.json()) as { code?: string; payUrl?: string; error?: string };
+       if (!res.ok || !json.code) {
+         setError(json.error ?? "送出失敗，請稍後再試");
+         await reload();
+@@ -80,6 +105,10 @@ export function CheckoutForm({
+       }
+       sessionStorage.removeItem("radiant.checkout-key");
+       clearCart();
++      if (json.payUrl) {
++        window.location.href = json.payUrl;
++        return;
++      }
+       router.push(`/order/${json.code}`);
+     } catch {
+       setError("網路連線異常，請再試一次。若已看到訂單成立，請勿重複送出。");
+@@ -117,15 +146,18 @@ export function CheckoutForm({
+           </div>
+         ) : null}
+ 
+-        {pickupPoints.length > 0 && (
++        {methods.length > 1 && (
+           <div className="method-switch" role="radiogroup" aria-label="取貨方式">
+-            <button type="button" className={method === "delivery" ? "on" : ""} aria-pressed={method === "delivery"} onClick={() => setMethod("delivery")}>宅配</button>
+-            <button type="button" className={method === "pickup" ? "on" : ""} aria-pressed={method === "pickup"} onClick={() => setMethod("pickup")}>自取</button>
++            {methods.map((m) => (
++              <button key={m.key} type="button" className={method === m.key ? "on" : ""} aria-pressed={method === m.key} onClick={() => setMethod(m.key)}>
++                {m.label}
++              </button>
++            ))}
+           </div>
+         )}
+ 
+         <h2 style={{ fontFamily: "var(--serif-tc)", fontSize: 20, marginBottom: 22, letterSpacing: "0.08em" }}>
+-          {pickupOn ? "自取資料" : "收件資料"}
++          {pickupOn ? "自取資料" : cvsOn ? "取貨資料" : "收件資料"}
+         </h2>
+         <div className="two">
+           <label className="field">
+@@ -154,6 +186,31 @@ export function CheckoutForm({
+             ))}
+             {fieldErrors.pickup && <span className="field-error">{fieldErrors.pickup}</span>}
+           </div>
++        ) : cvsOn ? (
++          <>
++            <div className="brand-switch" role="radiogroup" aria-label="超商品牌">
++              {CVS_BRANDS.map((b) => (
++                <button key={b} type="button" className={cvsBrand === b ? "on" : ""} aria-pressed={cvsBrand === b} onClick={() => setCvsBrand(b)}>
++                  {b}
++                </button>
++              ))}
++            </div>
++            <div className="two">
++              <label className="field">
++                <span className="label">門市名稱</span>
++                <input className="input" name="cvsStoreName" required maxLength={60} placeholder="例：台北信義門市" aria-invalid={Boolean(fieldErrors.cvsStoreName)} disabled={busy} />
++                {fieldErrors.cvsStoreName && <span className="field-error">{fieldErrors.cvsStoreName}</span>}
++              </label>
++              <label className="field">
++                <span className="label">店號</span>
++                <input className="input" name="cvsStoreCode" required maxLength={20} inputMode="numeric" aria-invalid={Boolean(fieldErrors.cvsStoreCode)} disabled={busy} />
++                {fieldErrors.cvsStoreCode && <span className="field-error">{fieldErrors.cvsStoreCode}</span>}
++              </label>
++            </div>
++            <span className="hint" style={{ display: "block", marginBottom: 20 }}>
++              店號可在各超商的門市查詢頁或 APP 找到，請確認無誤，出貨後無法更改門市。
++            </span>
++          </>
+         ) : (
+           <label className="field">
+             <span className="label">收件地址</span>
+@@ -165,6 +222,43 @@ export function CheckoutForm({
+           <span className="label">備註</span>
+           <textarea className="textarea" name="note" maxLength={300} disabled={busy} />
+         </label>
++        {(onlinePay || codOn) && (
++          <>
++            <h2 className="sub-title">付款方式</h2>
++            <div className="pickup-list">
++              {onlinePay && (
++                <label className={`pickup-choice${effectivePayment === "online" ? " on" : ""}`}>
++                  <input type="radio" name="payment" checked={effectivePayment === "online"} onChange={() => setPayment("online")} disabled={busy} />
++                  <span>
++                    <b>信用卡 / Apple Pay</b>
++                    <small>送出訂單後前往藍新金流安全付款頁，付款完成即確認訂單。</small>
++                  </span>
++                </label>
++              )}
++              {codOn && (
++                <label className={`pickup-choice${effectivePayment === "cod" ? " on" : ""}`}>
++                  <input type="radio" name="payment" checked={effectivePayment === "cod"} onChange={() => setPayment("cod")} disabled={busy} />
++                  <span>
++                    <b>超商取貨付款</b>
++                    <small>到店取貨時再付款。</small>
++                  </span>
++                </label>
++              )}
++              <label className={`pickup-choice${effectivePayment === "offline" ? " on" : ""}`}>
++                <input type="radio" name="payment" checked={effectivePayment === "offline"} onChange={() => setPayment("offline")} disabled={busy} />
++                <span>
++                  <b>其他付款方式</b>
++                  <small>送出後由我們透過 LINE 與您確認付款。</small>
++                </span>
++              </label>
++            </div>
++          </>
++        )}
++        {cancelDays > 0 && effectivePayment !== "cod" && (
++          <div className="notice" style={{ marginBottom: 20 }}>
++            訂單成立後 {cancelDays} 天內未完成付款，系統會自動取消並釋出庫存。
++          </div>
++        )}
+         {pickupOn && selected && (
+           <div className="notice" style={{ marginBottom: 20 }}>
+             自取不收運費。商品備妥後我們會透過 LINE 通知您前往「{selected.name}」取貨。
+@@ -195,7 +289,7 @@ export function CheckoutForm({
+         <SummaryRows data={data} pickup={pickupOn} />
+         {error && <div className="notice error" style={{ marginTop: 20 }} role="alert">{error}</div>}
+         <button type="submit" className="btn solid" disabled={busy || blocked}>
+-          {busy ? "送出中…" : blocked ? "庫存不足" : `送出訂單 · ${formatPrice(totals(data, { pickup: pickupOn }).total)}`}
++          {busy ? "處理中…" : blocked ? "庫存不足" : `${effectivePayment === "online" ? "前往付款" : "送出訂單"} · ${formatPrice(totals(data, { pickup: pickupOn }).total)}`}
+         </button>
+         {blocked && (
+           <p style={{ fontSize: 13, color: "var(--alert)", margin: "12px 0 0" }}>
+diff --git a/components/OrderReceipt.tsx b/components/OrderReceipt.tsx
+index 61c9209..03886a3 100644
+--- a/components/OrderReceipt.tsx
++++ b/components/OrderReceipt.tsx
+@@ -1,4 +1,4 @@
+-import { formatDate, formatPrice, fulfillmentLabel, ORDER_STATUS_LABEL } from "@/lib/format";
++import { formatDate, formatPrice, fulfillmentLabel, ORDER_STATUS_LABEL, paymentSummary } from "@/lib/format";
+ import { variantLabel } from "@/lib/variants";
+ import type { Order } from "@/lib/types";
+ import { ProductImage } from "./ProductImage";
+@@ -55,8 +55,12 @@ export function OrderReceipt({ order, showAddress = true }: { order: Order; show
+           <dd>{order.recipient}</dd>
+           <dt>電話</dt>
+           <dd>{order.phone}</dd>
+-          <dt>{order.fulfillment === "pickup" ? "自取地點" : "地址"}</dt>
++          <dt>{order.fulfillment === "pickup" ? "自取地點" : order.fulfillment === "cvs" ? "取貨門市" : "地址"}</dt>
+           <dd>{order.address || order.pickupPointName}</dd>
++          <dt>付款</dt>
++          <dd>
++            <span className={`pay-tag${order.paymentStatus === "paid" ? " paid" : ""}`}>{paymentSummary(order)}</span>
++          </dd>
+           {order.note && (
+             <>
+               <dt>備註</dt>
+diff --git a/components/admin/CancelOrderButton.tsx b/components/admin/CancelOrderButton.tsx
+index 52b55b3..5b40e41 100644
+--- a/components/admin/CancelOrderButton.tsx
++++ b/components/admin/CancelOrderButton.tsx
+@@ -8,11 +8,13 @@ export function CancelOrderButton({
+   code,
+   compact,
+   warnShipped,
++  warnPaid,
+ }: {
+   orderId: string;
+   code: string;
+   compact?: boolean;
+   warnShipped?: boolean;
++  warnPaid?: boolean;
+ }) {
+   const [open, setOpen] = useState(false);
+   const [pending, setPending] = useState(false);
+@@ -22,7 +24,7 @@ export function CancelOrderButton({
+       <form
+         action={cancelOrder}
+         onSubmit={(e) => {
+-          if (!confirm(`確定取消訂單 ${code}？庫存會加回商品。`)) e.preventDefault();
++          if (!confirm(`確定取消訂單 ${code}？庫存會加回商品。${compact && warnPaid ? "\n此單客人已線上付款，取消後需自行到藍新金流後台退款。" : ""}`)) e.preventDefault();
+         }}
+       >
+         <input type="hidden" name="id" value={orderId} />
+@@ -50,6 +52,11 @@ export function CancelOrderButton({
+       style={{ marginTop: 8 }}
+     >
+       <input type="hidden" name="id" value={orderId} />
++      {warnPaid && (
++        <div className="notice error" style={{ marginBottom: 16 }}>
++          此單客人已線上付款。取消不會自動退款，請另外到藍新金流後台為這筆交易退款。
++        </div>
++      )}
+       {warnShipped && (
+         <div className="notice error" style={{ marginBottom: 16 }}>
+           此單已出貨。取消會把庫存加回去，若貨已寄出請另外處理退件。
+diff --git a/components/admin/SettingsForm.tsx b/components/admin/SettingsForm.tsx
+index 26a1322..6175cb9 100644
+--- a/components/admin/SettingsForm.tsx
++++ b/components/admin/SettingsForm.tsx
+@@ -10,14 +10,24 @@ let pointN = 0;
+ const nextPointKey = () => `pk${++pointN}`;
+ 
+ type Props = {
+-  settings: Omit<Settings, "secret" | "loginChannelSecret" | "messagingToken">;
++  settings: Omit<Settings, "secret" | "loginChannelSecret" | "messagingToken" | "payHashKey" | "payHashIV">;
++  pay: {
++    ready: boolean;
++    mode: "test" | "live";
++    hasKeys: boolean;
++    keysFromEnv: boolean;
++    merchantFromEnv: boolean;
++    modeFromEnv: boolean;
++    notifyUrl: string;
++    returnUrl: string;
++  };
+   hasLoginSecret: boolean;
+   hasMessagingToken: boolean;
+   callbackUrl: string;
+   loginReady: boolean;
+ };
+ 
+-export function SettingsForm({ settings, hasLoginSecret, hasMessagingToken, callbackUrl, loginReady }: Props) {
++export function SettingsForm({ settings, hasLoginSecret, hasMessagingToken, callbackUrl, loginReady, pay }: Props) {
+   const [message, action, pending] = useActionState(saveSettings, "");
+   const [testMessage, testAction, testing] = useActionState(testPush, "");
+   const [points, setPoints] = useState<PointDraft[]>(() =>
+@@ -145,6 +155,82 @@ export function SettingsForm({ settings, hasLoginSecret, hasMessagingToken, call
+                 <textarea className="textarea" name="paymentNote" defaultValue={settings.paymentNote} maxLength={600} />
+                 <span className="hint">顯示在結帳頁與訂單完成頁，例如匯款帳號或收款方式。</span>
+               </label>
++              <label className="field">
++                <span className="label">未付款自動取消（天）</span>
++                <input className="input" type="number" min={0} max={60} name="unpaidCancelDays" defaultValue={settings.unpaidCancelDays} />
++                <span className="hint">
++                  訂單成立後超過這個天數仍是「待確認」且未付款，系統會自動取消、釋出庫存並用 LINE 通知客戶。填 0 表示不自動取消。超商取貨付款的訂單不受影響。
++                </span>
++              </label>
++            </section>
++
++            <section className="panel">
++              <h2>
++                線上付款（藍新金流）
++                <small>
++                  狀態：
++                  <b style={{ color: pay.ready ? "var(--teal-deep)" : "var(--alert)" }}>
++                    {pay.ready ? `已啟用（${pay.mode === "live" ? "正式環境" : "測試環境"}）` : "未啟用"}
++                  </b>
++                </small>
++              </h2>
++              <label className="toggle">
++                <input type="checkbox" name="payOnlineEnabled" defaultChecked={settings.payOnlineEnabled} />
++                <span>開放信用卡 / Apple Pay 線上付款</span>
++              </label>
++              <label className="field">
++                <span className="label">環境</span>
++                <select className="input" name="payMode" defaultValue={pay.mode} disabled={pay.modeFromEnv}>
++                  <option value="test">測試環境（不會真的扣款）</option>
++                  <option value="live">正式環境</option>
++                </select>
++                {pay.modeFromEnv && <span className="hint">目前由 Vercel 環境變數 NEWEBPAY_MODE 指定。</span>}
++              </label>
++              <label className="field">
++                <span className="label">商店代號 MerchantID</span>
++                <input className="input" name="payMerchantId" defaultValue={settings.payMerchantId} maxLength={40} disabled={pay.merchantFromEnv} />
++                {pay.merchantFromEnv && <span className="hint">目前由環境變數 NEWEBPAY_MERCHANT_ID 提供。</span>}
++              </label>
++              <div className="two">
++                <label className="field">
++                  <span className="label">HashKey（32 字元）</span>
++                  <input className="input" name="payHashKey" type="password" autoComplete="off" maxLength={80} disabled={pay.keysFromEnv} placeholder={pay.hasKeys ? "已設定，留白表示不變更" : ""} />
++                </label>
++                <label className="field">
++                  <span className="label">HashIV（16 字元）</span>
++                  <input className="input" name="payHashIV" type="password" autoComplete="off" maxLength={80} disabled={pay.keysFromEnv} placeholder={pay.hasKeys ? "已設定，留白表示不變更" : ""} />
++                </label>
++              </div>
++              {pay.keysFromEnv ? (
++                <div className="hint" style={{ marginBottom: 20 }}>HashKey / HashIV 目前由 Vercel 環境變數提供，不會顯示在這裡。</div>
++              ) : (
++                pay.hasKeys && (
++                  <label className="toggle" style={{ fontSize: 13 }}>
++                    <input type="checkbox" name="clearPayKeys" />
++                    <span>清除已儲存的 HashKey / HashIV</span>
++                  </label>
++                )
++              )}
++              <div className="notice" style={{ marginBottom: 20 }}>
++                測試環境與正式環境的商店代號與金鑰不同，切換環境時請一併更換。金鑰只會存在伺服器，不會傳回瀏覽器；較建議放在 Vercel 的環境變數（NEWEBPAY_MERCHANT_ID、NEWEBPAY_HASH_KEY、NEWEBPAY_HASH_IV）。
++                <div className="mono" style={{ marginTop: 8 }}>付款通知網址：{pay.notifyUrl}</div>
++                <div className="mono" style={{ marginTop: 4 }}>付款返回網址：{pay.returnUrl}</div>
++              </div>
++            </section>
++
++            <section className="panel">
++              <h2>
++                超商取貨
++                <small>客戶可選 7-ELEVEN / 全家 / 萊爾富，並填寫門市名稱與店號。目前出貨由店家手動處理，運費沿用上方設定。</small>
++              </h2>
++              <label className="toggle">
++                <input type="checkbox" name="cvsEnabled" defaultChecked={settings.cvsEnabled} />
++                <span>開放超商取貨</span>
++              </label>
++              <label className="toggle">
++                <input type="checkbox" name="cvsCodEnabled" defaultChecked={settings.cvsCodEnabled} />
++                <span>允許「取貨付款」（到店取貨時才付款）</span>
++              </label>
+             </section>
+ 
+             <section className="panel">
+diff --git a/lib/checkout.ts b/lib/checkout.ts
+index 65701e7..1c47966 100644
+--- a/lib/checkout.ts
++++ b/lib/checkout.ts
+@@ -1,6 +1,7 @@
+ import { z } from "zod";
+ import { cleanNote, cleanPersonName, normalizeTaiwanPhone } from "./phone";
+-import type { Fulfillment } from "./types";
++import { CVS_BRANDS } from "./cvs";
++import type { Fulfillment, PaymentMethod } from "./types";
+ 
+ const bodySchema = z
+   .object({
+@@ -18,8 +19,12 @@ const bodySchema = z
+     phone: z.string().trim().min(1).max(30),
+     address: z.string().trim().max(200).optional().default(""),
+     note: z.string().max(300).optional().default(""),
+-    fulfillment: z.enum(["delivery", "pickup"]).optional().default("delivery"),
++    fulfillment: z.enum(["delivery", "pickup", "cvs"]).optional().default("delivery"),
+     pickupPointId: z.string().trim().max(80).optional().default(""),
++    cvsBrand: z.string().trim().max(20).optional().default(""),
++    cvsStoreName: z.string().trim().max(60).optional().default(""),
++    cvsStoreCode: z.string().trim().max(20).optional().default(""),
++    paymentMethod: z.enum(["online", "offline", "cod"]).optional().default("offline"),
+     idempotencyKey: z.string().trim().regex(/^[A-Za-z0-9_-]{8,80}$/),
+   })
+   .strict();
+@@ -32,6 +37,10 @@ export type CheckoutBody = {
+   note: string;
+   fulfillment: Fulfillment;
+   pickupPointId: string;
++  cvsBrand: string;
++  cvsStoreName: string;
++  cvsStoreCode: string;
++  paymentMethod: PaymentMethod;
+   idempotencyKey: string;
+ };
+ 
+@@ -54,6 +63,13 @@ export function parseCheckoutBody(input: unknown): { ok: true; data: CheckoutBod
+   const address = cleanNote(parsed.data.address, 200);
+   if (fulfillment === "delivery" && address.length < 6) return { ok: false, error: "請填寫完整收件地址" };
+   if (fulfillment === "pickup" && !parsed.data.pickupPointId) return { ok: false, error: "請選擇自取地點" };
++  if (fulfillment === "cvs") {
++    if (!CVS_BRANDS.includes(parsed.data.cvsBrand)) return { ok: false, error: "請選擇超商品牌" };
++    if (!cleanNote(parsed.data.cvsStoreName, 60) || !/^[A-Za-z0-9-]{3,20}$/.test(parsed.data.cvsStoreCode)) {
++      return { ok: false, error: "請填寫門市名稱與正確的店號" };
++    }
++  }
++  if (parsed.data.paymentMethod === "cod" && fulfillment !== "cvs") return { ok: false, error: "取貨付款僅限超商取貨" };
+   return {
+     ok: true,
+     data: {
+@@ -61,6 +77,7 @@ export function parseCheckoutBody(input: unknown): { ok: true; data: CheckoutBod
+       recipient,
+       phone,
+       address,
++      cvsStoreName: cleanNote(parsed.data.cvsStoreName, 60),
+       note: cleanNote(parsed.data.note, 300),
+       fulfillment,
+     },
+diff --git a/lib/cvs.ts b/lib/cvs.ts
+new file mode 100644
+index 0000000..da0d51d
+--- /dev/null
++++ b/lib/cvs.ts
+@@ -0,0 +1 @@
++export const CVS_BRANDS = ["7-ELEVEN", "全家", "萊爾富"];
+diff --git a/lib/format.ts b/lib/format.ts
+index 0f9e2dd..d969e62 100644
+--- a/lib/format.ts
++++ b/lib/format.ts
+@@ -1,4 +1,5 @@
+-import type { Fulfillment, OrderStatus } from "./types";
++import type { Fulfillment, Order, OrderStatus } from "./types";
++import { payTypeLabel } from "./newebpay";
+ 
+ export function formatPrice(n: number): string {
+   return `NT$ ${Math.round(n).toLocaleString("en-US")}`;
+@@ -29,5 +30,24 @@ export const ORDER_STATUSES: OrderStatus[] = ["pending", "paid", "shipped", "com
+ export const OPEN_STATUSES: OrderStatus[] = ["pending", "paid"];
+ 
+ export function fulfillmentLabel(kind: Fulfillment | undefined): string {
+-  return kind === "pickup" ? "自取" : "宅配";
++  return kind === "pickup" ? "自取" : kind === "cvs" ? "超商取貨" : "宅配";
++}
++
++type PaymentFields = Pick<Order, "paymentMethod" | "paymentStatus" | "payType">;
++
++export function paymentMethodLabel(method: PaymentFields["paymentMethod"]): string {
++  return method === "online" ? "線上付款" : method === "cod" ? "超商取貨付款" : "LINE 確認付款";
++}
++
++export function paymentSummary(order: PaymentFields): string {
++  if (order.paymentMethod === "online") {
++    return order.paymentStatus === "paid" ? `已付款（${payTypeLabel(order.payType)}）` : "線上付款，尚未付款";
++  }
++  return paymentMethodLabel(order.paymentMethod);
++}
++
++export function fulfillmentSummary(order: Pick<Order, "fulfillment" | "address" | "pickupPointName">): string {
++  if (order.fulfillment === "pickup") return `自取：${order.address || order.pickupPointName}`;
++  if (order.fulfillment === "cvs") return `超商取貨：${order.address}`;
++  return `宅配：${order.address}`;
+ }
+diff --git a/lib/http.ts b/lib/http.ts
+index 971a984..dddf3ef 100644
+--- a/lib/http.ts
++++ b/lib/http.ts
+@@ -13,7 +13,7 @@ export function contentSecurityPolicy(dev: boolean): string {
+     "frame-ancestors 'none'",
+     "frame-src 'none'",
+     "base-uri 'self'",
+-    "form-action 'self'",
++    "form-action 'self' https://ccore.newebpay.com https://core.newebpay.com",
+     "object-src 'none'",
+     ...(dev ? [] : ["upgrade-insecure-requests"]),
+   ].join("; ");
+diff --git a/lib/newebpay.ts b/lib/newebpay.ts
+new file mode 100644
+index 0000000..515dcde
+--- /dev/null
++++ b/lib/newebpay.ts
+@@ -0,0 +1,193 @@
++import { createCipheriv, createDecipheriv, createHash, timingSafeEqual } from "crypto";
++import type { PayMode, Settings } from "./types";
++
++const GATEWAY: Record<PayMode, string> = {
++  test: "https://ccore.newebpay.com/MPG/mpg_gateway",
++  live: "https://core.newebpay.com/MPG/mpg_gateway",
++};
++
++export type PayConfig = {
++  enabled: boolean;
++  ready: boolean;
++  mode: PayMode;
++  merchantId: string;
++  hashKey: string;
++  hashIV: string;
++  fromEnv: { merchantId: boolean; hashKey: boolean; hashIV: boolean; mode: boolean };
++};
++
++export function payConfig(settings: Settings): PayConfig {
++  const envMode = process.env.NEWEBPAY_MODE === "live" ? "live" : process.env.NEWEBPAY_MODE === "test" ? "test" : "";
++  const merchantId = (process.env.NEWEBPAY_MERCHANT_ID || settings.payMerchantId || "").trim();
++  const hashKey = (process.env.NEWEBPAY_HASH_KEY || settings.payHashKey || "").trim();
++  const hashIV = (process.env.NEWEBPAY_HASH_IV || settings.payHashIV || "").trim();
++  const mode: PayMode = envMode || settings.payMode;
++  const enabled = Boolean(settings.payOnlineEnabled);
++  const ready = enabled && Boolean(merchantId) && hashKey.length === 32 && hashIV.length === 16;
++  return {
++    enabled,
++    ready,
++    mode: mode === "live" ? "live" : "test",
++    merchantId,
++    hashKey,
++    hashIV,
++    fromEnv: {
++      merchantId: Boolean(process.env.NEWEBPAY_MERCHANT_ID),
++      hashKey: Boolean(process.env.NEWEBPAY_HASH_KEY),
++      hashIV: Boolean(process.env.NEWEBPAY_HASH_IV),
++      mode: Boolean(envMode),
++    },
++  };
++}
++
++export function gatewayUrl(mode: PayMode): string {
++  return GATEWAY[mode];
++}
++
++export function encryptTradeInfo(params: Record<string, string | number>, hashKey: string, hashIV: string): string {
++  const query = new URLSearchParams(Object.entries(params).map(([k, v]) => [k, String(v)])).toString();
++  const cipher = createCipheriv("aes-256-cbc", Buffer.from(hashKey, "utf8"), Buffer.from(hashIV, "utf8"));
++  return Buffer.concat([cipher.update(query, "utf8"), cipher.final()]).toString("hex");
++}
++
++export function tradeSha(tradeInfo: string, hashKey: string, hashIV: string): string {
++  return createHash("sha256").update(`HashKey=${hashKey}&${tradeInfo}&HashIV=${hashIV}`).digest("hex").toUpperCase();
++}
++
++function safeCompare(a: string, b: string): boolean {
++  const x = Buffer.from(a.toUpperCase());
++  const y = Buffer.from(b.toUpperCase());
++  return x.length === y.length && timingSafeEqual(x, y);
++}
++
++// Responses are checked against both documented orderings of the key/iv wrapper;
++// either one can only be produced by someone who knows the HashKey and HashIV.
++export function verifyTradeSha(tradeInfo: string, sha: string, hashKey: string, hashIV: string): boolean {
++  if (!tradeInfo || !sha) return false;
++  const request = tradeSha(tradeInfo, hashKey, hashIV);
++  const response = createHash("sha256")
++    .update(`HashIV=${hashIV}&${tradeInfo}&HashKey=${hashKey}`)
++    .digest("hex")
++    .toUpperCase();
++  return safeCompare(sha, request) || safeCompare(sha, response);
++}
++
++export function decryptTradeInfo(hex: string, hashKey: string, hashIV: string): string | null {
++  if (!/^[0-9a-fA-F]+$/.test(hex) || hex.length % 32 !== 0) return null;
++  try {
++    const decipher = createDecipheriv("aes-256-cbc", Buffer.from(hashKey, "utf8"), Buffer.from(hashIV, "utf8"));
++    decipher.setAutoPadding(false);
++    const raw = Buffer.concat([decipher.update(Buffer.from(hex, "hex")), decipher.final()]);
++    const pad = raw[raw.length - 1];
++    if (pad < 1 || pad > 32 || pad > raw.length) return raw.toString("utf8");
++    return raw.subarray(0, raw.length - pad).toString("utf8");
++  } catch {
++    return null;
++  }
++}
++
++export type PayResult = {
++  ok: boolean;
++  status: string;
++  message: string;
++  merchantId: string;
++  merchantOrderNo: string;
++  amount: number;
++  tradeNo: string;
++  payType: string;
++  payTime: string;
++};
++
++function str(v: unknown): string {
++  return typeof v === "string" || typeof v === "number" ? String(v) : "";
++}
++
++export function parsePayResult(decrypted: string): PayResult | null {
++  let top: Record<string, unknown> = {};
++  try {
++    top = JSON.parse(decrypted) as Record<string, unknown>;
++  } catch {
++    top = Object.fromEntries(new URLSearchParams(decrypted));
++  }
++  if (!top || typeof top !== "object") return null;
++  const inner = top.Result && typeof top.Result === "object" ? (top.Result as Record<string, unknown>) : top;
++  const status = str(top.Status);
++  const merchantOrderNo = str(inner.MerchantOrderNo);
++  if (!status || !merchantOrderNo) return null;
++  return {
++    ok: status === "SUCCESS",
++    status,
++    message: str(top.Message),
++    merchantId: str(inner.MerchantID),
++    merchantOrderNo,
++    amount: Number(inner.Amt),
++    tradeNo: str(inner.TradeNo),
++    payType: str(inner.PaymentType),
++    payTime: str(inner.PayTime),
++  };
++}
++
++export function orderCodeFromMerchantNo(merchantOrderNo: string): string {
++  return merchantOrderNo.split("_")[0] ?? "";
++}
++
++export function merchantOrderNo(code: string, attempt: number): string {
++  return `${code}_${attempt}`;
++}
++
++export type MpgForm = { action: string; fields: Record<string, string> };
++
++export function buildMpgForm(args: {
++  cfg: PayConfig;
++  orderNo: string;
++  amount: number;
++  itemDesc: string;
++  returnUrl: string;
++  notifyUrl: string;
++  clientBackUrl: string;
++}): MpgForm {
++  const { cfg } = args;
++  const info = encryptTradeInfo(
++    {
++      MerchantID: cfg.merchantId,
++      RespondType: "JSON",
++      TimeStamp: Math.floor(Date.now() / 1000),
++      Version: "2.0",
++      LangType: "zh-tw",
++      MerchantOrderNo: args.orderNo,
++      Amt: Math.round(args.amount),
++      ItemDesc: args.itemDesc.slice(0, 50),
++      ReturnURL: args.returnUrl,
++      NotifyURL: args.notifyUrl,
++      ClientBackURL: args.clientBackUrl,
++      EmailModify: 0,
++      LoginType: 0,
++      CREDIT: 1,
++      APPLEPAY: 1,
++    },
++    cfg.hashKey,
++    cfg.hashIV
++  );
++  return {
++    action: gatewayUrl(cfg.mode),
++    fields: {
++      MerchantID: cfg.merchantId,
++      TradeInfo: info,
++      TradeSha: tradeSha(info, cfg.hashKey, cfg.hashIV),
++      Version: "2.0",
++      EncryptType: "0",
++    },
++  };
++}
++
++export const PAY_TYPE_LABEL: Record<string, string> = {
++  CREDIT: "信用卡",
++  APPLEPAY: "Apple Pay",
++  ANDROIDPAY: "Google Pay",
++  SAMSUNGPAY: "Samsung Pay",
++  MANUAL: "員工手動確認",
++};
++
++export function payTypeLabel(type: string): string {
++  return PAY_TYPE_LABEL[type] ?? (type || "線上付款");
++}
+diff --git a/lib/orders.ts b/lib/orders.ts
+index a4e8eac..6f7989c 100644
+--- a/lib/orders.ts
++++ b/lib/orders.ts
+@@ -8,8 +8,12 @@ import { pushLine } from "./line";
+ import { enabledPickupPoints, formatPickupAddress } from "./pickup";
+ import { canTransition } from "./order-flow";
+ import { variantLabel } from "./variants";
++import { CVS_BRANDS } from "./cvs";
++import { getStore } from "./store";
++import { merchantOrderNo, orderCodeFromMerchantNo, payConfig, type PayResult } from "./newebpay";
++import { fulfillmentSummary, paymentSummary } from "./format";
+ import type { CheckoutIdentity } from "./checkout";
+-import type { Customer, Fulfillment, Order, OrderItem, OrderStatus, Store } from "./types";
++import type { Customer, Fulfillment, Order, OrderItem, OrderStatus, PaymentMethod, Store } from "./types";
+ 
+ export type CartLine = { productId: string; variantId: string; qty: number };
+ 
+@@ -20,6 +24,10 @@ export type CheckoutInput = {
+   address: string;
+   fulfillment: Fulfillment;
+   pickupPointId: string;
++  cvsBrand: string;
++  cvsStoreName: string;
++  cvsStoreCode: string;
++  paymentMethod: PaymentMethod;
+   note: string;
+   idempotencyKey: string;
+   identity: CheckoutIdentity;
+@@ -27,6 +35,8 @@ export type CheckoutInput = {
+ 
+ class OrderError extends Error {}
+ 
++const DAY = 24 * 60 * 60 * 1000;
++
+ function upsertCustomer(store: Store, id: CheckoutIdentity): Customer {
+   const now = new Date().toISOString();
+   let customer: Customer | undefined;
+@@ -75,6 +85,64 @@ function rememberKey(store: Store, key: string, code: string): void {
+   store.idempotency = [...store.idempotency.filter((item) => item.key !== key), { key, code, at: now }].slice(-200);
+ }
+ 
++function restoreStock(store: Store, order: Order): void {
++  for (const item of order.items) {
++    const product = store.products.find((entry) => entry.id === item.productId);
++    const variant = product?.variants.find((entry) => entry.id === item.variantId);
++    if (variant) variant.stock += item.qty;
++    if (product) product.sold = Math.max(0, product.sold - item.qty);
++  }
++}
++
++export type ExpiredEntry = { order: Order; customer: Customer | undefined };
++
++export function isExpiredUnpaid(order: Order, days: number, now: number): boolean {
++  if (days <= 0 || order.status !== "pending" || order.paymentStatus === "paid") return false;
++  if (order.paymentMethod === "cod") return false;
++  return new Date(order.createdAt).getTime() + days * DAY <= now;
++}
++
++export function expireStale(store: Store, now = Date.now()): ExpiredEntry[] {
++  const days = store.settings.unpaidCancelDays;
++  const out: ExpiredEntry[] = [];
++  for (const order of store.orders) {
++    if (!isExpiredUnpaid(order, days, now)) continue;
++    restoreStock(store, order);
++    order.status = "cancelled";
++    order.internalNote = [order.internalNote, `系統：超過 ${days} 天未付款，自動取消`].filter(Boolean).join("\n");
++    order.updatedAt = new Date(now).toISOString();
++    out.push({ order, customer: store.customers.find((entry) => entry.id === order.customerId) });
++  }
++  return out;
++}
++
++function notifyExpired(entries: ExpiredEntry[], notifyTo: string, days: number): void {
++  if (!entries.length) return;
++  const codes = entries.map((entry) => entry.order.code).join("、");
++  void pushLine(notifyTo, `${entries.length} 張訂單超過 ${days} 天未付款，已自動取消並釋出庫存：\n${codes}`);
++  for (const { order, customer } of entries) {
++    if (!customer?.lineUserId) continue;
++    const lines = order.items.map((item) => `· ${item.name} ${variantLabel(item.color, item.size)} × ${item.qty}`).join("\n");
++    void pushLine(
++      customer.lineUserId,
++      `您的 Radiant 訂單 ${order.code} 因超過 ${days} 天未完成付款，已自動取消。\n${lines}\n如仍需要，歡迎重新下單。`
++    );
++  }
++}
++
++export async function sweepExpiredOrders(): Promise<number> {
++  const { orders, settings } = await getStore();
++  const now = Date.now();
++  if (!orders.some((order) => isExpiredUnpaid(order, settings.unpaidCancelDays, now))) return 0;
++  const result = await mutate((store) => ({
++    entries: expireStale(store, now),
++    notifyTo: store.settings.notifyTo,
++    days: store.settings.unpaidCancelDays,
++  }));
++  notifyExpired(result.entries, result.notifyTo, result.days);
++  return result.entries.length;
++}
++
+ export async function placeOrder(
+   input: CheckoutInput
+ ): Promise<{ ok: true; order: Order; customer: Customer; replay?: boolean } | { ok: false; error: string }> {
+@@ -84,9 +152,13 @@ export async function placeOrder(
+       if (hit) {
+         const existing = store.orders.find((order) => order.code === hit.code);
+         const customer = existing ? store.customers.find((item) => item.id === existing.customerId) : undefined;
+-        if (existing && customer) return { order: existing, customer, priorOrders: 0, notifyTo: "", replay: true };
++        if (existing && customer) {
++          return { order: existing, customer, priorOrders: 0, notifyTo: "", days: 0, expired: [] as ExpiredEntry[], replay: true };
++        }
+       }
+ 
++      const expired = expireStale(store);
++
+       const merged = new Map<string, CartLine>();
+       for (const line of input.lines) {
+         const qty = Math.floor(Number(line.qty));
+@@ -124,9 +196,13 @@ export async function placeOrder(
+ 
+       const subtotal = items.reduce((sum, item) => sum + item.price * item.qty, 0);
+       const pickup = input.fulfillment === "pickup";
++      const cvs = input.fulfillment === "cvs";
+       let address = input.address;
+       let pickupPointId = "";
+       let pickupPointName = "";
++      let cvsBrand = "";
++      let cvsStoreName = "";
++      let cvsStoreCode = "";
+       if (pickup) {
+         const point = enabledPickupPoints(store.settings).find((item) => item.id === input.pickupPointId);
+         if (!point) throw new OrderError("請選擇有效的自取地點");
+@@ -134,6 +210,17 @@ export async function placeOrder(
+         pickupPointName = point.name;
+         address = formatPickupAddress(point);
+       }
++      if (cvs) {
++        if (!store.settings.cvsEnabled) throw new OrderError("目前未開放超商取貨");
++        if (!CVS_BRANDS.includes(input.cvsBrand)) throw new OrderError("請選擇超商品牌");
++        if (!input.cvsStoreName || !input.cvsStoreCode) throw new OrderError("請填寫門市名稱與店號");
++        cvsBrand = input.cvsBrand;
++        cvsStoreName = input.cvsStoreName;
++        cvsStoreCode = input.cvsStoreCode;
++        address = `${cvsBrand} ${cvsStoreName}（店號 ${cvsStoreCode}）`;
++      }
++      if (input.paymentMethod === "online" && !payConfig(store.settings).ready) throw new OrderError("線上付款目前未開放");
++      if (input.paymentMethod === "cod" && !(cvs && store.settings.cvsCodEnabled)) throw new OrderError("取貨付款僅限超商取貨");
+       const shipping = shippingFor(subtotal, store.settings, pickup ? "pickup" : "delivery");
+       const customer = upsertCustomer(store, input.identity);
+       const now = new Date().toISOString();
+@@ -145,9 +232,18 @@ export async function placeOrder(
+         recipient: input.recipient,
+         phone: input.phone,
+         address,
+-        fulfillment: pickup ? "pickup" : "delivery",
++        fulfillment: pickup ? "pickup" : cvs ? "cvs" : "delivery",
+         pickupPointId,
+         pickupPointName,
++        cvsBrand,
++        cvsStoreName,
++        cvsStoreCode,
++        paymentMethod: input.paymentMethod,
++        paymentStatus: "unpaid",
++        payType: "",
++        payTradeNo: "",
++        paidAt: "",
++        payAttempts: 0,
+         note: input.note,
+         items,
+         subtotal,
+@@ -161,24 +257,25 @@ export async function placeOrder(
+       store.orders.push(order);
+       rememberKey(store, input.idempotencyKey, order.code);
+       const priorOrders = store.orders.filter((item) => item.customerId === customer.id && item.id !== order.id).length;
+-      return { order, customer, priorOrders, notifyTo: store.settings.notifyTo, replay: false };
++      return { order, customer, priorOrders, notifyTo: store.settings.notifyTo, days: store.settings.unpaidCancelDays, expired, replay: false };
+     });
+ 
+     if (!result.replay) {
++      notifyExpired(result.expired, result.notifyTo, result.days);
+       const lines = result.order.items.map((item) => `· ${item.name} ${variantLabel(item.color, item.size)} × ${item.qty}`).join("\n");
+-      const how = result.order.fulfillment === "pickup" ? `自取：${result.order.pickupPointName}` : `宅配：${result.order.address}`;
++      const how = fulfillmentSummary(result.order);
+       const shopMsg =
+         `新訂單 ${result.order.code}\n` +
+         `${result.customer.lineName}${result.customer.verified ? "" : "（訪客）"}\n` +
+         `${result.order.recipient} ${result.order.phone}\n` +
+-        `${how}` +
++        `${how}\n付款：${paymentSummary(result.order)}` +
+         `${result.priorOrders > 0 ? `\n此客戶累計第 ${result.priorOrders + 1} 張單，請合併處理` : ""}\n` +
+         `${lines}\n合計 ${formatPrice(result.order.total)}`;
+       void pushLine(result.notifyTo, shopMsg);
+       if (result.customer.lineUserId) {
+         void pushLine(
+           result.customer.lineUserId,
+-          `Radiant 已收到您的訂單 ${result.order.code}\n${how}\n${lines}\n合計 ${formatPrice(result.order.total)}\n我們會盡快與您確認。`
++          `Radiant 已收到您的訂單 ${result.order.code}\n${how}\n${lines}\n合計 ${formatPrice(result.order.total)}\n${result.order.paymentMethod === "online" ? "請於訂單頁完成線上付款。" : "我們會盡快與您確認。"}`
+         );
+       }
+     }
+@@ -200,14 +297,14 @@ export async function changeOrder(
+     if (!canTransition(order.status, status)) return { ok: false, error: "這個狀態無法這樣變更" };
+     let stockRestored = false;
+     if (status === "cancelled" && order.status !== "cancelled") {
+-      for (const item of order.items) {
+-        const product = store.products.find((entry) => entry.id === item.productId);
+-        const variant = product?.variants.find((entry) => entry.id === item.variantId);
+-        if (variant) variant.stock += item.qty;
+-        if (product) product.sold = Math.max(0, product.sold - item.qty);
+-      }
++      restoreStock(store, order);
+       stockRestored = true;
+     }
++    if (status === "paid" && order.paymentMethod === "online" && order.paymentStatus !== "paid") {
++      order.paymentStatus = "paid";
++      order.payType = "MANUAL";
++      order.paidAt = new Date().toISOString();
++    }
+     order.status = status;
+     order.internalNote = internalNote;
+     order.updatedAt = new Date().toISOString();
+@@ -215,3 +312,78 @@ export async function changeOrder(
+     return { ok: true, order, stockRestored, customer };
+   });
+ }
++
++export type StartPayment =
++  | { ok: true; order: Order; orderNo: string }
++  | { ok: false; error: string; order?: Order };
++
++export type PaymentAccess = { granted: boolean; lineUserId: string };
++
++export async function startPayment(code: string, access: PaymentAccess): Promise<StartPayment> {
++  return mutate((store): StartPayment => {
++    const order = store.orders.find((entry) => entry.code === code);
++    if (!order) return { ok: false, error: "找不到訂單" };
++    const customer = store.customers.find((entry) => entry.id === order.customerId);
++    const owner = Boolean(access.lineUserId && customer?.lineUserId && customer.lineUserId === access.lineUserId);
++    if (!access.granted && !owner) return { ok: false, error: "找不到訂單" };
++    if (order.paymentMethod !== "online") return { ok: false, error: "此訂單不是線上付款", order };
++    if (order.paymentStatus === "paid") return { ok: false, error: "此訂單已付款", order };
++    if (order.status !== "pending") return { ok: false, error: "此訂單已無法付款", order };
++    if (!payConfig(store.settings).ready) return { ok: false, error: "線上付款目前未開放", order };
++    order.payAttempts += 1;
++    order.updatedAt = new Date().toISOString();
++    return { ok: true, order: { ...order }, orderNo: merchantOrderNo(order.code, order.payAttempts) };
++  });
++}
++
++export type PaymentOutcome =
++  | { kind: "unknown" }
++  | { kind: "failed"; order: Order }
++  | { kind: "amount_mismatch"; order: Order }
++  | { kind: "duplicate"; order: Order }
++  | { kind: "paid" | "late"; order: Order; customer: Customer | undefined; notifyTo: string };
++
++export async function recordPayment(result: PayResult): Promise<PaymentOutcome> {
++  const code = orderCodeFromMerchantNo(result.merchantOrderNo);
++  const outcome = await mutate((store): PaymentOutcome => {
++    const order = store.orders.find((entry) => entry.code === code);
++    if (!order || order.paymentMethod !== "online") return { kind: "unknown" };
++    if (!result.ok) return { kind: "failed", order: { ...order } };
++    if (!Number.isFinite(result.amount) || Math.round(result.amount) !== order.total) {
++      return { kind: "amount_mismatch", order: { ...order } };
++    }
++    if (order.paymentStatus === "paid") return { kind: "duplicate", order: { ...order } };
++    const now = new Date().toISOString();
++    order.paymentStatus = "paid";
++    order.payType = result.payType;
++    order.payTradeNo = result.tradeNo;
++    order.paidAt = now;
++    const late = order.status === "cancelled";
++    if (late) {
++      order.internalNote = [order.internalNote, "系統：訂單已取消後才收到付款，請至藍新後台退款"].filter(Boolean).join("\n");
++    } else if (order.status === "pending") {
++      order.status = "paid";
++    }
++    order.updatedAt = now;
++    return {
++      kind: late ? "late" : "paid",
++      order: { ...order },
++      customer: store.customers.find((entry) => entry.id === order.customerId),
++      notifyTo: store.settings.notifyTo,
++    };
++  });
++
++  if (outcome.kind === "paid" || outcome.kind === "late") {
++    const { order, customer, notifyTo } = outcome;
++    const who = customer ? `${customer.lineName}${customer.lineId ? `（${customer.lineId}）` : ""}` : "";
++    if (outcome.kind === "late") {
++      void pushLine(notifyTo, `注意：訂單 ${order.code} 已取消，但收到線上付款 ${formatPrice(order.total)}\n${who}\n請至藍新金流後台退款。`);
++    } else {
++      void pushLine(notifyTo, `訂單 ${order.code} 已收到線上付款 ${formatPrice(order.total)}\n${who}\n${paymentSummary(order)}`);
++      if (customer?.lineUserId) {
++        void pushLine(customer.lineUserId, `Radiant 已收到您的付款（訂單 ${order.code}，${formatPrice(order.total)}）。我們會盡快為您處理，謝謝。`);
++      }
++    }
++  }
++  return outcome;
++}
+diff --git a/lib/payment.ts b/lib/payment.ts
+new file mode 100644
+index 0000000..1e4a081
+--- /dev/null
++++ b/lib/payment.ts
+@@ -0,0 +1,20 @@
++import { getStore } from "./store";
++import { decryptTradeInfo, parsePayResult, payConfig, verifyTradeSha } from "./newebpay";
++import { recordPayment, type PaymentOutcome } from "./orders";
++
++export type CallbackResult = { verified: false } | { verified: true; outcome: PaymentOutcome };
++
++export async function processCallback(form: URLSearchParams): Promise<CallbackResult> {
++  const tradeInfo = form.get("TradeInfo") ?? "";
++  const sha = form.get("TradeSha") ?? "";
++  const { settings } = await getStore();
++  const cfg = payConfig(settings);
++  if (!cfg.merchantId || cfg.hashKey.length !== 32 || cfg.hashIV.length !== 16) return { verified: false };
++  if (!verifyTradeSha(tradeInfo, sha, cfg.hashKey, cfg.hashIV)) return { verified: false };
++  const plain = decryptTradeInfo(tradeInfo, cfg.hashKey, cfg.hashIV);
++  if (!plain) return { verified: false };
++  const result = parsePayResult(plain);
++  if (!result) return { verified: false };
++  if (result.merchantId && result.merchantId !== cfg.merchantId) return { verified: false };
++  return { verified: true, outcome: await recordPayment(result) };
++}
+diff --git a/lib/store.ts b/lib/store.ts
+index e6a4b26..aa80575 100644
+--- a/lib/store.ts
++++ b/lib/store.ts
+@@ -36,9 +36,19 @@ function defaultSettings(): Settings {
+     messagingToken: "",
+     notifyTo: "",
+     pickupPoints: [],
++    cvsEnabled: false,
++    cvsCodEnabled: true,
++    payOnlineEnabled: false,
++    payMode: "test",
++    payMerchantId: "",
++    payHashKey: "",
++    payHashIV: "",
++    unpaidCancelDays: 7,
+   };
+ }
+ 
++const text = (v: unknown): string => (typeof v === "string" ? v : "");
++
+ function normalizeItem(item: Partial<OrderItem>): OrderItem {
+   return {
+     ...(item as OrderItem),
+@@ -49,26 +59,42 @@ function normalizeItem(item: Partial<OrderItem>): OrderItem {
+ }
+ 
+ function normalizeOrder(order: Partial<Order>): Order {
++  const fulfillment = order.fulfillment === "pickup" || order.fulfillment === "cvs" ? order.fulfillment : "delivery";
++  const paymentMethod = order.paymentMethod === "online" || order.paymentMethod === "cod" ? order.paymentMethod : "offline";
+   return {
+     ...(order as Order),
+-    fulfillment: order.fulfillment === "pickup" ? "pickup" : "delivery",
+-    pickupPointId: typeof order.pickupPointId === "string" ? order.pickupPointId : "",
+-    pickupPointName: typeof order.pickupPointName === "string" ? order.pickupPointName : "",
++    fulfillment,
++    pickupPointId: text(order.pickupPointId),
++    pickupPointName: text(order.pickupPointName),
++    cvsBrand: text(order.cvsBrand),
++    cvsStoreName: text(order.cvsStoreName),
++    cvsStoreCode: text(order.cvsStoreCode),
++    paymentMethod,
++    paymentStatus: order.paymentStatus === "paid" ? "paid" : "unpaid",
++    payType: text(order.payType),
++    payTradeNo: text(order.payTradeNo),
++    paidAt: text(order.paidAt),
++    payAttempts: Number.isFinite(order.payAttempts) ? Number(order.payAttempts) : 0,
+     items: (order.items ?? []).map(normalizeItem),
+   };
+ }
+ 
++function normalizeSettings(raw: Partial<Settings> | undefined, defaults: Settings): Settings {
++  const merged: Settings = { ...defaults, ...(raw ?? {}) };
++  merged.pickupPoints = sanitizePickupPoints(raw?.pickupPoints);
++  merged.payMode = merged.payMode === "live" ? "live" : "test";
++  const days = Number(merged.unpaidCancelDays);
++  merged.unpaidCancelDays = Number.isFinite(days) ? Math.min(60, Math.max(0, Math.round(days))) : 7;
++  return merged;
++}
++
+ function normalizeCustomer(customer: Partial<Customer>): Customer {
+   return { ...(customer as Customer), phone: typeof customer.phone === "string" ? customer.phone : "" };
+ }
+ 
+ function normalize(parsed: Partial<Store>): Store {
+   const defaults = defaultSettings();
+-  const settings = {
+-    ...defaults,
+-    ...(parsed.settings ?? {}),
+-    pickupPoints: sanitizePickupPoints(parsed.settings?.pickupPoints),
+-  };
++  const settings = normalizeSettings(parsed.settings, defaults);
+   if (!settings.secret) settings.secret = defaults.secret;
+   return {
+     admin: parsed.admin ?? null,
+diff --git a/lib/types.ts b/lib/types.ts
+index 692d226..bb2f616 100644
+--- a/lib/types.ts
++++ b/lib/types.ts
+@@ -40,7 +40,10 @@ export type Product = {
+ };
+ 
+ export type OrderStatus = "pending" | "paid" | "shipped" | "completed" | "cancelled";
+-export type Fulfillment = "delivery" | "pickup";
++export type Fulfillment = "delivery" | "pickup" | "cvs";
++export type PaymentMethod = "online" | "offline" | "cod";
++export type PaymentStatus = "unpaid" | "paid";
++export type PayMode = "test" | "live";
+ 
+ export type PickupPoint = {
+   id: string;
+@@ -87,6 +90,15 @@ export type Order = {
+   fulfillment: Fulfillment;
+   pickupPointId: string;
+   pickupPointName: string;
++  cvsBrand: string;
++  cvsStoreName: string;
++  cvsStoreCode: string;
++  paymentMethod: PaymentMethod;
++  paymentStatus: PaymentStatus;
++  payType: string;
++  payTradeNo: string;
++  paidAt: string;
++  payAttempts: number;
+   note: string;
+   items: OrderItem[];
+   subtotal: number;
+@@ -120,6 +132,14 @@ export type Settings = {
+   messagingToken: string;
+   notifyTo: string;
+   pickupPoints: PickupPoint[];
++  cvsEnabled: boolean;
++  cvsCodEnabled: boolean;
++  payOnlineEnabled: boolean;
++  payMode: PayMode;
++  payMerchantId: string;
++  payHashKey: string;
++  payHashIV: string;
++  unpaidCancelDays: number;
+ };
+ 
+ export type Admin = {
+diff --git a/tests/checkout.test.ts b/tests/checkout.test.ts
+index 62d353d..41001ed 100644
+--- a/tests/checkout.test.ts
++++ b/tests/checkout.test.ts
+@@ -14,6 +14,10 @@ const input = (patch: Partial<CheckoutInput> = {}): CheckoutInput => ({
+   address: "台北市中山區南京東路一段1號",
+   fulfillment: "delivery",
+   pickupPointId: "",
++  cvsBrand: "",
++  cvsStoreName: "",
++  cvsStoreCode: "",
++  paymentMethod: "offline",
+   note: "",
+   idempotencyKey: `key-${Math.random().toString(36).slice(2, 12)}`,
+   identity: { lineUserId: "", lineName: "王小明", lineId: "", verified: false, phone: "0912345678" },
+diff --git a/tests/payment.test.ts b/tests/payment.test.ts
+new file mode 100644
+index 0000000..a3e37e6
+--- /dev/null
++++ b/tests/payment.test.ts
+@@ -0,0 +1,155 @@
++import { createCipheriv, createHash } from "crypto";
++import { mkdtempSync, rmSync } from "fs";
++import { tmpdir } from "os";
++import { join } from "path";
++import { afterAll, beforeAll, describe, expect, it } from "vitest";
++import type { CheckoutInput } from "@/lib/orders";
++import { decryptTradeInfo, encryptTradeInfo, parsePayResult, tradeSha, verifyTradeSha } from "@/lib/newebpay";
++import { parseCheckoutBody } from "@/lib/checkout";
++
++const dir = mkdtempSync(join(tmpdir(), "radiant-pay-"));
++process.env.RADIANT_DATA_FILE = join(dir, "store.json");
++process.env.NEWEBPAY_MERCHANT_ID = "MS12345678";
++process.env.NEWEBPAY_HASH_KEY = "abcdefghijklmnopqrstuvwxyz012345";
++process.env.NEWEBPAY_HASH_IV = "ABCDEFGHIJKLMNOP";
++const KEY = process.env.NEWEBPAY_HASH_KEY;
++const IV = process.env.NEWEBPAY_HASH_IV;
++
++const input = (patch: Partial<CheckoutInput> = {}): CheckoutInput => ({
++  lines: [{ productId: "prd_p", variantId: "var_p", qty: 1 }],
++  recipient: "王小明",
++  phone: "0912345678",
++  address: "台北市中山區南京東路一段1號",
++  fulfillment: "delivery",
++  pickupPointId: "",
++  cvsBrand: "",
++  cvsStoreName: "",
++  cvsStoreCode: "",
++  paymentMethod: "online",
++  note: "",
++  idempotencyKey: `key-${Math.random().toString(36).slice(2, 12)}`,
++  identity: { lineUserId: "", lineName: "王小明", lineId: "", verified: false, phone: "0912345678" },
++  ...patch,
++});
++
++function gatewayResponse(amount: number, orderNo: string, status = "SUCCESS") {
++  const cipher = createCipheriv("aes-256-cbc", KEY, IV);
++  const body = JSON.stringify({ Status: status, Result: { MerchantID: "MS12345678", Amt: amount, TradeNo: "T1", MerchantOrderNo: orderNo, PaymentType: "CREDIT" } });
++  const tradeInfo = Buffer.concat([cipher.update(body), cipher.final()]).toString("hex");
++  const sha = createHash("sha256").update(`HashIV=${IV}&${tradeInfo}&HashKey=${KEY}`).digest("hex").toUpperCase();
++  return { tradeInfo, sha };
++}
++
++describe("NewebPay crypto", () => {
++  it("round-trips TradeInfo and signs it", () => {
++    const hex = encryptTradeInfo({ MerchantID: "M", Amt: 100, ItemDesc: "測試 item" }, KEY, IV);
++    const plain = decryptTradeInfo(hex, KEY, IV);
++    expect(new URLSearchParams(plain ?? "").get("ItemDesc")).toBe("測試 item");
++    expect(tradeSha(hex, KEY, IV)).toMatch(/^[0-9A-F]{64}$/);
++  });
++
++  it("verifies gateway signatures and rejects forged ones", () => {
++    const good = gatewayResponse(100, "RD1_1");
++    expect(verifyTradeSha(good.tradeInfo, good.sha, KEY, IV)).toBe(true);
++    expect(verifyTradeSha(good.tradeInfo, "0".repeat(64), KEY, IV)).toBe(false);
++    expect(verifyTradeSha(good.tradeInfo, good.sha, KEY, "ZZZZZZZZZZZZZZZZ")).toBe(false);
++    expect(decryptTradeInfo("not-hex", KEY, IV)).toBeNull();
++  });
++
++  it("parses a gateway result", () => {
++    const { tradeInfo } = gatewayResponse(570, "RD1_2");
++    const result = parsePayResult(decryptTradeInfo(tradeInfo, KEY, IV) ?? "");
++    expect(result).toMatchObject({ ok: true, amount: 570, merchantOrderNo: "RD1_2", payType: "CREDIT" });
++  });
++});
++
++describe("checkout body", () => {
++  const body = (patch: Record<string, unknown>) => ({
++    items: [{ productId: "a", variantId: "b", qty: 1 }],
++    recipient: "王",
++    phone: "0912345678",
++    address: "",
++    idempotencyKey: "abcdefgh1234",
++    ...patch,
++  });
++  it("requires brand and store for convenience-store pickup", () => {
++    expect(parseCheckoutBody(body({ fulfillment: "cvs", cvsBrand: "全家", cvsStoreName: "信義", cvsStoreCode: "123456" })).ok).toBe(true);
++    expect(parseCheckoutBody(body({ fulfillment: "cvs", cvsBrand: "亂填", cvsStoreName: "信義", cvsStoreCode: "123456" })).ok).toBe(false);
++    expect(parseCheckoutBody(body({ fulfillment: "cvs", cvsBrand: "全家", cvsStoreName: "", cvsStoreCode: "123456" })).ok).toBe(false);
++  });
++  it("allows pay-on-pickup only with convenience-store pickup", () => {
++    expect(parseCheckoutBody(body({ fulfillment: "delivery", address: "台北市中山區南京東路", paymentMethod: "cod" })).ok).toBe(false);
++  });
++});
++
++describe("payments and unpaid expiry", () => {
++  beforeAll(async () => {
++    const { mutate } = await import("@/lib/store");
++    await mutate((store) => {
++      store.settings.payOnlineEnabled = true;
++      store.settings.cvsEnabled = true;
++      store.settings.cvsCodEnabled = true;
++      store.products.push({
++        id: "prd_p", name: "測試包", subtitle: "", category: "包", categories: [], description: "", details: [],
++        price: 500, comparePrice: 0,
++        variants: [{ id: "var_p", color: "黑", size: "", hex: "#111111", sku: "", stock: 10, price: null }],
++        photos: [], status: "listed", featured: false, sold: 0,
++        createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
++      });
++    });
++  });
++  afterAll(() => rmSync(dir, { recursive: true, force: true }));
++
++  it("records a verified payment once and ignores a wrong amount", async () => {
++    const { placeOrder, recordPayment } = await import("@/lib/orders");
++    const placed = await placeOrder(input());
++    expect(placed.ok).toBe(true);
++    if (!placed.ok) return;
++    const parse = (amount: number, status = "SUCCESS") => {
++      const { tradeInfo } = gatewayResponse(amount, `${placed.order.code}_1`, status);
++      return parsePayResult(decryptTradeInfo(tradeInfo, KEY, IV) ?? "");
++    };
++    const wrong = parse(placed.order.total + 1);
++    expect((await recordPayment(wrong!)).kind).toBe("amount_mismatch");
++    expect((await recordPayment(parse(placed.order.total, "TRA10001")!)).kind).toBe("failed");
++    expect((await recordPayment(parse(placed.order.total)!)).kind).toBe("paid");
++    expect((await recordPayment(parse(placed.order.total)!)).kind).toBe("duplicate");
++    const { getStore } = await import("@/lib/store");
++    const stored = (await getStore()).orders.find((order) => order.id === placed.order.id);
++    expect(stored).toMatchObject({ status: "paid", paymentStatus: "paid", payType: "CREDIT" });
++  });
++
++  it("cancels stale unpaid orders, restores stock, and spares paid, cod and fresh ones", async () => {
++    const { placeOrder, sweepExpiredOrders } = await import("@/lib/orders");
++    const { getStore, mutate } = await import("@/lib/store");
++    const stock = () => getStore().then((store) => store.products[0].variants[0].stock);
++    const stockBefore = await stock();
++    const stale = await placeOrder(input({ paymentMethod: "offline" }));
++    const cod = await placeOrder(input({ fulfillment: "cvs", cvsBrand: "7-ELEVEN", cvsStoreName: "信義", cvsStoreCode: "123456", paymentMethod: "cod" }));
++    const fresh = await placeOrder(input({ paymentMethod: "offline" }));
++    if (!stale.ok || !cod.ok || !fresh.ok) throw new Error("setup failed");
++    const longAgo = new Date(Date.now() - 8 * 86400000).toISOString();
++    await mutate((store) => {
++      for (const order of store.orders) if (order.id === stale.order.id || order.id === cod.order.id) order.createdAt = longAgo;
++    });
++    const before = await stock();
++    expect(await sweepExpiredOrders()).toBe(1);
++    const after = await getStore();
++    expect(after.orders.find((order) => order.id === stale.order.id)?.status).toBe("cancelled");
++    expect(after.orders.find((order) => order.id === cod.order.id)?.status).toBe("pending");
++    expect(after.orders.find((order) => order.id === fresh.order.id)?.status).toBe("pending");
++    expect(after.products[0].variants[0].stock).toBe(before + 1);
++    expect(stockBefore).toBeGreaterThan(0);
++  });
++
++  it("rejects online payment and cvs when they are switched off", async () => {
++    const { placeOrder } = await import("@/lib/orders");
++    const { mutate } = await import("@/lib/store");
++    await mutate((store) => {
++      store.settings.payOnlineEnabled = false;
++      store.settings.cvsEnabled = false;
++    });
++    expect((await placeOrder(input())).ok).toBe(false);
++    expect((await placeOrder(input({ fulfillment: "cvs", cvsBrand: "全家", cvsStoreName: "信義", cvsStoreCode: "123456", paymentMethod: "offline" }))).ok).toBe(false);
++  });
++});
+diff --git a/vercel.json b/vercel.json
+index f92a3f8..41dc6d5 100644
+--- a/vercel.json
++++ b/vercel.json
+@@ -1,3 +1,4 @@
+ {
+-  "framework": "nextjs"
++  "framework": "nextjs",
++  "crons": [{ "path": "/api/cron/expire-orders", "schedule": "0 20 * * *" }]
+ }
+-- 
+2.43.0
+
