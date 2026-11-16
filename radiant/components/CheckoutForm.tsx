@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { formatPrice } from "@/lib/format";
 import { clearCart } from "@/lib/cart-client";
-import type { Fulfillment, PickupPoint } from "@/lib/types";
+import { CVS_BRANDS } from "@/lib/cvs";
+import type { Fulfillment, PaymentMethod, PickupPoint } from "@/lib/types";
 import { ProductImage } from "./ProductImage";
 import { SummaryRows, totals, useCart } from "./CartView";
 
@@ -13,10 +14,18 @@ export function CheckoutForm({
   identity,
   paymentNote,
   pickupPoints,
+  cvsEnabled,
+  cvsCodEnabled,
+  onlinePay,
+  cancelDays,
 }: {
   identity: { name: string } | null;
   paymentNote: string;
   pickupPoints: PickupPoint[];
+  cvsEnabled: boolean;
+  cvsCodEnabled: boolean;
+  onlinePay: boolean;
+  cancelDays: number;
 }) {
   const router = useRouter();
   const { data } = useCart();
@@ -24,7 +33,15 @@ export function CheckoutForm({
   const [error, setError] = useState("");
   const [method, setMethod] = useState<Fulfillment>("delivery");
   const [pickupId, setPickupId] = useState(pickupPoints[0]?.id ?? "");
+  const [cvsBrand, setCvsBrand] = useState(CVS_BRANDS[0]);
+  const [payment, setPayment] = useState<PaymentMethod>(onlinePay ? "online" : "offline");
   const pickupOn = pickupPoints.length > 0 && method === "pickup";
+  const cvsOn = cvsEnabled && method === "cvs";
+  const codOn = cvsOn && cvsCodEnabled;
+  const effectivePayment: PaymentMethod = payment === "cod" && !codOn ? (onlinePay ? "online" : "offline") : payment;
+  const methods: { key: Fulfillment; label: string }[] = [{ key: "delivery", label: "宅配" }];
+  if (cvsEnabled) methods.push({ key: "cvs", label: "超商取貨" });
+  if (pickupPoints.length > 0) methods.push({ key: "pickup", label: "自取" });
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -43,17 +60,25 @@ export function CheckoutForm({
         note: form.get("note"),
         lineId: form.get("lineId"),
         lineName: form.get("lineName"),
-        fulfillment: pickupOn ? "pickup" : "delivery",
+        fulfillment: pickupOn ? "pickup" : cvsOn ? "cvs" : "delivery",
         pickupPointId: pickupOn ? pickupId : "",
+        cvsBrand: cvsOn ? cvsBrand : "",
+        cvsStoreName: cvsOn ? form.get("cvsStoreName") : "",
+        cvsStoreCode: cvsOn ? form.get("cvsStoreCode") : "",
+        paymentMethod: effectivePayment,
       }),
     });
-    const json = (await res.json()) as { code?: string; token?: string; error?: string };
+    const json = (await res.json()) as { code?: string; token?: string; payUrl?: string; error?: string };
     if (!res.ok || !json.code) {
       setError(json.error ?? "送出失敗，請稍後再試");
       setBusy(false);
       return;
     }
     clearCart();
+    if (json.payUrl) {
+      window.location.href = json.payUrl;
+      return;
+    }
     router.push(`/order/${json.code}?t=${json.token}`);
   }
 
@@ -104,29 +129,24 @@ export function CheckoutForm({
           </div>
         )}
 
-        {pickupPoints.length > 0 && (
+        {methods.length > 1 && (
           <div className="method-switch" role="radiogroup" aria-label="取貨方式">
-            <button
-              type="button"
-              className={method === "delivery" ? "on" : ""}
-              aria-pressed={method === "delivery"}
-              onClick={() => setMethod("delivery")}
-            >
-              宅配
-            </button>
-            <button
-              type="button"
-              className={method === "pickup" ? "on" : ""}
-              aria-pressed={method === "pickup"}
-              onClick={() => setMethod("pickup")}
-            >
-              自取
-            </button>
+            {methods.map((m) => (
+              <button
+                key={m.key}
+                type="button"
+                className={method === m.key ? "on" : ""}
+                aria-pressed={method === m.key}
+                onClick={() => setMethod(m.key)}
+              >
+                {m.label}
+              </button>
+            ))}
           </div>
         )}
 
         <h2 style={{ fontFamily: "var(--serif-tc)", fontSize: 20, marginBottom: 22, letterSpacing: "0.08em" }}>
-          {pickupOn ? "自取資料" : "收件資料"}
+          {pickupOn ? "自取資料" : cvsOn ? "取貨資料" : "收件資料"}
         </h2>
         <div className="two">
           <label className="field">
@@ -159,6 +179,35 @@ export function CheckoutForm({
               </label>
             ))}
           </div>
+        ) : cvsOn ? (
+          <>
+            <div className="brand-switch" role="radiogroup" aria-label="超商品牌">
+              {CVS_BRANDS.map((b) => (
+                <button
+                  key={b}
+                  type="button"
+                  className={cvsBrand === b ? "on" : ""}
+                  aria-pressed={cvsBrand === b}
+                  onClick={() => setCvsBrand(b)}
+                >
+                  {b}
+                </button>
+              ))}
+            </div>
+            <div className="two">
+              <label className="field">
+                <span className="label">門市名稱</span>
+                <input className="input" name="cvsStoreName" required maxLength={60} placeholder="例：台北信義門市" />
+              </label>
+              <label className="field">
+                <span className="label">店號</span>
+                <input className="input" name="cvsStoreCode" required maxLength={20} inputMode="numeric" />
+              </label>
+            </div>
+            <span className="hint" style={{ display: "block", marginBottom: 20 }}>
+              店號可在各超商的門市查詢頁或 APP 找到，請確認無誤，出貨後無法更改門市。
+            </span>
+          </>
         ) : (
           <label className="field">
             <span className="label">收件地址</span>
@@ -176,6 +225,43 @@ export function CheckoutForm({
           <span className="label">備註</span>
           <textarea className="textarea" name="note" maxLength={300} />
         </label>
+        {(onlinePay || codOn) && (
+          <>
+            <h2 className="sub-title">付款方式</h2>
+            <div className="pickup-list">
+              {onlinePay && (
+                <label className={`pickup-choice${effectivePayment === "online" ? " on" : ""}`}>
+                  <input type="radio" name="payment" checked={effectivePayment === "online"} onChange={() => setPayment("online")} />
+                  <span>
+                    <b>信用卡 / Apple Pay</b>
+                    <small>送出訂單後前往藍新金流安全付款頁，付款完成即確認訂單。</small>
+                  </span>
+                </label>
+              )}
+              {codOn && (
+                <label className={`pickup-choice${effectivePayment === "cod" ? " on" : ""}`}>
+                  <input type="radio" name="payment" checked={effectivePayment === "cod"} onChange={() => setPayment("cod")} />
+                  <span>
+                    <b>超商取貨付款</b>
+                    <small>到店取貨時再付款。</small>
+                  </span>
+                </label>
+              )}
+              <label className={`pickup-choice${effectivePayment === "offline" ? " on" : ""}`}>
+                <input type="radio" name="payment" checked={effectivePayment === "offline"} onChange={() => setPayment("offline")} />
+                <span>
+                  <b>其他付款方式</b>
+                  <small>送出後由我們透過 LINE 與您確認付款。</small>
+                </span>
+              </label>
+            </div>
+          </>
+        )}
+        {cancelDays > 0 && effectivePayment !== "cod" && (
+          <div className="notice" style={{ marginBottom: 20 }}>
+            訂單成立後 {cancelDays} 天內未完成付款，系統會自動取消並釋出庫存。
+          </div>
+        )}
         {pickupOn && selected && (
           <div className="notice" style={{ marginBottom: 20 }}>
             自取不收運費。商品備妥後我們會透過 LINE 通知您前往「{selected.name}」取貨。
@@ -212,7 +298,7 @@ export function CheckoutForm({
           </div>
         )}
         <button type="submit" className="btn solid" disabled={busy || blocked}>
-          {busy ? "送出中…" : `送出訂單 · ${formatPrice(totals(data, { pickup: pickupOn }).total)}`}
+          {busy ? "處理中…" : `${effectivePayment === "online" ? "前往付款" : "送出訂單"} · ${formatPrice(totals(data, { pickup: pickupOn }).total)}`}
         </button>
         {blocked && (
           <p style={{ fontSize: 13, color: "var(--alert)", margin: "12px 0 0" }}>

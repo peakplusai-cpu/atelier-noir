@@ -3,7 +3,9 @@ import { getStore } from "@/lib/store";
 import { getLineIdentity, lineLoginEnabled } from "@/lib/line";
 import { enabledPickupPoints } from "@/lib/pickup";
 import { placeOrder, type CartLine } from "@/lib/orders";
-import type { Fulfillment } from "@/lib/types";
+import { payConfig } from "@/lib/newebpay";
+import { CVS_BRANDS } from "@/lib/cvs";
+import type { Fulfillment, PaymentMethod } from "@/lib/types";
 
 function text(value: unknown, max: number): string {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
@@ -24,8 +26,14 @@ export async function POST(request: Request) {
   const recipient = text(body.recipient, 60);
   const phone = text(body.phone, 30);
   const address = text(body.address, 200);
-  const fulfillment: Fulfillment = text(body.fulfillment, 20) === "pickup" ? "pickup" : "delivery";
+  const kind = text(body.fulfillment, 20);
+  const fulfillment: Fulfillment = kind === "pickup" ? "pickup" : kind === "cvs" ? "cvs" : "delivery";
   const pickupPointId = text(body.pickupPointId, 80);
+  const cvsBrand = text(body.cvsBrand, 20);
+  const cvsStoreName = text(body.cvsStoreName, 60);
+  const cvsStoreCode = text(body.cvsStoreCode, 20);
+  const rawPay = text(body.paymentMethod, 20);
+  const paymentMethod: PaymentMethod = rawPay === "online" ? "online" : rawPay === "cod" ? "cod" : "offline";
 
   if (!recipient || !phone) {
     return NextResponse.json({ error: "請填寫姓名與電話" }, { status: 400 });
@@ -33,8 +41,20 @@ export async function POST(request: Request) {
   if (fulfillment === "pickup") {
     const point = enabledPickupPoints(settings).find((p) => p.id === pickupPointId);
     if (!point) return NextResponse.json({ error: "請選擇自取地點" }, { status: 400 });
+  } else if (fulfillment === "cvs") {
+    if (!settings.cvsEnabled) return NextResponse.json({ error: "目前未開放超商取貨" }, { status: 400 });
+    if (!CVS_BRANDS.includes(cvsBrand)) return NextResponse.json({ error: "請選擇超商品牌" }, { status: 400 });
+    if (!cvsStoreName || !cvsStoreCode) {
+      return NextResponse.json({ error: "請填寫門市名稱與店號" }, { status: 400 });
+    }
   } else if (!address) {
     return NextResponse.json({ error: "請完整填寫收件人、電話與地址" }, { status: 400 });
+  }
+  if (paymentMethod === "online" && !payConfig(settings).ready) {
+    return NextResponse.json({ error: "線上付款目前未開放" }, { status: 400 });
+  }
+  if (paymentMethod === "cod" && !(fulfillment === "cvs" && settings.cvsCodEnabled)) {
+    return NextResponse.json({ error: "取貨付款僅限超商取貨" }, { status: 400 });
   }
 
   let lineName = identity?.name ?? "";
@@ -60,6 +80,10 @@ export async function POST(request: Request) {
     address,
     fulfillment,
     pickupPointId,
+    cvsBrand,
+    cvsStoreName,
+    cvsStoreCode,
+    paymentMethod,
     note: text(body.note, 300),
     identity: {
       lineUserId: identity?.userId ?? "",
@@ -70,5 +94,8 @@ export async function POST(request: Request) {
   });
 
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 409 });
-  return NextResponse.json({ code: result.order.code, token: result.order.token });
+  const { code, token } = result.order;
+  const payUrl =
+    paymentMethod === "online" ? `/api/payment/newebpay/start?code=${code}&t=${token}` : undefined;
+  return NextResponse.json({ code, token, payUrl });
 }

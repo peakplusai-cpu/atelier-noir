@@ -1,4 +1,4 @@
-import { formatDate, formatPrice, fulfillmentLabel, ORDER_STATUS_LABEL } from "@/lib/format";
+import { formatDate, formatPrice, fulfillmentLabel, ORDER_STATUS_LABEL, paymentSummary } from "@/lib/format";
 import type { Order } from "@/lib/types";
 import { ProductImage } from "./ProductImage";
 
@@ -54,8 +54,12 @@ export function OrderReceipt({ order, showAddress = true }: { order: Order; show
           <dd>{order.recipient}</dd>
           <dt>電話</dt>
           <dd>{order.phone}</dd>
-          <dt>{order.fulfillment === "pickup" ? "自取地點" : "地址"}</dt>
+          <dt>{order.fulfillment === "pickup" ? "自取地點" : order.fulfillment === "cvs" ? "取貨門市" : "地址"}</dt>
           <dd>{order.address || order.pickupPointName}</dd>
+          <dt>付款</dt>
+          <dd>
+            <span className={`pay-tag${order.paymentStatus === "paid" ? " paid" : ""}`}>{paymentSummary(order)}</span>
+          </dd>
           {order.note && (
             <>
               <dt>備註</dt>

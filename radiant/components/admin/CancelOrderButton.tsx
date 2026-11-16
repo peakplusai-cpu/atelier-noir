@@ -8,11 +8,13 @@ export function CancelOrderButton({
   code,
   compact,
   warnShipped,
+  warnPaid,
 }: {
   orderId: string;
   code: string;
   compact?: boolean;
   warnShipped?: boolean;
+  warnPaid?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
@@ -22,7 +24,7 @@ export function CancelOrderButton({
       <form
         action={cancelOrder}
         onSubmit={(e) => {
-          if (!confirm(`確定取消訂單 ${code}？庫存會加回商品。`)) e.preventDefault();
+          if (!confirm(`確定取消訂單 ${code}？庫存會加回商品。${compact && warnPaid ? "\n此單客人已線上付款，取消後需自行到藍新金流後台退款。" : ""}`)) e.preventDefault();
         }}
       >
         <input type="hidden" name="id" value={orderId} />
@@ -50,6 +52,11 @@ export function CancelOrderButton({
       style={{ marginTop: 8 }}
     >
       <input type="hidden" name="id" value={orderId} />
+      {warnPaid && (
+        <div className="notice error" style={{ marginBottom: 16 }}>
+          此單客人已線上付款。取消不會自動退款，請另外到藍新金流後台為這筆交易退款。
+        </div>
+      )}
       {warnShipped && (
         <div className="notice error" style={{ marginBottom: 16 }}>
           此單已出貨。取消會把庫存加回去，若貨已寄出請另外處理退件。

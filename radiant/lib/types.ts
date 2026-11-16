@@ -30,7 +30,10 @@ export type Product = {
 };
 
 export type OrderStatus = "pending" | "paid" | "shipped" | "completed" | "cancelled";
-export type Fulfillment = "delivery" | "pickup";
+export type Fulfillment = "delivery" | "pickup" | "cvs";
+export type PaymentMethod = "online" | "offline" | "cod";
+export type PaymentStatus = "unpaid" | "paid";
+export type PayMode = "test" | "live";
 
 export type PickupPoint = {
   id: string;
@@ -74,6 +77,15 @@ export type Order = {
   fulfillment: Fulfillment;
   pickupPointId: string;
   pickupPointName: string;
+  cvsBrand: string;
+  cvsStoreName: string;
+  cvsStoreCode: string;
+  paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
+  payType: string;
+  payTradeNo: string;
+  paidAt: string;
+  payAttempts: number;
   note: string;
   items: OrderItem[];
   subtotal: number;
@@ -107,6 +119,14 @@ export type Settings = {
   messagingToken: string;
   notifyTo: string;
   pickupPoints: PickupPoint[];
+  cvsEnabled: boolean;
+  cvsCodEnabled: boolean;
+  payOnlineEnabled: boolean;
+  payMode: PayMode;
+  payMerchantId: string;
+  payHashKey: string;
+  payHashIV: string;
+  unpaidCancelDays: number;
 };
 
 export type Admin = { passwordHash: string; createdAt: string };

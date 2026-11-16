@@ -37,6 +37,13 @@ export default async function OrderAdmin({
       {updated && <div className="notice" style={{ marginBottom: 24 }}>訂單已更新。</div>}
       {cancelled && <div className="notice" style={{ marginBottom: 24 }}>訂單已取消，庫存已加回商品。</div>}
 
+      {order.paymentMethod === "online" && order.paymentStatus === "paid" && (
+        <div className="notice" style={{ marginBottom: 24 }}>
+          已線上付款{order.payTradeNo ? `，藍新交易序號 ${order.payTradeNo}` : ""}。
+          {locked ? "此單已取消，請確認已在藍新金流後台完成退款。" : ""}
+        </div>
+      )}
+
       <div className="form-grid">
         <OrderReceipt order={order} />
         <div>
@@ -108,7 +115,12 @@ export default async function OrderAdmin({
                 <p style={{ fontSize: 13, color: "var(--muted)", margin: "16px 0 12px" }}>
                   取消後無法恢復，商品庫存會自動加回。
                 </p>
-                <CancelOrderButton orderId={order.id} code={order.code} warnShipped={order.status === "shipped"} />
+                <CancelOrderButton
+                  orderId={order.id}
+                  code={order.code}
+                  warnShipped={order.status === "shipped"}
+                  warnPaid={order.paymentMethod === "online" && order.paymentStatus === "paid"}
+                />
               </div>
             )}
           </section>

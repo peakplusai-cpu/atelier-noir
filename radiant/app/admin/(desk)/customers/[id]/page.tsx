@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getStore } from "@/lib/store";
 import { saveCustomerNote, shipAllForCustomer } from "@/app/actions/admin";
-import { formatDate, formatPrice, ORDER_STATUS_LABEL, OPEN_STATUSES } from "@/lib/format";
+import { formatDate, formatPrice, fulfillmentLabel, ORDER_STATUS_LABEL, OPEN_STATUSES } from "@/lib/format";
 import { PrintButton } from "@/components/admin/PrintButton";
 
 export default async function CustomerAdmin({
@@ -36,6 +36,8 @@ export default async function CustomerAdmin({
   const itemsTotal = open.reduce((s, o) => s + o.subtotal, 0);
   const shippingTotal = open.reduce((s, o) => s + o.shipping, 0);
   const addresses = [...new Map(open.map((o) => [`${o.fulfillment}|${o.recipient}|${o.phone}|${o.address}`, o])).values()];
+  const onlinePaid = open.filter((o) => o.paymentMethod === "online" && o.paymentStatus === "paid").reduce((s, o) => s + o.total, 0);
+  const codDue = open.filter((o) => o.paymentMethod === "cod").reduce((s, o) => s + o.total, 0);
   const notes = open.filter((o) => o.note).map((o) => `${o.code}：${o.note}`);
   const spent = mine.filter((o) => o.status !== "cancelled").reduce((s, o) => s + o.total, 0);
 
@@ -97,11 +99,23 @@ export default async function CustomerAdmin({
                   </dd>
                   <dt>應收總額</dt>
                   <dd>{formatPrice(itemsTotal + shippingTotal)}</dd>
+                  {onlinePaid > 0 && (
+                    <>
+                      <dt>已線上付款</dt>
+                      <dd>{formatPrice(onlinePaid)}</dd>
+                    </>
+                  )}
+                  {codDue > 0 && (
+                    <>
+                      <dt>取貨付款（到店收）</dt>
+                      <dd>{formatPrice(codDue)}</dd>
+                    </>
+                  )}
                   <dt>{addresses.length > 1 ? "收件資料（多組）" : "收件資料"}</dt>
                   <dd>
                     {addresses.map((o) => (
                       <div key={o.id} style={{ marginBottom: 6 }}>
-                        {o.fulfillment === "pickup" ? "自取" : "宅配"}　{o.recipient}　{o.phone}
+                        {fulfillmentLabel(o.fulfillment)}　{o.recipient}　{o.phone}
                         <br />
                         {o.address}
                       </div>

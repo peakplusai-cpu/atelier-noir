@@ -232,6 +232,10 @@ export async function saveSettings(_prev: string, form: FormData): Promise<strin
   } catch {
     return "自取點資料格式不正確";
   }
+  const hashKey = str(form, "payHashKey", 80);
+  const hashIV = str(form, "payHashIV", 80);
+  if (hashKey && hashKey.length !== 32) return "HashKey 應為 32 個字元，請重新確認";
+  if (hashIV && hashIV.length !== 16) return "HashIV 應為 16 個字元，請重新確認";
   await mutate((s) => {
     const st = s.settings;
     st.shopName = str(form, "shopName", 40) || "Radiant";
@@ -252,6 +256,18 @@ export async function saveSettings(_prev: string, form: FormData): Promise<strin
     if (form.get("clearLoginSecret") === "on") st.loginChannelSecret = "";
     if (form.get("clearMessagingToken") === "on") st.messagingToken = "";
     st.pickupPoints = sanitizePickupPoints(pickupPoints);
+    st.cvsEnabled = form.get("cvsEnabled") === "on";
+    st.cvsCodEnabled = form.get("cvsCodEnabled") === "on";
+    st.payOnlineEnabled = form.get("payOnlineEnabled") === "on";
+    if (form.has("payMode")) st.payMode = str(form, "payMode", 8) === "live" ? "live" : "test";
+    if (form.has("payMerchantId")) st.payMerchantId = str(form, "payMerchantId", 40);
+    if (hashKey) st.payHashKey = hashKey;
+    if (hashIV) st.payHashIV = hashIV;
+    if (form.get("clearPayKeys") === "on") {
+      st.payHashKey = "";
+      st.payHashIV = "";
+    }
+    st.unpaidCancelDays = Math.min(60, Math.max(0, Math.round(num(str(form, "unpaidCancelDays", 4)))));
   });
   revalidatePath("/", "layout");
   return "已儲存";

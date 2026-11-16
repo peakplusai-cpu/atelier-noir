@@ -4,6 +4,7 @@ import { CheckoutForm } from "@/components/CheckoutForm";
 import { getStore } from "@/lib/store";
 import { getLineIdentity, lineLoginEnabled } from "@/lib/line";
 import { enabledPickupPoints } from "@/lib/pickup";
+import { payConfig } from "@/lib/newebpay";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "結帳" };
@@ -50,6 +51,10 @@ export default async function CheckoutPage({ searchParams }: { searchParams: Pro
             identity={identity ? { name: identity.name } : null}
             paymentNote={settings.paymentNote}
             pickupPoints={enabledPickupPoints(settings)}
+            cvsEnabled={settings.cvsEnabled}
+            cvsCodEnabled={settings.cvsCodEnabled}
+            onlinePay={payConfig(settings).ready}
+            cancelDays={settings.unpaidCancelDays}
           />
         )}
       </main>

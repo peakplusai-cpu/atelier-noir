@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getStore } from "@/lib/store";
-import { formatDate, formatPrice, ORDER_STATUS_LABEL, ORDER_STATUSES, OPEN_STATUSES } from "@/lib/format";
+import { formatDate, formatPrice, paymentSummary, ORDER_STATUS_LABEL, ORDER_STATUSES, OPEN_STATUSES } from "@/lib/format";
 import { CancelOrderButton } from "@/components/admin/CancelOrderButton";
 import type { OrderStatus } from "@/lib/types";
 
@@ -18,7 +18,7 @@ export default async function OrdersAdmin({ searchParams }: { searchParams: Prom
     .filter((o) => {
       if (!q) return true;
       const c = byId.get(o.customerId);
-      return `${o.code} ${o.recipient} ${o.phone} ${o.pickupPointName} ${o.address} ${c?.lineName ?? ""} ${c?.lineId ?? ""}`.toLowerCase().includes(q);
+      return `${o.code} ${o.recipient} ${o.phone} ${o.pickupPointName} ${o.address} ${o.cvsStoreName} ${o.cvsStoreCode} ${c?.lineName ?? ""} ${c?.lineId ?? ""}`.toLowerCase().includes(q);
     })
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
@@ -90,6 +90,9 @@ export default async function OrdersAdmin({ searchParams }: { searchParams: Prom
                     {o.fulfillment === "pickup" && (
                       <div style={{ fontSize: 12.5, color: "var(--teal-deep)", marginTop: 2 }}>自取{o.pickupPointName ? ` · ${o.pickupPointName}` : ""}</div>
                     )}
+                    {o.fulfillment === "cvs" && (
+                      <div style={{ fontSize: 12.5, color: "var(--teal-deep)", marginTop: 2 }}>超商 · {o.address}</div>
+                    )}
                   </td>
                   <td style={{ maxWidth: 260, fontSize: 13, color: "var(--muted)" }}>
                     {o.items.map((i) => `${i.name} ${i.color}×${i.qty}`).join("、")}
@@ -99,11 +102,18 @@ export default async function OrdersAdmin({ searchParams }: { searchParams: Prom
                     <span className={`badge${OPEN_STATUSES.includes(o.status) ? " on" : o.status === "cancelled" ? " mute" : ""}`}>
                       {ORDER_STATUS_LABEL[o.status]}
                     </span>
+                    {o.status !== "cancelled" && (
+                      <div style={{ marginTop: 4 }}>
+                        <span className={`pay-tag${o.paymentStatus === "paid" ? " paid" : o.paymentMethod === "online" ? " due" : ""}`}>
+                          {paymentSummary(o)}
+                        </span>
+                      </div>
+                    )}
                   </td>
                   <td className="num right">{formatPrice(o.total)}</td>
                   <td>
                     {o.status !== "cancelled" && o.status !== "completed" && (
-                      <CancelOrderButton orderId={o.id} code={o.code} compact />
+                      <CancelOrderButton orderId={o.id} code={o.code} compact warnPaid={o.paymentMethod === "online" && o.paymentStatus === "paid"} />
                     )}
                   </td>
                 </tr>

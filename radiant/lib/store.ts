@@ -27,26 +27,52 @@ function defaultSettings(): Settings {
     messagingToken: "",
     notifyTo: "",
     pickupPoints: [],
+    cvsEnabled: false,
+    cvsCodEnabled: true,
+    payOnlineEnabled: false,
+    payMode: "test",
+    payMerchantId: "",
+    payHashKey: "",
+    payHashIV: "",
+    unpaidCancelDays: 7,
   };
 }
 
+const text = (v: unknown): string => (typeof v === "string" ? v : "");
+
 function normalizeOrder(order: Partial<Order>): Order {
+  const fulfillment = order.fulfillment === "pickup" || order.fulfillment === "cvs" ? order.fulfillment : "delivery";
+  const paymentMethod = order.paymentMethod === "online" || order.paymentMethod === "cod" ? order.paymentMethod : "offline";
   return {
     ...(order as Order),
-    fulfillment: order.fulfillment === "pickup" ? "pickup" : "delivery",
-    pickupPointId: typeof order.pickupPointId === "string" ? order.pickupPointId : "",
-    pickupPointName: typeof order.pickupPointName === "string" ? order.pickupPointName : "",
+    fulfillment,
+    pickupPointId: text(order.pickupPointId),
+    pickupPointName: text(order.pickupPointName),
+    cvsBrand: text(order.cvsBrand),
+    cvsStoreName: text(order.cvsStoreName),
+    cvsStoreCode: text(order.cvsStoreCode),
+    paymentMethod,
+    paymentStatus: order.paymentStatus === "paid" ? "paid" : "unpaid",
+    payType: text(order.payType),
+    payTradeNo: text(order.payTradeNo),
+    paidAt: text(order.paidAt),
+    payAttempts: Number.isFinite(order.payAttempts) ? Number(order.payAttempts) : 0,
   };
+}
+
+function normalizeSettings(raw: Partial<Settings> | undefined): Settings {
+  const merged: Settings = { ...defaultSettings(), ...(raw ?? {}) };
+  merged.pickupPoints = sanitizePickupPoints(raw?.pickupPoints);
+  merged.payMode = merged.payMode === "live" ? "live" : "test";
+  const days = Number(merged.unpaidCancelDays);
+  merged.unpaidCancelDays = Number.isFinite(days) ? Math.min(60, Math.max(0, Math.round(days))) : 7;
+  return merged;
 }
 
 function normalize(parsed: Partial<Store>): Store {
   return {
     admin: parsed.admin ?? null,
-    settings: {
-      ...defaultSettings(),
-      ...(parsed.settings ?? {}),
-      pickupPoints: sanitizePickupPoints(parsed.settings?.pickupPoints),
-    },
+    settings: normalizeSettings(parsed.settings),
     products: parsed.products ?? [],
     customers: parsed.customers ?? [],
     orders: (parsed.orders ?? []).map(normalizeOrder),

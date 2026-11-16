@@ -68,6 +68,14 @@ git push -u origin main
 
 也可用環境變數 `LINE_CHANNEL_ID`、`LINE_CHANNEL_SECRET`、`LINE_MESSAGING_TOKEN`（後台填的值優先）。正式環境請設定 `SITE_ORIGIN`。
 
+## 線上付款（藍新金流）、超商取貨、未付款自動取消
+
+- 信用卡與 Apple Pay 走藍新 MPG：結帳送出後導向藍新付款頁，付款結果由藍新以 NotifyURL 通知（簽章與金額都會驗證，重複通知不會重複處理），客人返回網站會看到「付款完成」。
+- 金鑰（商店代號、HashKey、HashIV）建議放 Vercel 環境變數 `NEWEBPAY_MERCHANT_ID`、`NEWEBPAY_HASH_KEY`、`NEWEBPAY_HASH_IV`，也可在後台「設定 → 線上付款」填寫（只存伺服器，不會回傳到瀏覽器）。未通過審核前請用「測試環境」與藍新測試商店的金鑰；正式上線改成正式環境並換上正式金鑰。
+- 超商取貨：客人選 7-ELEVEN / 全家 / 萊爾富，自行填門市名稱與店號。出貨仍由店家手動處理；可另外允許「取貨付款」。
+- 未付款自動取消：訂單成立後超過設定天數（預設 7 天）仍未付款，會自動取消、歸還庫存並以 LINE 通知。每天由 `vercel.json` 的 Cron 執行 `/api/cron/expire-orders`，每次有人下單時也會順帶檢查。取貨付款的訂單不會被自動取消。
+- 客人在訂單已取消後才付款成功時，訂單會標記並通知店家到藍新後台退款。取消已付款的訂單不會自動退款。
+
 ## 資料
 
 沒有設定 Supabase 時，資料存在 `data/store.json`、圖片存在 `data/uploads/`（皆不進版控），適合本機開發。

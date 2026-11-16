@@ -10,14 +10,24 @@ let pointN = 0;
 const nextPointKey = () => `pk${++pointN}`;
 
 type Props = {
-  settings: Omit<Settings, "secret" | "loginChannelSecret" | "messagingToken">;
+  settings: Omit<Settings, "secret" | "loginChannelSecret" | "messagingToken" | "payHashKey" | "payHashIV">;
+  pay: {
+    ready: boolean;
+    mode: "test" | "live";
+    hasKeys: boolean;
+    keysFromEnv: boolean;
+    merchantFromEnv: boolean;
+    modeFromEnv: boolean;
+    notifyUrl: string;
+    returnUrl: string;
+  };
   hasLoginSecret: boolean;
   hasMessagingToken: boolean;
   callbackUrl: string;
   loginReady: boolean;
 };
 
-export function SettingsForm({ settings, hasLoginSecret, hasMessagingToken, callbackUrl, loginReady }: Props) {
+export function SettingsForm({ settings, hasLoginSecret, hasMessagingToken, callbackUrl, loginReady, pay }: Props) {
   const [message, action, pending] = useActionState(saveSettings, "");
   const [testMessage, testAction, testing] = useActionState(testPush, "");
   const [points, setPoints] = useState<PointDraft[]>(() =>
@@ -144,6 +154,82 @@ export function SettingsForm({ settings, hasLoginSecret, hasMessagingToken, call
                 <span className="label">付款說明</span>
                 <textarea className="textarea" name="paymentNote" defaultValue={settings.paymentNote} maxLength={600} />
                 <span className="hint">顯示在結帳頁與訂單完成頁，例如匯款帳號或收款方式。</span>
+              </label>
+              <label className="field">
+                <span className="label">未付款自動取消（天）</span>
+                <input className="input" type="number" min={0} max={60} name="unpaidCancelDays" defaultValue={settings.unpaidCancelDays} />
+                <span className="hint">
+                  訂單成立後超過這個天數仍是「待確認」且未付款，系統會自動取消、釋出庫存並用 LINE 通知客戶。填 0 表示不自動取消。超商取貨付款的訂單不受影響。
+                </span>
+              </label>
+            </section>
+
+            <section className="panel">
+              <h2>
+                線上付款（藍新金流）
+                <small>
+                  狀態：
+                  <b style={{ color: pay.ready ? "var(--teal-deep)" : "var(--alert)" }}>
+                    {pay.ready ? `已啟用（${pay.mode === "live" ? "正式環境" : "測試環境"}）` : "未啟用"}
+                  </b>
+                </small>
+              </h2>
+              <label className="toggle">
+                <input type="checkbox" name="payOnlineEnabled" defaultChecked={settings.payOnlineEnabled} />
+                <span>開放信用卡 / Apple Pay 線上付款</span>
+              </label>
+              <label className="field">
+                <span className="label">環境</span>
+                <select className="input" name="payMode" defaultValue={pay.mode} disabled={pay.modeFromEnv}>
+                  <option value="test">測試環境（不會真的扣款）</option>
+                  <option value="live">正式環境</option>
+                </select>
+                {pay.modeFromEnv && <span className="hint">目前由 Vercel 環境變數 NEWEBPAY_MODE 指定。</span>}
+              </label>
+              <label className="field">
+                <span className="label">商店代號 MerchantID</span>
+                <input className="input" name="payMerchantId" defaultValue={settings.payMerchantId} maxLength={40} disabled={pay.merchantFromEnv} />
+                {pay.merchantFromEnv && <span className="hint">目前由環境變數 NEWEBPAY_MERCHANT_ID 提供。</span>}
+              </label>
+              <div className="two">
+                <label className="field">
+                  <span className="label">HashKey（32 字元）</span>
+                  <input className="input" name="payHashKey" type="password" autoComplete="off" maxLength={80} disabled={pay.keysFromEnv} placeholder={pay.hasKeys ? "已設定，留白表示不變更" : ""} />
+                </label>
+                <label className="field">
+                  <span className="label">HashIV（16 字元）</span>
+                  <input className="input" name="payHashIV" type="password" autoComplete="off" maxLength={80} disabled={pay.keysFromEnv} placeholder={pay.hasKeys ? "已設定，留白表示不變更" : ""} />
+                </label>
+              </div>
+              {pay.keysFromEnv ? (
+                <div className="hint" style={{ marginBottom: 20 }}>HashKey / HashIV 目前由 Vercel 環境變數提供，不會顯示在這裡。</div>
+              ) : (
+                pay.hasKeys && (
+                  <label className="toggle" style={{ fontSize: 13 }}>
+                    <input type="checkbox" name="clearPayKeys" />
+                    <span>清除已儲存的 HashKey / HashIV</span>
+                  </label>
+                )
+              )}
+              <div className="notice" style={{ marginBottom: 20 }}>
+                測試環境與正式環境的商店代號與金鑰不同，切換環境時請一併更換。金鑰只會存在伺服器，不會傳回瀏覽器；較建議放在 Vercel 的環境變數（NEWEBPAY_MERCHANT_ID、NEWEBPAY_HASH_KEY、NEWEBPAY_HASH_IV）。
+                <div className="mono" style={{ marginTop: 8 }}>付款通知網址：{pay.notifyUrl}</div>
+                <div className="mono" style={{ marginTop: 4 }}>付款返回網址：{pay.returnUrl}</div>
+              </div>
+            </section>
+
+            <section className="panel">
+              <h2>
+                超商取貨
+                <small>客戶可選 7-ELEVEN / 全家 / 萊爾富，並填寫門市名稱與店號。目前出貨由店家手動處理，運費沿用上方設定。</small>
+              </h2>
+              <label className="toggle">
+                <input type="checkbox" name="cvsEnabled" defaultChecked={settings.cvsEnabled} />
+                <span>開放超商取貨</span>
+              </label>
+              <label className="toggle">
+                <input type="checkbox" name="cvsCodEnabled" defaultChecked={settings.cvsCodEnabled} />
+                <span>允許「取貨付款」（到店取貨時才付款）</span>
               </label>
             </section>
 
