@@ -161,7 +161,7 @@ export default function CartDrawer() {
             <Link href="/checkout" className="btn btn-solid btn-block" onClick={closeCart}>
               Checkout &middot; {formatUsd(subtotal + shipping)}
             </Link>
-            <p className="fine">Secure checkout, powered by Creem.</p>
+            <p className="fine">Secure checkout, powered by PayPal.</p>
           </div>
         )}
       </aside>

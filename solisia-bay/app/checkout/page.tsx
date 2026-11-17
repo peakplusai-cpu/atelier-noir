@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import CheckoutForm from "@/components/CheckoutForm";
+import { paypalClientId } from "@/lib/paypal";
 
 export const metadata: Metadata = { title: "Checkout", robots: { index: false } };
 
@@ -10,7 +11,7 @@ export default function CheckoutPage() {
         <p className="eyebrow">Secure checkout</p>
         <h1 className="serif">Checkout</h1>
       </header>
-      <CheckoutForm />
+      <CheckoutForm paypalClientId={paypalClientId()} />
     </section>
   );
 }

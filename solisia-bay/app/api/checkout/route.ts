@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getProduct, sizeLabel, validateSelection } from "@/lib/catalog";
 import { COUNTRIES } from "@/lib/countries";
-import { createCreemCheckout, creemConfigured } from "@/lib/creem";
+import { paypalConfigured } from "@/lib/paypal";
 import { shippingFor, toCents } from "@/lib/money";
 import { createOrder, updateOrder, type OrderItem, StorageError } from "@/lib/orders";
 import { siteOrigin } from "@/lib/site";
@@ -79,34 +79,20 @@ export async function POST(request: Request) {
 
   const successUrl = `${origin}/checkout/success?order=${encodeURIComponent(order.code)}&token=${order.token}`;
 
-  if (!creemConfigured()) {
+  if (!paypalConfigured()) {
     if (process.env.NODE_ENV === "production") {
       await updateOrder(order.code, { status: "failed" });
       return fail("Payments are not configured yet. Please try again later.", 503);
     }
-    // Local development without Creem credentials: simulate a successful payment.
+    // Local development without PayPal credentials: simulate a successful payment.
     await updateOrder(order.code, {
       status: "paid",
-      creemCheckoutId: "demo",
+      paymentOrderId: "demo",
       amountPaidCents: toCents(total),
       paidAt: new Date().toISOString(),
     });
     return NextResponse.json({ url: successUrl, demo: true });
   }
 
-  try {
-    const checkout = await createCreemCheckout({
-      requestId: order.code,
-      amountCents: toCents(total),
-      email,
-      successUrl,
-      metadata: { order_code: order.code },
-    });
-    await updateOrder(order.code, { creemCheckoutId: checkout.id });
-    return NextResponse.json({ url: checkout.checkoutUrl });
-  } catch (err) {
-    console.error("[checkout] creem error", err instanceof Error ? err.message : err);
-    await updateOrder(order.code, { status: "failed" });
-    return fail("We couldn't start secure payment. Please try again in a moment.", 502);
-  }
+  return NextResponse.json({ code: order.code, token: order.token });
 }

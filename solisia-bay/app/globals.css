@@ -1957,6 +1957,24 @@ main {
   gap: 16px;
 }
 
+.checkout-form fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-inline-size: 0;
+  display: grid;
+  gap: 16px;
+}
+
+.checkout-form fieldset:disabled {
+  opacity: 0.55;
+}
+
+.paypal-box {
+  display: grid;
+  gap: 14px;
+}
+
 .checkout-form h2,
 .checkout-summary h2 {
   font-size: 30px;

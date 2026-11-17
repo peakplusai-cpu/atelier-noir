@@ -3,7 +3,7 @@
 歐美跨境高端海島度假服飾品牌（Women's Resort & Swimwear / Men's Miami Resort Wear）的獨立電商網站。
 視覺走 Quiet Luxury：暖沙白 `#FAF8F5`、深海藍 `#1B365D`、陽光金棕 `#C5A059`、炭黑 `#1E1E1E`；標題 Cormorant Garamond，內文與價格 Plus Jakarta Sans。
 
-Next.js 15 + TypeScript，金流使用 [Creem](https://creem.io)，訂單存在 Supabase。
+Next.js 15 + TypeScript，金流使用 PayPal Checkout（JS SDK 按鈕 + 伺服器端 Orders v2 API），訂單存在 Supabase。
 
 ## 與 Radiant 的關係
 
@@ -24,24 +24,24 @@ npm install
 npm run dev        # http://localhost:3200
 ```
 
-沒有設定 Creem 時（且非 production），結帳會走「模擬付款成功」流程，方便本機測整條路徑；訂單寫入 `data/orders.json`（不進版控）。
+沒有設定 PayPal 時（且非 production），結帳會走「模擬付款成功」流程，方便本機測整條路徑；訂單寫入 `data/orders.json`（不進版控）。
 沒有設定 Supabase 時同樣使用本機 JSON 檔。
 
-## 部署（Vercel + Supabase + Creem）
+## 部署（Vercel + Supabase + PayPal）
 
 1. **Supabase**：在 Radiant 使用的同一個專案，SQL Editor 執行 `supabase/schema.sql`（只會建立 `solisia_orders`）。
-2. **Creem**
-   - Dashboard 建立一個 **一次性付款（one-time）、幣別 USD** 的商品，例如「SOLISIA BAY Order」，價格隨意（最少 $1）。
-     結帳時程式會用 `custom_price` 帶入真正的訂單金額（商品小計 + 運費，金額一律由伺服器依目錄重新計算，不信任前端價格）。
-   - Developers 取得 API Key（`creem_test_...` 會自動使用測試環境）與該商品的 Product ID。
-   - Webhooks 新增 `https://你的網域/api/webhooks/creem`，訂閱 `checkout.completed`，取得 Signing secret。
+2. **PayPal**：[developer.paypal.com](https://developer.paypal.com) 建立 App，取得 Client ID 與 Secret。
+   Sandbox 憑證配合 `PAYPAL_ENV=sandbox`，正式上線換成 Live 憑證並設 `PAYPAL_ENV=live`。
 3. **Vercel**：New Project → Import 同一個 GitHub repo → **Root Directory 設為 `solisia-bay`**。環境變數：
    - `SITE_ORIGIN`：正式網域，例如 `https://solisiabay.com`
-   - `CREEM_API_KEY`、`CREEM_PRODUCT_ID`、`CREEM_WEBHOOK_SECRET`
+   - `PAYPAL_CLIENT_ID`、`PAYPAL_CLIENT_SECRET`、`PAYPAL_ENV`
    - `SUPABASE_URL`、`SUPABASE_SERVICE_ROLE_KEY`（與 Radiant 同一組值）
-4. 部署後用 Creem 測試模式跑一筆訂單，確認 `solisia_orders.status` 由 `pending` 變成 `paid`。
+4. 用 Sandbox 買家帳號跑一筆訂單，確認 `solisia_orders.status` 由 `pending` 變成 `paid`，`payment_capture_id` 有值。
 
-> Production 若沒有設定 Creem，`/api/checkout` 會直接回 503，不會模擬付款。
+金額一律由伺服器依商品目錄重算（小計 + 運費），前端傳來的價格會被忽略。PayPal 訂單的 `custom_id` 是我們的訂單編號，
+capture 時會核對編號、幣別（USD）與金額完全一致才標記已付款。
+
+> Production 若沒有設定 PayPal，`/api/checkout` 會直接回 503，不會模擬付款。
 
 ## 功能
 
@@ -49,7 +49,7 @@ npm run dev        # http://localhost:3200
 - **商品列表** `/collection/[all|women|men|couples]`：依尺寸、款式（比基尼上身／下身拆賣、古巴領襯衫、古巴領套裝、泳褲…）篩選與排序（狀態寫進網址可分享）；滑鼠懸停切換模特兒背面，若商品設定 `media.video` 則播放動態實穿影片。
 - **商品詳情** `/products/[slug]`：cm / inch 一鍵切換的尺碼表（含模特兒身高體重與穿著尺碼）、衛生貼條與運送／退換貨折疊選單、Complete the Look 搭配推薦、Product JSON-LD。
 - **側邊購物車**：「滿 $120 USD 全球免運」動態進度條，自動計算還差多少、湊單推薦；購物車存在 localStorage。
-- **結帳**：站內填寫收件資料 → 建立訂單 → 導向 Creem 付款頁 → Webhook 驗簽（HMAC-SHA256）後標記已付款 → 成功頁自動輪詢狀態。
+- **結帳**：站內填寫收件資料 → 建立訂單 → PayPal Checkout 按鈕（JS SDK）完成付款 → 伺服器呼叫 Orders v2 API capture 並核對金額後標記已付款 → 成功頁顯示收據。
 
 ## 商品與圖片
 

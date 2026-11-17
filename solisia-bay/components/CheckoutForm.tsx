@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { useCart } from "./CartProvider";
 import ProductImage from "./ProductImage";
 import { FreeShippingBar } from "./CartDrawer";
@@ -9,10 +10,11 @@ import { getProduct, sizeLabel } from "@/lib/catalog";
 import { COUNTRIES } from "@/lib/countries";
 import { formatUsd, shippingFor } from "@/lib/money";
 
-export default function CheckoutForm() {
+export default function CheckoutForm({ paypalClientId }: { paypalClientId: string }) {
   const { lines, subtotal, ready, setQty, remove } = useCart();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [paypal, setPaypal] = useState<{ code: string; token: string } | null>(null);
 
   const shipping = shippingFor(subtotal);
   const total = subtotal + shipping;
@@ -43,13 +45,18 @@ export default function CheckoutForm() {
           items: lines.map((l) => ({ slug: l.slug, color: l.color, sizes: l.sizes, qty: l.qty })),
         }),
       });
-      const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
-      if (!res.ok || !data.url) {
+      const data = (await res.json().catch(() => ({}))) as { url?: string; code?: string; token?: string; error?: string };
+      if (!res.ok || (!data.url && !data.code)) {
         setError(data.error ?? "Something went wrong. Please try again.");
         setBusy(false);
         return;
       }
-      window.location.assign(data.url);
+      if (data.url) {
+        window.location.assign(data.url);
+        return;
+      }
+      setPaypal({ code: data.code!, token: data.token! });
+      setBusy(false);
     } catch {
       setError("Network error. Please check your connection and try again.");
       setBusy(false);
@@ -70,6 +77,7 @@ export default function CheckoutForm() {
   return (
     <div className="checkout">
       <form className="checkout-form" onSubmit={onSubmit}>
+        <fieldset disabled={Boolean(paypal)}>
         <h2 className="serif">Contact</h2>
         <label className="field">
           <span>Email</span>
@@ -118,17 +126,54 @@ export default function CheckoutForm() {
           <span>Phone (optional, for the courier)</span>
           <input name="phone" type="tel" autoComplete="tel" />
         </label>
+        </fieldset>
 
         {error && (
           <p className="form-error" role="alert">
             {error}
           </p>
         )}
-        <button type="submit" className="btn btn-solid btn-block" disabled={busy || !ready}>
-          {busy ? "Redirecting to secure payment\u2026" : `Continue to payment \u00B7 ${formatUsd(total)}`}
-        </button>
+        {paypal ? (
+          <div className="paypal-box">
+            <p className="fine">Order {paypal.code} &middot; {formatUsd(total)}. Pay securely with PayPal.</p>
+            <PayPalScriptProvider options={{ clientId: paypalClientId, currency: "USD", intent: "capture" }}>
+              <PayPalButtons
+                style={{ layout: "vertical", shape: "rect", label: "pay" }}
+                createOrder={async () => {
+                  const r = await fetch("/api/paypal/order", {
+                    method: "POST",
+                    headers: { "content-type": "application/json" },
+                    body: JSON.stringify(paypal),
+                  });
+                  const d = (await r.json().catch(() => ({}))) as { id?: string; error?: string };
+                  if (!r.ok || !d.id) throw new Error(d.error ?? "Could not start PayPal");
+                  return d.id;
+                }}
+                onApprove={async (data) => {
+                  const r = await fetch("/api/paypal/capture", {
+                    method: "POST",
+                    headers: { "content-type": "application/json" },
+                    body: JSON.stringify({ ...paypal, paypalOrderId: data.orderID }),
+                  });
+                  const d = (await r.json().catch(() => ({}))) as { error?: string };
+                  if (!r.ok) {
+                    setError(d.error ?? "Payment could not be completed.");
+                    return;
+                  }
+                  window.location.assign(`/checkout/success?order=${encodeURIComponent(paypal.code)}&token=${paypal.token}`);
+                }}
+                onCancel={() => setError("Payment cancelled. You can try PayPal again below.")}
+                onError={() => setError("PayPal ran into a problem. Please try again.")}
+              />
+            </PayPalScriptProvider>
+          </div>
+        ) : (
+          <button type="submit" className="btn btn-solid btn-block" disabled={busy || !ready}>
+            {busy ? "Preparing secure payment\u2026" : `Continue to payment \u00B7 ${formatUsd(total)}`}
+          </button>
+        )}
         <p className="fine">
-          You&rsquo;ll complete payment on a secure page powered by Creem. By continuing you agree to our{" "}
+          Payment is processed securely by PayPal. By continuing you agree to our{" "}
           <Link href="/policies/shipping-returns">shipping &amp; returns policy</Link>.
         </p>
       </form>

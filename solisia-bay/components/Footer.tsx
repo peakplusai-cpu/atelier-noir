@@ -27,7 +27,7 @@ export default function Footer() {
         </div>
         <div>
           <h4>Secure checkout</h4>
-          <p className="footer-note">Payments are processed securely by Creem. We never see or store your card details.</p>
+          <p className="footer-note">Payments are processed securely by PayPal. We never see or store your card details.</p>
         </div>
       </div>
       <div className="footer-bottom">

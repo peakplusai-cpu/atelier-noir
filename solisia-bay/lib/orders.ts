@@ -36,8 +36,8 @@ export type Order = {
   name: string;
   phone: string;
   address: ShippingAddress;
-  creemCheckoutId: string | null;
-  creemOrderId: string | null;
+  paymentOrderId: string | null;
+  paymentCaptureId: string | null;
   amountPaidCents: number | null;
   paidAt: string | null;
   createdAt: string;
@@ -61,8 +61,8 @@ type Row = {
   customer_name: string;
   phone: string;
   address: ShippingAddress;
-  creem_checkout_id: string | null;
-  creem_order_id: string | null;
+  payment_order_id: string | null;
+  payment_capture_id: string | null;
   amount_paid_cents: number | null;
   paid_at: string | null;
   created_at: string;
@@ -82,8 +82,8 @@ function fromRow(r: Row): Order {
     name: r.customer_name,
     phone: r.phone,
     address: r.address,
-    creemCheckoutId: r.creem_checkout_id,
-    creemOrderId: r.creem_order_id,
+    paymentOrderId: r.payment_order_id,
+    paymentCaptureId: r.payment_capture_id,
     amountPaidCents: r.amount_paid_cents,
     paidAt: r.paid_at,
     createdAt: r.created_at,
@@ -104,8 +104,8 @@ function toRow(o: Order): Row {
     customer_name: o.name,
     phone: o.phone,
     address: o.address,
-    creem_checkout_id: o.creemCheckoutId,
-    creem_order_id: o.creemOrderId,
+    payment_order_id: o.paymentOrderId,
+    payment_capture_id: o.paymentCaptureId,
     amount_paid_cents: o.amountPaidCents,
     paid_at: o.paidAt,
     created_at: o.createdAt,
@@ -146,8 +146,8 @@ export async function createOrder(input: NewOrder): Promise<Order> {
     token: randomBytes(16).toString("hex"),
     status: "pending",
     currency: "USD",
-    creemCheckoutId: null,
-    creemOrderId: null,
+    paymentOrderId: null,
+    paymentCaptureId: null,
     amountPaidCents: null,
     paidAt: null,
     createdAt: new Date().toISOString(),
@@ -172,7 +172,7 @@ export async function getOrder(code: string): Promise<Order | null> {
   return readFileStore().find((o) => o.code === code) ?? null;
 }
 
-type Patch = Partial<Pick<Order, "status" | "creemCheckoutId" | "creemOrderId" | "amountPaidCents" | "paidAt">>;
+type Patch = Partial<Pick<Order, "status" | "paymentOrderId" | "paymentCaptureId" | "amountPaidCents" | "paidAt">>;
 
 /**
  * Applies a patch. When `onlyFrom` is given the update only happens if the current status is in that list,
@@ -182,8 +182,8 @@ export async function updateOrder(code: string, patch: Patch, onlyFrom?: OrderSt
   if (supabaseConfigured()) {
     const row: Partial<Row> = {};
     if (patch.status !== undefined) row.status = patch.status;
-    if (patch.creemCheckoutId !== undefined) row.creem_checkout_id = patch.creemCheckoutId;
-    if (patch.creemOrderId !== undefined) row.creem_order_id = patch.creemOrderId;
+    if (patch.paymentOrderId !== undefined) row.payment_order_id = patch.paymentOrderId;
+    if (patch.paymentCaptureId !== undefined) row.payment_capture_id = patch.paymentCaptureId;
     if (patch.amountPaidCents !== undefined) row.amount_paid_cents = patch.amountPaidCents;
     if (patch.paidAt !== undefined) row.paid_at = patch.paidAt;
     let q = supabaseAdmin().from(TABLE).update(row).eq("code", code);

@@ -15,8 +15,8 @@ create table if not exists public.solisia_orders (
   customer_name text not null,
   phone text not null default '',
   address jsonb not null default '{}'::jsonb,
-  creem_checkout_id text,
-  creem_order_id text,
+  payment_order_id text,
+  payment_capture_id text,
   amount_paid_cents integer,
   paid_at timestamptz,
   created_at timestamptz not null default now()
