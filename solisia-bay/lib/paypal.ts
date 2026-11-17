@@ -51,12 +51,18 @@ export async function createPayPalOrder(input: {
   code: string;
   subtotal: number;
   shipping: number;
+  discount?: number;
   total: number;
+  shippingWaived?: boolean;
+  shipThreshold?: number;
+  shipFlat?: number;
   items: PayPalItem[];
 }): Promise<string> {
   const expected = chargeCents(input);
   if (expected === null) throw new Error("Order totals are inconsistent");
   const itemCents = input.items.reduce((sum, item) => sum + toCents(item.unitPrice) * item.qty, 0);
+  const discountCents = toCents(input.discount ?? 0);
+  const shippingCents = expected - itemCents + discountCents;
   const token = await accessToken();
   const res = await paypal<{ id?: string }>("/v2/checkout/orders", {
     method: "POST",
@@ -72,7 +78,8 @@ export async function createPayPalOrder(input: {
             value: centsToMoney(expected),
             breakdown: {
               item_total: { currency_code: "USD", value: centsToMoney(itemCents) },
-              shipping: { currency_code: "USD", value: centsToMoney(expected - itemCents) },
+              shipping: { currency_code: "USD", value: centsToMoney(shippingCents) },
+              ...(discountCents > 0 ? { discount: { currency_code: "USD", value: centsToMoney(discountCents) } } : {}),
             },
           },
           items: input.items.map((item) => ({

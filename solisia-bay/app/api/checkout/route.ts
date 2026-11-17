@@ -5,8 +5,10 @@ import { paypalConfigured } from "@/lib/paypal";
 import { demoPaymentsAllowed } from "@/lib/payments";
 import { toCents } from "@/lib/money";
 import { createOrder, updateOrder, StorageError } from "@/lib/orders";
-import { priceCart, PricingError } from "@/lib/pricing";
+import { priceCart, PricingError, type PricedCart } from "@/lib/pricing";
 import { rateLimit } from "@/lib/rate-limit";
+import { variantKey } from "@/lib/catalog";
+import { mutateShop, publishedProducts, releaseHold } from "@/lib/shop";
 
 export const dynamic = "force-dynamic";
 
@@ -55,28 +57,53 @@ export async function POST(request: Request) {
     return fail("Please complete your shipping address.");
   }
 
-  let priced;
+  const coupon = text(record.coupon, 40);
+  let priced: PricedCart | null = null;
   try {
-    priced = priceCart(record.items);
+    priced = await mutateShop(async (shop) => {
+      const quote = priceCart(record.items, publishedProducts(shop), {
+        coupon,
+        promotions: shop.promotions,
+        threshold: shop.settings.freeShippingThreshold,
+        flat: shop.settings.flatShipping,
+      });
+      for (const item of quote.items) {
+        const product = shop.products.find((entry) => entry.slug === item.slug);
+        if (!product?.inventory) continue;
+        const key = variantKey(item.color, item.size);
+        product.inventory[key] = (product.inventory[key] ?? 0) - item.qty;
+      }
+      if (quote.promoId) {
+        const promo = shop.promotions.find((entry) => entry.id === quote.promoId);
+        if (promo) promo.used += 1;
+      }
+      return quote;
+    });
   } catch (err) {
     if (err instanceof PricingError) return fail(err.message, err.status);
+    if (err instanceof StorageError) return fail("We couldn't save your order right now. Please try again shortly.", 503);
     throw err;
   }
+  if (!priced) return fail("We couldn't price this order.");
 
   let order;
   try {
-    order = await createOrder({ ...priced, email, name, phone, address });
+    order = await createOrder({ ...priced, email, name, phone, address, stockHeld: true });
   } catch (err) {
+    await releaseHold({ items: priced.items, promoId: priced.promoId, stockHeld: true }).catch((releaseErr) => {
+      console.error("[checkout] could not return reserved stock", releaseErr);
+    });
     if (err instanceof StorageError) {
       console.error("[checkout] storage error", err.message);
-      return fail("We couldn't save your order right now. Please try again shortly.", 503);
+      return fail(err.message.includes("meta") ? err.message : "We couldn't save your order right now. Please try again shortly.", 503);
     }
     throw err;
   }
 
   if (!paypalConfigured()) {
     if (!demoPaymentsAllowed()) {
-      await updateOrder(order.code, { status: "failed" }, ["pending"]);
+      await releaseHold(order).catch((releaseErr) => console.error("[checkout] restock failed", releaseErr));
+      await updateOrder(order.code, { status: "failed", stockHeld: false }, ["pending"]);
       return fail("Payments are not configured yet. Please try again later.", 503);
     }
     await updateOrder(
@@ -92,7 +119,9 @@ export async function POST(request: Request) {
     token: order.token,
     items: order.items,
     subtotal: order.subtotal,
+    discount: order.discount,
     shipping: order.shipping,
     total: order.total,
+    coupon: order.coupon,
   });
 }

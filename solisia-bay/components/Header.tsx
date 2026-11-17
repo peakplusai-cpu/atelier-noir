@@ -13,7 +13,7 @@ const NAV = [
   { href: "/collection/all", label: "Shop All" },
 ];
 
-export default function Header() {
+export default function Header({ announcement = "", freeShipping = SITE.freeShippingThreshold }: { announcement?: string; freeShipping?: number }) {
   const pathname = usePathname();
   const { count, openCart, ready } = useCart();
   const [scrolled, setScrolled] = useState(false);
@@ -33,7 +33,7 @@ export default function Header() {
     <div className="chrome">
       <div className="announce">
         <p>
-          Free worldwide shipping on orders over ${SITE.freeShippingThreshold} USD
+          {announcement || `Free worldwide shipping on orders over $${freeShipping} USD`}
           <span className="hide-sm"> &nbsp;·&nbsp; Easy {SITE.returnDays}-day returns</span>
         </p>
       </div>

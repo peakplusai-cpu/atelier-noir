@@ -2,9 +2,11 @@ import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/components/CartProvider";
+import { CatalogProvider } from "@/components/CatalogProvider";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
+import { publishedProducts, getShop } from "@/lib/shop";
 import { SITE, siteOrigin } from "@/lib/site";
 
 const display = Cormorant_Garamond({
@@ -39,16 +41,21 @@ export const viewport: Viewport = {
   themeColor: "#FAF8F5",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export const dynamic = "force-dynamic";
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const shop = await getShop();
   return (
     <html lang="en" className={`${display.variable} ${sans.variable}`}>
       <body>
-        <CartProvider>
-          <Header />
-          <main id="main">{children}</main>
-          <Footer />
-          <CartDrawer />
-        </CartProvider>
+        <CatalogProvider value={{ products: publishedProducts(shop), settings: shop.settings }}>
+          <CartProvider>
+            <Header announcement={shop.settings.announcement} freeShipping={shop.settings.freeShippingThreshold} />
+            <main id="main">{children}</main>
+            <Footer />
+            <CartDrawer />
+          </CartProvider>
+        </CatalogProvider>
       </body>
     </html>
   );

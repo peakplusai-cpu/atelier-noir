@@ -49,7 +49,9 @@ export default async function OrderPage({ params }: Props) {
             ))}
           </ul>
           <p className="fine">
-            小計 {formatUsd(order.subtotal)} · 運費 {order.shipping === 0 ? "免運" : formatUsd(order.shipping)}
+            小計 {formatUsd(order.subtotal)}
+            {order.discount > 0 ? ` · 折扣 -${formatUsd(order.discount)}${order.coupon ? `（${order.coupon}）` : ""}` : ""}
+            {" · "}運費 {order.shipping === 0 ? "免運" : formatUsd(order.shipping)}
           </p>
         </div>
         <div>

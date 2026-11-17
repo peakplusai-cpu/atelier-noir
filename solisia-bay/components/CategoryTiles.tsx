@@ -1,6 +1,6 @@
 import Link from "next/link";
 import ProductImage from "./ProductImage";
-import { getProduct } from "@/lib/catalog";
+import { getShop, publishedProducts } from "@/lib/shop";
 
 const TILES = [
   { href: "/collection/women", label: "Shop Women", sub: "Swim, separates & cover-ups", slug: "amalfi-plunge-one-piece" },
@@ -8,12 +8,13 @@ const TILES = [
   { href: "/collection/couples", label: "Couples Sets", sub: "Pieces for two, priced together", slug: "amalfi-couples-set" },
 ];
 
-export default function CategoryTiles() {
+export default async function CategoryTiles() {
+  const live = publishedProducts(await getShop());
   return (
     <section id="entry" className="section tiles">
       <div className="tiles-grid">
         {TILES.map((t) => {
-          const p = getProduct(t.slug);
+          const p = live.find((item) => item.slug === t.slug);
           if (!p) return null;
           return (
             <Link key={t.href} href={t.href} className="tile">

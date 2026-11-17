@@ -50,12 +50,12 @@ capture 時會核對編號、幣別（USD）與金額完全一致才標記已付
 - **商品列表** `/collection/[all|women|men|couples]`：依尺寸、款式（比基尼上身／下身拆賣、古巴領襯衫、古巴領套裝、泳褲…）篩選與排序（狀態寫進網址可分享）；滑鼠懸停切換模特兒背面，若商品設定 `media.video` 則播放動態實穿影片。
 - **商品詳情** `/products/[slug]`：cm / inch 一鍵切換的尺碼表（含模特兒身高體重與穿著尺碼）、衛生貼條與運送／退換貨折疊選單、Complete the Look 搭配推薦、Product JSON-LD。
 - **側邊購物車**：「滿 $120 USD 全球免運」動態進度條，自動計算還差多少、湊單推薦；購物車存在 localStorage。
-- **員工入口**：頁尾「員工專用入口」。第一次進入設定密碼，之後可查看訂單並標記已出貨、已完成或取消（取消不會自動退 PayPal 款項）。
+- **員工入口**：頁尾「員工專用入口」。第一次進入設定密碼。後台有總覽、商品、優惠碼、動態牆、訂單、客戶與運費設定。取消已付款訂單不會自動退 PayPal 款，但會把庫存加回去。
 - **結帳**：站內填寫收件資料 → 建立訂單 → PayPal Checkout 按鈕（JS SDK）完成付款 → 伺服器呼叫 Orders v2 API capture 並核對金額後標記已付款 → 成功頁顯示收據。
 
 ## 商品與圖片
 
-商品資料在 `lib/catalog.ts`。目前商品圖是由 `components/ProductArt.tsx` 程式繪製的 SVG 平拍示意圖（正面／背面／細節／面料），
+內建商品在 `lib/catalog.ts`，第一次啟動會寫進 `solisia_store`（或本機 `data/shop.json`）當種子，每色每尺寸庫存 24。之後前台與結帳都讀這份資料。沒有上傳圖片時仍用 `components/ProductArt.tsx` 的 SVG。既有 Supabase 請執行 `supabase/migrations/20261117_admin_store.sql`。
 上線前請換成實拍：在 `public/` 放圖片，並在商品上加
 
 ```ts

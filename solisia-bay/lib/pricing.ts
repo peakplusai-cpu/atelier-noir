@@ -1,5 +1,8 @@
-import { getProduct, sizeLabel, validateSelection } from "./catalog";
+import { products as seedProducts, sizeLabel, stockOf, validateSelection } from "./catalog";
 import { roundMoney, shippingFor, toCents } from "./money";
+import { quotePromotion, type Promotion } from "./promos";
+import { SITE } from "./site";
+import type { Gender, Product } from "./types";
 
 export const MAX_LINE_QTY = 10;
 export const MAX_LINES = 20;
@@ -11,6 +14,7 @@ export type PricedItem = {
   size: string;
   unitPrice: number;
   qty: number;
+  gender?: Gender;
 };
 
 export class PricingError extends Error {
@@ -38,10 +42,28 @@ function cleanSizes(value: unknown): Record<string, string> {
   return out;
 }
 
+export type PricedCart = {
+  items: PricedItem[];
+  subtotal: number;
+  shipping: number;
+  discount: number;
+  total: number;
+  coupon: string;
+  promoId: string;
+  shippingWaived: boolean;
+  shipThreshold: number;
+  shipFlat: number;
+};
+
 /**
- * Prices a bag from the catalog. Client prices, compare-at prices and shipping quotes are ignored.
+ * Prices a bag from the supplied catalog. Client prices are ignored.
+ * The default catalog is the built-in seed, which is not stock-tracked.
  */
-export function priceCart(rawItems: unknown): { items: PricedItem[]; subtotal: number; shipping: number; total: number } {
+export function priceCart(
+  rawItems: unknown,
+  catalog: Product[] = seedProducts,
+  options?: { coupon?: string; promotions?: Promotion[]; threshold?: number; flat?: number; now?: number }
+): PricedCart {
   if (!Array.isArray(rawItems) || rawItems.length === 0) throw new PricingError("Your bag is empty.");
   if (rawItems.length > MAX_LINES) throw new PricingError("Too many items in your bag.");
 
@@ -51,7 +73,7 @@ export function priceCart(rawItems: unknown): { items: PricedItem[]; subtotal: n
       throw new PricingError("Some items in your bag are no longer available. Please review your bag.", 409);
     }
     const row = raw as Record<string, unknown>;
-    const product = getProduct(clean(row.slug, 80));
+    const product = catalog.find((item) => item.slug === clean(row.slug, 80));
     const color = clean(row.color, 40);
     const sizes = cleanSizes(row.sizes);
     const qty = Math.floor(Number(row.qty));
@@ -59,6 +81,7 @@ export function priceCart(rawItems: unknown): { items: PricedItem[]; subtotal: n
       !product ||
       !Number.isFinite(product.price) ||
       product.price <= 0 ||
+      (product.status ?? "published") === "draft" ||
       !validateSelection(product, color, sizes) ||
       !Number.isFinite(qty) ||
       qty < 1 ||
@@ -67,8 +90,12 @@ export function priceCart(rawItems: unknown): { items: PricedItem[]; subtotal: n
       throw new PricingError("Some items in your bag are no longer available. Please review your bag.", 409);
     }
     const size = sizeLabel(product, sizes);
+    const available = stockOf(product, color, size);
     const key = `${product.slug}|${color}|${size}`;
     const nextQty = (merged.get(key)?.qty ?? 0) + qty;
+    if (available !== null && nextQty > available) {
+      throw new PricingError("Some pieces don't have enough stock. Please review your bag.", 409);
+    }
     if (nextQty > MAX_LINE_QTY) {
       throw new PricingError("Some items in your bag are no longer available. Please review your bag.", 409);
     }
@@ -82,6 +109,7 @@ export function priceCart(rawItems: unknown): { items: PricedItem[]; subtotal: n
         size,
         unitPrice: roundMoney(product.price),
         qty,
+        gender: product.gender,
       });
     }
   }
@@ -89,10 +117,33 @@ export function priceCart(rawItems: unknown): { items: PricedItem[]; subtotal: n
   const items = [...merged.values()];
   const subtotalCents = items.reduce((sum, item) => sum + toCents(item.unitPrice) * item.qty, 0);
   const subtotal = subtotalCents / 100;
-  const shipping = shippingFor(subtotal);
-  const totalCents = subtotalCents + toCents(shipping);
+  const shipThreshold = options?.threshold ?? SITE.freeShippingThreshold;
+  const shipFlat = options?.flat ?? SITE.flatShipping;
+  const quoted = quotePromotion({
+    items,
+    subtotal,
+    promotions: options?.promotions ?? [],
+    coupon: options?.coupon,
+    now: options?.now,
+  });
+  if ("error" in quoted) throw new PricingError(quoted.error);
+  let discountCents = toCents(quoted.discount);
+  const shipping = quoted.freeShipping ? 0 : shippingFor(subtotal, { threshold: shipThreshold, flat: shipFlat });
+  if (discountCents > subtotalCents) discountCents = subtotalCents;
+  const totalCents = subtotalCents - discountCents + toCents(shipping);
   if (!Number.isSafeInteger(totalCents) || totalCents <= 0) throw new PricingError("We couldn't price this order.");
-  return { items, subtotal, shipping, total: totalCents / 100 };
+  return {
+    items,
+    subtotal,
+    shipping,
+    discount: discountCents / 100,
+    total: totalCents / 100,
+    coupon: quoted.coupon,
+    promoId: quoted.promoId,
+    shippingWaived: quoted.freeShipping,
+    shipThreshold,
+    shipFlat,
+  };
 }
 
 /** Recomputes the payable total from the stored lines. Returns null when the record is inconsistent. */
@@ -101,6 +152,10 @@ export function chargeCents(order: {
   subtotal: number;
   shipping: number;
   total: number;
+  discount?: number;
+  shippingWaived?: boolean;
+  shipThreshold?: number;
+  shipFlat?: number;
 }): number | null {
   if (!Array.isArray(order.items) || order.items.length === 0 || order.items.length > MAX_LINES) return null;
   let itemCents = 0;
@@ -112,8 +167,14 @@ export function chargeCents(order: {
     itemCents += unit * item.qty;
   }
   const subtotal = itemCents / 100;
-  const shippingCents = toCents(shippingFor(subtotal));
-  const totalCents = itemCents + shippingCents;
+  const discount = toCents(order.discount ?? 0);
+  if (discount < 0 || discount > itemCents) return null;
+  const shippingCents = toCents(
+    order.shippingWaived
+      ? 0
+      : shippingFor(subtotal, { threshold: order.shipThreshold, flat: order.shipFlat })
+  );
+  const totalCents = itemCents - discount + shippingCents;
   if (itemCents !== toCents(order.subtotal)) return null;
   if (shippingCents !== toCents(order.shipping)) return null;
   if (totalCents !== toCents(order.total) || totalCents <= 0) return null;

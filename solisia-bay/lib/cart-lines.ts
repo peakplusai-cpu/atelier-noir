@@ -1,5 +1,6 @@
-import { getProduct, validateSelection } from "./catalog";
+import { products as seedProducts, validateSelection } from "./catalog";
 import { MAX_LINE_QTY } from "./pricing";
+import type { Product } from "./types";
 
 export type CartLine = {
   key: string;
@@ -34,14 +35,14 @@ export function finiteQty(value: unknown, fallback = 1): number | null {
 }
 
 /** Drops unknown products and invalid colour/size pairs. Merges duplicates and caps quantity. */
-export function sanitizeCart(raw: unknown): CartLine[] {
+export function sanitizeCart(raw: unknown, catalog: Product[] = seedProducts): CartLine[] {
   if (!Array.isArray(raw)) return [];
   const merged = new Map<string, CartLine>();
   for (const item of raw) {
     if (!item || typeof item !== "object") continue;
     const line = item as Partial<CartLine>;
     if (typeof line.slug !== "string" || typeof line.color !== "string") continue;
-    const product = getProduct(line.slug);
+    const product = catalog.find((entry) => entry.slug === line.slug && (entry.status ?? "published") === "published");
     const sizes = cleanSizes(line.sizes);
     if (!product || !sizes || !validateSelection(product, line.color, sizes)) continue;
     const qty = finiteQty(line.qty, 1);

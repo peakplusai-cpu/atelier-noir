@@ -4,6 +4,7 @@ import { randomBytes } from "crypto";
 import { withLock } from "./lock";
 import { isOrderStatus, type OrderStatus } from "./order-status";
 import type { PricedItem } from "./pricing";
+import { SITE } from "./site";
 import { supabaseAdmin, supabaseConfigured } from "./supabase";
 
 export type { OrderStatus } from "./order-status";
@@ -36,6 +37,13 @@ export type Order = {
   amountPaidCents: number | null;
   paidAt: string | null;
   createdAt: string;
+  discount: number;
+  coupon: string;
+  promoId: string;
+  stockHeld: boolean;
+  shippingWaived: boolean;
+  shipThreshold: number;
+  shipFlat: number;
 };
 
 const TABLE = "solisia_orders";
@@ -66,10 +74,16 @@ type Row = {
   amount_paid_cents: number | null;
   paid_at: string | null;
   created_at: string;
+  meta?: Partial<Order> | null;
 };
+
+function metaOf(r: Row): Partial<Order> {
+  return r.meta && typeof r.meta === "object" ? r.meta : {};
+}
 
 function fromRow(r: Row): Order {
   const status = isOrderStatus(r.status) ? r.status : "pending";
+  const meta = metaOf(r);
   return {
     code: r.code,
     token: r.token,
@@ -88,6 +102,13 @@ function fromRow(r: Row): Order {
     amountPaidCents: r.amount_paid_cents,
     paidAt: r.paid_at,
     createdAt: r.created_at,
+    discount: Number(meta.discount ?? 0),
+    coupon: typeof meta.coupon === "string" ? meta.coupon : "",
+    promoId: typeof meta.promoId === "string" ? meta.promoId : "",
+    stockHeld: Boolean(meta.stockHeld),
+    shippingWaived: Boolean(meta.shippingWaived),
+    shipThreshold: Number(meta.shipThreshold ?? SITE.freeShippingThreshold),
+    shipFlat: Number(meta.shipFlat ?? SITE.flatShipping),
   };
 }
 
@@ -110,6 +131,15 @@ function toRow(o: Order): Row {
     amount_paid_cents: o.amountPaidCents,
     paid_at: o.paidAt,
     created_at: o.createdAt,
+    meta: {
+      discount: o.discount,
+      coupon: o.coupon,
+      promoId: o.promoId,
+      stockHeld: o.stockHeld,
+      shippingWaived: o.shippingWaived,
+      shipThreshold: o.shipThreshold,
+      shipFlat: o.shipFlat,
+    },
   };
 }
 
@@ -142,7 +172,24 @@ function newCode(): string {
   return `SB-${stamp}-${rand}`;
 }
 
-export type NewOrder = Pick<Order, "items" | "subtotal" | "shipping" | "total" | "email" | "name" | "phone" | "address">;
+export type NewOrder = Pick<
+  Order,
+  | "items"
+  | "subtotal"
+  | "shipping"
+  | "discount"
+  | "total"
+  | "email"
+  | "name"
+  | "phone"
+  | "address"
+  | "coupon"
+  | "promoId"
+  | "stockHeld"
+  | "shippingWaived"
+  | "shipThreshold"
+  | "shipFlat"
+>;
 
 export async function createOrder(input: NewOrder): Promise<Order> {
   const order: Order = {
@@ -159,7 +206,14 @@ export async function createOrder(input: NewOrder): Promise<Order> {
   };
   if (supabaseConfigured()) {
     const { error } = await supabaseAdmin().from(TABLE).insert(toRow(order));
-    if (error) throw new StorageError(`Could not save order: ${error.message}`);
+    if (error) {
+      const missing = /meta|schema cache|column/i.test(error.message);
+      throw new StorageError(
+        missing
+          ? "訂單資料表還沒有 meta 欄位。請在 Supabase 執行 supabase/migrations/20261117_admin_store.sql。"
+          : `Could not save order: ${error.message}`
+      );
+    }
     return order;
   }
   await withLock("orders", () => {
@@ -196,7 +250,9 @@ export async function getOrder(code: string): Promise<Order | null> {
   return readFileStore().find((order) => order.code === code) ?? null;
 }
 
-type Patch = Partial<Pick<Order, "status" | "paymentOrderId" | "paymentCaptureId" | "amountPaidCents" | "paidAt">>;
+type Patch = Partial<
+  Pick<Order, "status" | "paymentOrderId" | "paymentCaptureId" | "amountPaidCents" | "paidAt" | "stockHeld" | "discount" | "coupon" | "promoId" | "shippingWaived" | "shipThreshold" | "shipFlat">
+>;
 
 export type UpdateGuard = {
   /** Update only when payment_order_id is still empty, so two checkouts cannot replace each other. */
@@ -215,6 +271,26 @@ export async function updateOrder(code: string, patch: Patch, onlyFrom?: OrderSt
     if (patch.paymentCaptureId !== undefined) row.payment_capture_id = patch.paymentCaptureId;
     if (patch.amountPaidCents !== undefined) row.amount_paid_cents = patch.amountPaidCents;
     if (patch.paidAt !== undefined) row.paid_at = patch.paidAt;
+    if (
+      patch.stockHeld !== undefined ||
+      patch.discount !== undefined ||
+      patch.coupon !== undefined ||
+      patch.promoId !== undefined ||
+      patch.shippingWaived !== undefined ||
+      patch.shipThreshold !== undefined ||
+      patch.shipFlat !== undefined
+    ) {
+      const current = await getOrder(code);
+      row.meta = {
+        discount: patch.discount ?? current?.discount ?? 0,
+        coupon: patch.coupon ?? current?.coupon ?? "",
+        promoId: patch.promoId ?? current?.promoId ?? "",
+        stockHeld: patch.stockHeld ?? current?.stockHeld ?? false,
+        shippingWaived: patch.shippingWaived ?? current?.shippingWaived ?? false,
+        shipThreshold: patch.shipThreshold ?? current?.shipThreshold ?? SITE.freeShippingThreshold,
+        shipFlat: patch.shipFlat ?? current?.shipFlat ?? SITE.flatShipping,
+      };
+    }
     let query = supabaseAdmin().from(TABLE).update(row).eq("code", code);
     if (onlyFrom) query = query.in("status", onlyFrom);
     if (guard?.requireUnsetPayment) query = query.is("payment_order_id", null);

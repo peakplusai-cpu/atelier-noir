@@ -2,18 +2,16 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import PdpClient from "@/components/PdpClient";
 import ProductCard from "@/components/ProductCard";
-import { getProduct, products } from "@/lib/catalog";
+import { getShop, publishedProducts } from "@/lib/shop";
 import { siteOrigin } from "@/lib/site";
 
 type Props = { params: Promise<{ slug: string }> };
 
-export function generateStaticParams() {
-  return products.map((p) => ({ slug: p.slug }));
-}
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const p = getProduct(slug);
+  const p = publishedProducts(await getShop()).find((item) => item.slug === slug);
   if (!p) return {};
   return {
     title: p.name,
@@ -24,10 +22,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
-  const product = getProduct(slug);
+  const live = publishedProducts(await getShop());
+  const product = live.find((item) => item.slug === slug);
   if (!product) notFound();
 
-  const look = product.lookWith.map((s) => getProduct(s)).filter((p): p is NonNullable<typeof p> => Boolean(p));
+  const look = product.lookWith.map((s) => live.find((item) => item.slug === s)).filter((p): p is NonNullable<typeof p> => Boolean(p));
   const ld = {
     "@context": "https://schema.org",
     "@type": "Product",
