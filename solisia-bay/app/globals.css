@@ -538,6 +538,63 @@ main {
   object-fit: cover;
 }
 
+/* Portrait photo: a wide hero crops sky and sand, and the pier stays in the middle. */
+.hero-photo {
+  object-position: center 50%;
+}
+
+.hero[data-photo="true"] .hero-media::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(11, 27, 51, 0.62) 0%, rgba(11, 27, 51, 0.18) 38%, rgba(11, 27, 51, 0) 62%);
+  pointer-events: none;
+}
+
+@media (max-width: 760px) {
+  .hero[data-photo="true"] {
+    height: auto;
+    min-height: 0;
+    background: var(--sand);
+  }
+  .hero[data-photo="true"] .hero-media {
+    position: relative;
+    aspect-ratio: 4 / 5;
+  }
+  .hero[data-photo="true"] .hero-photo {
+    object-position: center 48%;
+  }
+  .hero[data-photo="true"] .hero-copy {
+    position: relative;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    max-width: none;
+    padding: 28px var(--gutter) 8px;
+    color: var(--ink);
+  }
+  .hero[data-photo="true"] .hero-copy h1 {
+    font-size: 48px;
+    color: var(--marine);
+  }
+  .hero[data-photo="true"] .hero-copy h1 em {
+    color: var(--gold-deep);
+  }
+  .hero[data-photo="true"] .eyebrow.light {
+    color: var(--gold-deep);
+  }
+  .hero[data-photo="true"] .hero-sub {
+    color: #4b4740;
+  }
+  .hero[data-photo="true"] .btn-light {
+    background: #fff;
+  }
+  .hero[data-photo="true"] .btn-ghost-light {
+    border-color: var(--marine);
+    color: var(--marine);
+  }
+}
+
 .hero-scene {
   display: block;
 }
