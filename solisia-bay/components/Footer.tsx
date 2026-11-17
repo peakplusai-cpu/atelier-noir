@@ -32,6 +32,9 @@ export default function Footer() {
       </div>
       <div className="footer-bottom">
         <p>&copy; {new Date().getFullYear()} SOLISIA BAY. All rights reserved.</p>
+        <Link href="/admin" className="staff-entry">
+          員工專用入口
+        </Link>
         <p>All prices in USD.</p>
       </div>
     </footer>

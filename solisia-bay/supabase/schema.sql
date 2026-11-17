@@ -5,7 +5,7 @@
 create table if not exists public.solisia_orders (
   code text primary key,
   token text not null,
-  status text not null default 'pending' check (status in ('pending', 'paid', 'failed', 'cancelled')),
+  status text not null default 'pending' check (status in ('pending', 'paid', 'shipped', 'completed', 'failed', 'cancelled')),
   items jsonb not null default '[]'::jsonb,
   subtotal numeric(10, 2) not null,
   shipping numeric(10, 2) not null,
@@ -27,3 +27,19 @@ create index if not exists solisia_orders_email_idx on public.solisia_orders (lo
 
 -- Only the server (service role key) touches this table.
 alter table public.solisia_orders enable row level security;
+
+-- Staff login. One row: the signing secret plus the password hash set on first visit to /admin.
+create table if not exists public.solisia_staff (
+  id int primary key check (id = 1),
+  password_hash text,
+  secret text not null,
+  created_at timestamptz not null default now()
+);
+
+alter table public.solisia_staff enable row level security;
+
+-- If solisia_orders was created before shipped/completed existed, widen the status check.
+alter table public.solisia_orders drop constraint if exists solisia_orders_status_check;
+alter table public.solisia_orders
+  add constraint solisia_orders_status_check
+  check (status in ('pending', 'paid', 'shipped', 'completed', 'failed', 'cancelled'));
