@@ -34,12 +34,13 @@ async function paypal<T>(path: string, init: RequestInit, token?: string): Promi
   return json as T;
 }
 
-async function accessToken(): Promise<string> {
+async function accessToken(signal?: AbortSignal): Promise<string> {
   const basic = Buffer.from(`${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`).toString("base64");
   const res = await paypal<{ access_token?: string }>("/v1/oauth2/token", {
     method: "POST",
     headers: { authorization: `Basic ${basic}`, "content-type": "application/x-www-form-urlencoded" },
     body: "grant_type=client_credentials",
+    signal,
   });
   if (!res.access_token) throw new Error("PayPal did not return an access token");
   return res.access_token;
@@ -117,6 +118,26 @@ function readCapture(order: PayPalOrder): PayPalCapture | null {
     currency: (capture.amount.currency_code ?? "").toUpperCase(),
     customId: unit.custom_id,
   };
+}
+
+export type PayPalView =
+  | { kind: "captured"; capture: PayPalCapture | null }
+  | { kind: "open" | "voided" | "unknown" };
+
+/** Reads a PayPal order without capturing it. Unknown means do not cancel the local order. */
+export async function inspectPayPalOrder(paypalOrderId: string, timeoutMs = 5000): Promise<PayPalView> {
+  if (!paypalConfigured() || !/^[A-Za-z0-9_-]{8,40}$/.test(paypalOrderId)) return { kind: "unknown" };
+  try {
+    const signal = AbortSignal.timeout(Math.max(1, timeoutMs));
+    const token = await accessToken(signal);
+    const order = await paypal<PayPalOrder>(`/v2/checkout/orders/${encodeURIComponent(paypalOrderId)}`, { method: "GET", signal }, token);
+    if (order.status === "VOIDED") return { kind: "voided" };
+    const captured = order.status === "COMPLETED" || Boolean(order.purchase_units?.some((unit) => unit.payments?.captures?.some((item) => item.status === "COMPLETED")));
+    if (captured) return { kind: "captured", capture: readCapture({ ...order, status: "COMPLETED" }) };
+    return { kind: "open" };
+  } catch {
+    return { kind: "unknown" };
+  }
 }
 
 export async function capturePayPalOrder(paypalOrderId: string): Promise<PayPalCapture> {

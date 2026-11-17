@@ -81,16 +81,24 @@ export default async function CollectionPage({ params, searchParams }: Props) {
         </nav>
       </header>
 
-      <Suspense fallback={null}>
-        <FilterBar
-          sizes={sizeOptions}
-          styles={styleKeys.map((k) => ({ value: k, label: STYLE_LABELS[k] }))}
-          total={base.length}
-          shown={items.length}
-        />
-      </Suspense>
+      {base.length > 0 && (
+        <Suspense fallback={null}>
+          <FilterBar
+            sizes={sizeOptions}
+            styles={styleKeys.map((k) => ({ value: k, label: STYLE_LABELS[k] }))}
+            total={base.length}
+            shown={items.length}
+          />
+        </Suspense>
+      )}
 
-      {items.length === 0 ? (
+      {base.length === 0 ? (
+        <div className="empty">
+          <p className="eyebrow">Coming soon</p>
+          <p className="serif">New pieces are on the way.</p>
+          <p>This collection is empty for now. Please check back shortly.</p>
+        </div>
+      ) : items.length === 0 ? (
         <div className="empty">
           <p className="serif">Nothing matches those filters.</p>
           <Link href={`/collection/${handle}`} className="btn btn-outline">
