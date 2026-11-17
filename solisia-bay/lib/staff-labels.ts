@@ -7,6 +7,7 @@ export const STATUS_LABEL: Record<OrderStatus, string> = {
   completed: "已完成",
   failed: "付款失敗",
   cancelled: "已取消",
+  review: "金額待核對",
 };
 
 export const STATUS_ACTIONS: Partial<Record<OrderStatus, { status: OrderStatus; label: string }[]>> = {
@@ -17,4 +18,5 @@ export const STATUS_ACTIONS: Partial<Record<OrderStatus, { status: OrderStatus; 
     { status: "cancelled", label: "標記取消" },
   ],
   shipped: [{ status: "completed", label: "標記已完成" }],
+  review: [{ status: "cancelled", label: "標記取消" }],
 };

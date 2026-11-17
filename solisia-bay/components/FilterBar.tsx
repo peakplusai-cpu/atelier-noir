@@ -97,7 +97,7 @@ export default function FilterBar({
           </div>
         </div>
         {active > 0 && (
-          <button type="button" className="link-btn" onClick={() => router.replace(pathname, { scroll: false })}>
+          <button type="button" className="link-btn" onClick={() => push({ size: [], style: [] })}>
             Clear all filters
           </button>
         )}

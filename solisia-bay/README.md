@@ -24,18 +24,19 @@ npm install
 npm run dev        # http://localhost:3200
 ```
 
-沒有設定 PayPal 時（且非 production），結帳會走「模擬付款成功」流程，方便本機測整條路徑；訂單寫入 `data/orders.json`（不進版控）。
+沒有設定 PayPal 時，只有本機（`NODE_ENV` 不是 `production`，且不是 Vercel）會走「模擬付款成功」。Vercel 或 production 沒有 PayPal 會回 503，不會模擬付款。訂單寫入 `data/orders.json`（不進版控）。
 沒有設定 Supabase 時同樣使用本機 JSON 檔。
 
 ## 部署（Vercel + Supabase + PayPal）
 
-1. **Supabase**：在 Radiant 使用的同一個專案，SQL Editor 執行 `supabase/schema.sql`（只會建立 `solisia_orders`）。
+1. **Supabase**：在 Radiant 使用的同一個專案，SQL Editor 執行 `supabase/schema.sql`（建立 `solisia_orders` 與 `solisia_staff`）。若資料表已存在，仍要重跑檔尾的 `status` check，才能使用 `review`（付款金額不符、待人工核對）。
 2. **PayPal**：[developer.paypal.com](https://developer.paypal.com) 建立 App，取得 Client ID 與 Secret。
    Sandbox 憑證配合 `PAYPAL_ENV=sandbox`，正式上線換成 Live 憑證並設 `PAYPAL_ENV=live`。
 3. **Vercel**：New Project → Import 同一個 GitHub repo → **Root Directory 設為 `solisia-bay`**。環境變數：
    - `SITE_ORIGIN`：正式網域，例如 `https://solisiabay.com`
    - `PAYPAL_CLIENT_ID`、`PAYPAL_CLIENT_SECRET`、`PAYPAL_ENV`
    - `SUPABASE_URL`、`SUPABASE_SERVICE_ROLE_KEY`（與 Radiant 同一組值）
+   - `STAFF_SETUP_TOKEN`（建議）：第一次打開 `/admin/setup` 時必須輸入的設定代碼。未設定時，第一個打開該頁的人就能建立員工密碼。
 4. 用 Sandbox 買家帳號跑一筆訂單，確認 `solisia_orders.status` 由 `pending` 變成 `paid`，`payment_capture_id` 有值。
 
 金額一律由伺服器依商品目錄重算（小計 + 運費），前端傳來的價格會被忽略。PayPal 訂單的 `custom_id` 是我們的訂單編號，

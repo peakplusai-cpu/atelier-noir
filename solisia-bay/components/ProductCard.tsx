@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import ProductImage from "./ProductImage";
 import { STYLE_LABELS } from "@/lib/catalog";
-import { formatUsd } from "@/lib/money";
+import { formatUsd, savings } from "@/lib/money";
 import type { Product } from "@/lib/types";
 
 export default function ProductCard({ product, priority }: { product: Product; priority?: boolean }) {
@@ -38,7 +38,9 @@ export default function ProductCard({ product, priority }: { product: Product; p
         )}
         <span className="badges">
           {product.isNew && <span className="badge">New</span>}
-          {product.compareAt && <span className="badge badge-gold">Save {formatUsd(product.compareAt - product.price)}</span>}
+          {savings(product.price, product.compareAt) > 0 && (
+            <span className="badge badge-gold">Save {formatUsd(savings(product.price, product.compareAt))}</span>
+          )}
         </span>
       </Link>
       <div className="card-info">
@@ -47,7 +49,7 @@ export default function ProductCard({ product, priority }: { product: Product; p
             {product.name}
           </Link>
           <span className="price">
-            {product.compareAt && <s>{formatUsd(product.compareAt)}</s>}
+            {savings(product.price, product.compareAt) > 0 && <s>{formatUsd(product.compareAt!)}</s>}
             {formatUsd(product.price)}
           </span>
         </div>
