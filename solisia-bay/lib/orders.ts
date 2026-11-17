@@ -3,7 +3,7 @@ import { dirname, join } from "path";
 import { randomBytes } from "crypto";
 import { supabaseAdmin, supabaseConfigured } from "./supabase";
 
-export type OrderStatus = "pending" | "paid" | "failed" | "cancelled";
+export type OrderStatus = "pending" | "paid" | "shipped" | "completed" | "failed" | "cancelled";
 
 export type OrderItem = {
   slug: string;
@@ -161,6 +161,22 @@ export async function createOrder(input: NewOrder): Promise<Order> {
   all.push(order);
   writeFileStore(all);
   return order;
+}
+
+export async function listOrders(limit = 200): Promise<Order[]> {
+  if (supabaseConfigured()) {
+    const { data, error } = await supabaseAdmin()
+      .from(TABLE)
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    if (error) throw new StorageError(`Could not list orders: ${error.message}`);
+    return ((data ?? []) as Row[]).map(fromRow);
+  }
+  return readFileStore()
+    .slice()
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+    .slice(0, limit);
 }
 
 export async function getOrder(code: string): Promise<Order | null> {
