@@ -1,3 +1,4 @@
+import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 
 const storageOrigin = "https://wgrwwuyxhdyakchuiubi.supabase.co";
@@ -72,6 +73,40 @@ test("policies, missing pages, and order lookup do not leak", async ({ page, req
     multipart: { file: { name: "x.svg", mimeType: "image/svg+xml", buffer: Buffer.from("<svg></svg>") } },
   });
   expect(upload.status()).toBe(401);
+});
+
+test("the feed wall is a full-bleed marquee", async ({ page, request }) => {
+  await request.get("/");
+  await mkdir("data/uploads", { recursive: true });
+  await copyFile("public/hero/pier.jpg", "data/uploads/pier-light.jpg");
+  const shop = JSON.parse(await readFile("data/shop.json", "utf8")) as { wall: unknown[] };
+  shop.wall = [
+    { id: "wall_pier", image: "/media/pier-light.jpg", caption: "Pier light", slug: "calista-triangle-bikini-top", published: true, createdAt: "2026-01-01T00:00:00.000Z" },
+    { id: "wall_two", image: "/media/pier-light.jpg", caption: "Golden hour", slug: "", published: true, createdAt: "2026-01-02T00:00:00.000Z" },
+  ];
+  await writeFile("data/shop.json", JSON.stringify(shop));
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/");
+  const wall = page.getByRole("region", { name: "From the bay" });
+  await wall.scrollIntoViewIfNeeded();
+  await page.evaluate(() => {
+    document.querySelectorAll<HTMLElement>(".bay-wall-track").forEach((el) => {
+      el.style.animationPlayState = "paused";
+    });
+  });
+  await expect(wall).toBeVisible();
+  const box = await wall.boundingBox();
+  expect(box?.height ?? 0).toBeGreaterThan(400);
+  await mkdir("/opt/cursor/artifacts", { recursive: true });
+  await page.screenshot({ path: "/opt/cursor/artifacts/solisia-wall-desktop.png", fullPage: false });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await wall.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: "/opt/cursor/artifacts/solisia-wall-mobile.png", fullPage: false });
+  const tile = wall.locator(".bay-wall-item").first();
+  const tileBox = await tile.boundingBox();
+  expect(tileBox?.height ?? 0).toBeGreaterThan(280);
+  await tile.click();
+  await expect(page).toHaveURL(/\/products\/calista-triangle-bikini-top/);
 });
 
 test("staff setup, settings, logout and login", async ({ page }) => {
