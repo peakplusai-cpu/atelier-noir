@@ -7,3 +7,6 @@ node_modules
 *.tmp
 *.tsbuildinfo
 .vercel
+test-results
+playwright-report
+blob-report

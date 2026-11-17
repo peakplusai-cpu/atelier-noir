@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { validateSelection } from "@/lib/catalog";
+import { sizeLabel, stockOf, validateSelection } from "@/lib/catalog";
 import { finiteQty, lineKey, sanitizeCart, type CartLine } from "@/lib/cart-lines";
 import { toCents } from "@/lib/money";
 import { MAX_LINE_QTY } from "@/lib/pricing";
@@ -77,9 +77,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const qty = finiteQty(input.qty ?? 1, 1);
     const product = products.find((item) => item.slug === input.slug);
     if (qty === null || qty < 1 || !product || !validateSelection(product, input.color, input.sizes)) return;
+    const available = stockOf(product, input.color, sizeLabel(product, input.sizes));
     const key = lineKey(input.slug, input.color, input.sizes);
     setLines((prev) => {
       const existing = prev.find((l) => l.key === key);
+      if (available !== null && (existing?.qty ?? 0) + qty > available) return prev;
       if (existing) {
         return prev.map((l) => (l.key === key ? { ...l, qty: Math.min(MAX_LINE_QTY, l.qty + qty) } : l));
       }

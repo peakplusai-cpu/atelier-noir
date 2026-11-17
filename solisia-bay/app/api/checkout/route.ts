@@ -5,10 +5,10 @@ import { paypalConfigured } from "@/lib/paypal";
 import { demoPaymentsAllowed } from "@/lib/payments";
 import { toCents } from "@/lib/money";
 import { createOrder, updateOrder, StorageError } from "@/lib/orders";
-import { priceCart, PricingError, type PricedCart } from "@/lib/pricing";
+import { PricingError, type PricedCart } from "@/lib/pricing";
 import { rateLimit } from "@/lib/rate-limit";
-import { variantKey } from "@/lib/catalog";
-import { mutateShop, publishedProducts, releaseHold } from "@/lib/shop";
+import { reserveCheckout } from "@/lib/reserve";
+import { releaseHold } from "@/lib/shop";
 
 export const dynamic = "force-dynamic";
 
@@ -60,25 +60,7 @@ export async function POST(request: Request) {
   const coupon = text(record.coupon, 40);
   let priced: PricedCart | null = null;
   try {
-    priced = await mutateShop(async (shop) => {
-      const quote = priceCart(record.items, publishedProducts(shop), {
-        coupon,
-        promotions: shop.promotions,
-        threshold: shop.settings.freeShippingThreshold,
-        flat: shop.settings.flatShipping,
-      });
-      for (const item of quote.items) {
-        const product = shop.products.find((entry) => entry.slug === item.slug);
-        if (!product?.inventory) continue;
-        const key = variantKey(item.color, item.size);
-        product.inventory[key] = (product.inventory[key] ?? 0) - item.qty;
-      }
-      if (quote.promoId) {
-        const promo = shop.promotions.find((entry) => entry.id === quote.promoId);
-        if (promo) promo.used += 1;
-      }
-      return quote;
-    });
+    priced = await reserveCheckout(record.items, coupon);
   } catch (err) {
     if (err instanceof PricingError) return fail(err.message, err.status);
     if (err instanceof StorageError) return fail("We couldn't save your order right now. Please try again shortly.", 503);

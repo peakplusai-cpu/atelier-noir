@@ -45,7 +45,8 @@ export default async function HomePage() {
                   {post.caption && <span>{post.caption}</span>}
                 </>
               );
-              return post.slug ? (
+              const slugOk = /^[a-z0-9-]+$/.test(post.slug);
+              return slugOk ? (
                 <Link key={post.id || post.image} href={`/products/${post.slug}`} className="wall-card">{inner}</Link>
               ) : (
                 <figure key={post.id || post.image} className="wall-card">{inner}</figure>

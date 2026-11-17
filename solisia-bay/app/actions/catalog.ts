@@ -3,6 +3,9 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { isStaff } from "@/lib/auth";
+import { allowedImageUrl } from "@/lib/csp";
+import { originAllowed } from "@/lib/guard";
+import { headers } from "next/headers";
 import { MEN_SIZES, WOMEN_SIZES, selectionCombos, variantKey } from "@/lib/catalog";
 import { normalizeCoupon, type PromoKind, type PromoScope, type Promotion, type WallPost } from "@/lib/promos";
 import { defaultsFor, getShop, mutateShop, newId, slugify, type ShopSettings } from "@/lib/shop";
@@ -12,6 +15,15 @@ const GENDERS: Gender[] = ["women", "men", "couples"];
 const STYLES: StyleKey[] = ["bikini-top", "bikini-bottom", "one-piece", "cover-up", "cuban-shirt", "cuban-set", "swim-trunks", "shorts", "couples-set"];
 
 async function guard(): Promise<void> {
+  const headerList = await headers();
+  const probe = new Request("https://solisia.local/admin", {
+    headers: {
+      origin: headerList.get("origin") ?? "",
+      host: headerList.get("host") ?? "",
+      "x-forwarded-host": headerList.get("x-forwarded-host") ?? "",
+    },
+  });
+  if (!originAllowed(probe)) redirect("/admin/login");
   if (!(await isStaff())) redirect("/admin/login");
 }
 
@@ -58,7 +70,7 @@ export async function saveProduct(_prev: string, form: FormData): Promise<string
   const style = STYLES.includes(payload.style as StyleKey) ? (payload.style as StyleKey) : null;
   if (!gender || !style) return "請選擇分類";
   const price = Math.round(num(payload.price) * 100) / 100;
-  if (price <= 0) return "售價必須大於 0";
+  if (price <= 0 || price > 100_000) return "售價必須大於 0，且不可超過 100000";
   const compareAt = Math.round(num(payload.compareAt) * 100) / 100;
   const colors = (Array.isArray(payload.colors) ? payload.colors : [])
     .map((color) => {
@@ -73,7 +85,7 @@ export async function saveProduct(_prev: string, form: FormData): Promise<string
   const selectors = selectorsFor(gender, parseList(payload.herSizes), parseList(payload.hisSizes));
   const inventoryIn = payload.inventory && typeof payload.inventory === "object" ? (payload.inventory as Record<string, unknown>) : {};
   const photos = (Array.isArray(payload.photos) ? payload.photos : [])
-    .filter((url): url is string => typeof url === "string" && (url.startsWith("/media/") || url.startsWith("https://")))
+    .filter((url): url is string => typeof url === "string" && allowedImageUrl(url))
     .slice(0, 8);
   const details = text(payload.details, 2000)
     .split("\n")
@@ -251,7 +263,7 @@ export async function saveWall(_prev: string, form: FormData): Promise<string> {
         published: Boolean(post.published),
         createdAt: text(post.createdAt, 40) || new Date().toISOString(),
       }))
-      .filter((post) => post.image.startsWith("/media/") || post.image.startsWith("https://"))
+      .filter((post) => allowedImageUrl(post.image))
       .slice(0, 24);
   } catch {
     return "資料格式不正確";
