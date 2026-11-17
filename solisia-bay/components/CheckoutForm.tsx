@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { useCart } from "./CartProvider";
 import ProductImage from "./ProductImage";
@@ -38,7 +38,33 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [coupon, setCoupon] = useState("");
+  const [quote, setQuote] = useState<{ total: number; discount: number; coupon: string } | null>(null);
   const [locked, setLocked] = useState<LockedOrder | null>(null);
+
+  useEffect(() => {
+    const code = coupon.trim();
+    if (!code || lines.length === 0) {
+      setQuote(null);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      void fetch("/api/quote", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          coupon: code,
+          items: lines.map((line) => ({ slug: line.slug, color: line.color, sizes: line.sizes, qty: line.qty })),
+        }),
+      })
+        .then((res) => res.json())
+        .then((data: { total?: number; discount?: number; coupon?: string; error?: string }) => {
+          if (data.coupon && typeof data.total === "number") setQuote({ total: data.total, discount: data.discount ?? 0, coupon: data.coupon });
+          else setQuote(null);
+        })
+        .catch(() => setQuote(null));
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [coupon, lines]);
 
   const viewSubtotal = locked?.subtotal ?? subtotal;
   const shipping = locked?.shipping ?? shippingFor(subtotal, { threshold: settings.freeShippingThreshold, flat: settings.flatShipping });
@@ -244,7 +270,7 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
           </div>
         ) : (
           <button type="submit" className="btn btn-solid btn-block" disabled={busy || !ready}>
-            {busy ? "Preparing secure payment\u2026" : `Continue to payment \u00B7 ${formatUsd(total)}`}
+            {busy ? "Preparing secure payment\u2026" : paymentLabel(coupon, total, quote)}
           </button>
         )}
         <p className="fine">
@@ -313,10 +339,26 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
           </div>
           <div className="totals-grand">
             <dt>Total (USD)</dt>
-            <dd>{formatUsd(total)}</dd>
+            <dd>{formatUsd(locked ? total : matchedQuote(coupon, quote)?.total ?? total)}</dd>
           </div>
         </dl>
       </aside>
     </div>
   );
+}
+
+function normalizeCode(value: string): string {
+  return value.trim().replace(/\s+/g, "").toUpperCase();
+}
+
+function matchedQuote(coupon: string, quote: { total: number; discount: number; coupon: string } | null) {
+  if (!quote || !coupon.trim()) return null;
+  return normalizeCode(quote.coupon) === normalizeCode(coupon) ? quote : null;
+}
+
+function paymentLabel(coupon: string, fallback: number, quote: { total: number; discount: number; coupon: string } | null): string {
+  const match = matchedQuote(coupon, quote);
+  if (match) return `Continue to payment \u00B7 ${formatUsd(match.total)}`;
+  if (coupon.trim()) return "Continue to payment";
+  return `Continue to payment \u00B7 ${formatUsd(fallback)}`;
 }

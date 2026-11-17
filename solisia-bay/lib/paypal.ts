@@ -119,6 +119,25 @@ function readCapture(order: PayPalOrder): PayPalCapture | null {
   };
 }
 
+export type PayPalView =
+  | { kind: "captured"; capture: PayPalCapture | null }
+  | { kind: "open" | "voided" | "unknown" };
+
+/** Reads a PayPal order without capturing it. Unknown means do not cancel the local order. */
+export async function inspectPayPalOrder(paypalOrderId: string): Promise<PayPalView> {
+  if (!paypalConfigured() || !/^[A-Za-z0-9_-]{8,40}$/.test(paypalOrderId)) return { kind: "unknown" };
+  try {
+    const token = await accessToken();
+    const order = await paypal<PayPalOrder>(`/v2/checkout/orders/${encodeURIComponent(paypalOrderId)}`, { method: "GET" }, token);
+    if (order.status === "VOIDED") return { kind: "voided" };
+    const captured = order.status === "COMPLETED" || Boolean(order.purchase_units?.some((unit) => unit.payments?.captures?.some((item) => item.status === "COMPLETED")));
+    if (captured) return { kind: "captured", capture: readCapture({ ...order, status: "COMPLETED" }) };
+    return { kind: "open" };
+  } catch {
+    return { kind: "unknown" };
+  }
+}
+
 export async function capturePayPalOrder(paypalOrderId: string): Promise<PayPalCapture> {
   if (!/^[A-Za-z0-9_-]{8,40}$/.test(paypalOrderId)) throw new Error("Invalid PayPal order id");
   const token = await accessToken();
