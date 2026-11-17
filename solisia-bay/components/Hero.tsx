@@ -71,13 +71,13 @@ function Scene() {
 
 export default function Hero() {
   return (
-    <section className="hero" aria-label="Resort 2027">
+    <section className="hero" data-photo={SITE.heroImage ? "true" : undefined} aria-label="Resort 2027">
       <div className="hero-media">
         {SITE.heroVideo ? (
           <video src={SITE.heroVideo} autoPlay muted loop playsInline poster={SITE.heroImage || undefined} />
         ) : SITE.heroImage ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={SITE.heroImage} alt="" />
+          <img src={SITE.heroImage} alt="" className="hero-photo" />
         ) : (
           <Scene />
         )}
