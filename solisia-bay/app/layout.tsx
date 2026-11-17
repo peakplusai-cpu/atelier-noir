@@ -6,7 +6,8 @@ import { CatalogProvider } from "@/components/CatalogProvider";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
-import { publishedProducts, getShop } from "@/lib/shop";
+import { loadPublicShop } from "@/lib/expire-checkouts";
+import { publishedProducts } from "@/lib/shop";
 import { SITE, siteOrigin } from "@/lib/site";
 
 const display = Cormorant_Garamond({
@@ -44,7 +45,7 @@ export const viewport: Viewport = {
 export const dynamic = "force-dynamic";
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const shop = await getShop();
+  const shop = await loadPublicShop();
   return (
     <html lang="en" className={`${display.variable} ${sans.variable}`}>
       <body>

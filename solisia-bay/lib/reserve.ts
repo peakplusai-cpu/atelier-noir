@@ -1,9 +1,11 @@
 import { variantKey } from "./catalog";
+import { releaseStaleHolds } from "./expire-checkouts";
 import { priceCart, PricingError, type PricedCart } from "./pricing";
 import { mutateShop, publishedProducts } from "./shop";
 
 /** Prices from the live catalog, then holds stock and a coupon redemption. */
 export async function reserveCheckout(rawItems: unknown, coupon = ""): Promise<PricedCart> {
+  await releaseStaleHolds();
   return mutateShop(async (shop) => {
     const quote = priceCart(rawItems, publishedProducts(shop), {
       coupon,
