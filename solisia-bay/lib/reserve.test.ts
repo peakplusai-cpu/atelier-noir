@@ -7,6 +7,7 @@ import type { PricedCart, PricingError } from "./pricing.ts";
 
 const dir = mkdtempSync(join(tmpdir(), "solisia-shop-"));
 process.env.SOLISIA_SHOP_FILE = join(dir, "shop.json");
+process.env.SOLISIA_DATA_FILE = join(dir, "orders.json");
 process.env.SUPABASE_URL = "";
 delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 

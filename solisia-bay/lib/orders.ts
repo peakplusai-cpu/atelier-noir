@@ -240,6 +240,24 @@ export async function listOrders(limit = 200): Promise<Order[]> {
     .slice(0, limit);
 }
 
+export async function listStalePendingOrders(olderThanIso: string, limit = 50): Promise<Order[]> {
+  if (supabaseConfigured()) {
+    const { data, error } = await supabaseAdmin()
+      .from(TABLE)
+      .select("*")
+      .eq("status", "pending")
+      .lt("created_at", olderThanIso)
+      .order("created_at", { ascending: true })
+      .limit(limit);
+    if (error) throw new StorageError(`Could not list stale orders: ${error.message}`);
+    return ((data ?? []) as Row[]).map(fromRow);
+  }
+  return readFileStore()
+    .filter((order) => order.status === "pending" && order.createdAt < olderThanIso)
+    .sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1))
+    .slice(0, limit);
+}
+
 export async function getOrder(code: string): Promise<Order | null> {
   if (!isOrderCode(code)) return null;
   if (supabaseConfigured()) {
@@ -257,6 +275,8 @@ type Patch = Partial<
 export type UpdateGuard = {
   /** Update only when payment_order_id is still empty, so two checkouts cannot replace each other. */
   requireUnsetPayment?: boolean;
+  /** Update only when this order still holds reserved stock. */
+  onlyIfStockHeld?: boolean;
 };
 
 /**
@@ -294,6 +314,7 @@ export async function updateOrder(code: string, patch: Patch, onlyFrom?: OrderSt
     let query = supabaseAdmin().from(TABLE).update(row).eq("code", code);
     if (onlyFrom) query = query.in("status", onlyFrom);
     if (guard?.requireUnsetPayment) query = query.is("payment_order_id", null);
+    if (guard?.onlyIfStockHeld) query = query.contains("meta", { stockHeld: true });
     const { data, error } = await query.select("*");
     if (error) throw new StorageError(`Could not update order: ${error.message}`);
     return data && data.length ? fromRow(data[0] as Row) : null;
@@ -303,6 +324,7 @@ export async function updateOrder(code: string, patch: Patch, onlyFrom?: OrderSt
     const order = all.find((item) => item.code === code);
     if (!order || (onlyFrom && !onlyFrom.includes(order.status))) return null;
     if (guard?.requireUnsetPayment && order.paymentOrderId) return null;
+    if (guard?.onlyIfStockHeld && !order.stockHeld) return null;
     Object.assign(order, patch);
     writeFileStore(all);
     return order;
