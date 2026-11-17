@@ -1,23 +1,13 @@
 import path from "path";
 import type { NextConfig } from "next";
+import { supabaseStorageOrigin } from "./lib/csp";
 
-const csp = [
-  "default-src 'self'",
-  "base-uri 'self'",
-  "object-src 'none'",
-  "frame-ancestors 'none'",
-  "form-action 'self' https://www.paypal.com https://www.sandbox.paypal.com",
-  "script-src 'self' 'unsafe-inline' https://www.paypal.com https://www.sandbox.paypal.com https://www.paypalobjects.com",
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://www.paypal.com https://www.paypalobjects.com https://images.unsplash.com",
-  "font-src 'self'",
-  "connect-src 'self' https://www.paypal.com https://www.sandbox.paypal.com https://api-m.paypal.com https://api-m.sandbox.paypal.com https://www.paypalobjects.com",
-  "frame-src https://www.paypal.com https://www.sandbox.paypal.com https://www.paypalobjects.com",
-  "worker-src 'self' blob:",
-].join("; ");
+const storageHost = (() => {
+  const origin = supabaseStorageOrigin();
+  return origin ? new URL(origin).hostname : "";
+})();
 
 const securityHeaders = [
-  { key: "Content-Security-Policy", value: csp },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
@@ -30,7 +20,10 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(process.cwd()),
   images: {
-    remotePatterns: [{ protocol: "https", hostname: "images.unsplash.com" }],
+    remotePatterns: [
+      { protocol: "https", hostname: "images.unsplash.com" },
+      ...(storageHost ? [{ protocol: "https" as const, hostname: storageHost, pathname: "/storage/v1/object/public/solisia-uploads/**" }] : []),
+    ],
   },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];

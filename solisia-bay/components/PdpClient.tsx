@@ -5,8 +5,9 @@ import ProductImage from "./ProductImage";
 import { ModelInfo, SizeGuidePanel, UnitToggle } from "./SizeGuide";
 import { useCart } from "./CartProvider";
 import { Accordion, AccordionItem } from "./Accordion";
-import { STYLE_LABELS } from "@/lib/catalog";
+import { STYLE_LABELS, sizeLabel, stockOf } from "@/lib/catalog";
 import { formatUsd, savings } from "@/lib/money";
+import { useCatalog } from "./CatalogProvider";
 import { HYGIENE_COPY, RETURNS_COPY, SHIPPING_COPY } from "@/lib/policies";
 import { SITE } from "@/lib/site";
 import type { Unit } from "@/lib/sizes";
@@ -24,6 +25,7 @@ const SLIDES: Slide[] = [
 
 export default function PdpClient({ product }: { product: Product }) {
   const { add } = useCart();
+  const { settings } = useCatalog();
   const [colorName, setColorName] = useState(product.colors[0].name);
   const [sizes, setSizes] = useState<Record<string, string>>({});
   const [slide, setSlide] = useState(0);
@@ -33,6 +35,8 @@ export default function PdpClient({ product }: { product: Product }) {
   const [added, setAdded] = useState(false);
 
   const complete = product.selectors.every((s) => sizes[s.key]);
+  const available = complete ? stockOf(product, colorName, sizeLabel(product, sizes)) : null;
+  const soldOut = available === 0;
   const highlight = useMemo(() => sizes[product.selectors[0].key], [sizes, product.selectors]);
   const slides: Slide[] = [
     ...SLIDES,
@@ -41,7 +45,7 @@ export default function PdpClient({ product }: { product: Product }) {
   ];
 
   const onAdd = () => {
-    if (!complete) {
+    if (!complete || soldOut) {
       setShowError(true);
       return;
     }
@@ -155,12 +159,13 @@ export default function PdpClient({ product }: { product: Product }) {
           <UnitToggle unit={unit} onChange={setUnit} />
         </div>
 
-        <button type="button" className="btn btn-solid btn-block" onClick={onAdd}>
-          {added ? "Added to bag" : complete ? `Add to bag \u00B7 ${formatUsd(product.price)}` : "Select your size"}
+        <button type="button" className="btn btn-solid btn-block" onClick={onAdd} disabled={soldOut}>
+          {soldOut ? "Sold out" : added ? "Added to bag" : complete ? `Add to bag \u00B7 ${formatUsd(product.price)}` : "Select your size"}
         </button>
         {showError && !complete && <p className="form-error" role="alert">Please choose your size to continue.</p>}
+        {soldOut && <p className="form-error" role="alert">This size is sold out.</p>}
         <ul className="perks">
-          <li>Free worldwide shipping over ${SITE.freeShippingThreshold} USD</li>
+          <li>Free worldwide shipping over ${settings.freeShippingThreshold} USD</li>
           <li>{SITE.returnDays}-day returns</li>
           <li>Secure checkout</li>
         </ul>
