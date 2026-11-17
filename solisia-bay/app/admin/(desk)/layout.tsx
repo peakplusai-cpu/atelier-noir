@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { isStaff, staffReady } from "@/lib/auth";
 import { logoutStaff } from "@/app/actions/staff";
+import { AdminNav } from "@/components/admin/AdminNav";
 import { StorageError } from "@/lib/orders";
 
 export const dynamic = "force-dynamic";
@@ -28,12 +29,14 @@ export default async function DeskLayout({ children }: { children: React.ReactNo
           SOLISIA BAY
         </Link>
         <span>員工後台</span>
+        <Link href="/" className="link-btn">查看前台</Link>
         <form action={logoutStaff}>
           <button type="submit" className="link-btn">
             登出
           </button>
         </form>
       </div>
+      <AdminNav />
       {children}
     </section>
   );

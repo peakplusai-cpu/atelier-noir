@@ -34,7 +34,11 @@ export async function POST(request: Request) {
       code: order.code,
       subtotal: order.subtotal,
       shipping: order.shipping,
+      discount: order.discount,
       total: order.total,
+      shippingWaived: order.shippingWaived,
+      shipThreshold: order.shipThreshold,
+      shipFlat: order.shipFlat,
       items: order.items.map((item) => ({ name: item.name, qty: item.qty, unitPrice: item.unitPrice })),
     });
     const saved = await updateOrder(order.code, { paymentOrderId: id }, ["pending"], { requireUnsetPayment: true });

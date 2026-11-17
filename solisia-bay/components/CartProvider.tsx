@@ -1,10 +1,11 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { getProduct, validateSelection } from "@/lib/catalog";
+import { validateSelection } from "@/lib/catalog";
 import { finiteQty, lineKey, sanitizeCart, type CartLine } from "@/lib/cart-lines";
 import { toCents } from "@/lib/money";
 import { MAX_LINE_QTY } from "@/lib/pricing";
+import { useCatalog } from "./CatalogProvider";
 
 export type { CartLine };
 
@@ -31,6 +32,7 @@ const CartContext = createContext<CartContextValue | null>(null);
 export { lineKey };
 
 export function CartProvider({ children }: { children: ReactNode }) {
+  const { products } = useCatalog();
   const [lines, setLines] = useState<CartLine[]>([]);
   const [ready, setReady] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -38,12 +40,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) setLines(sanitizeCart(JSON.parse(raw)));
+      if (raw) setLines(sanitizeCart(JSON.parse(raw), products));
     } catch {
       /* ignore corrupt storage */
     }
     setReady(true);
-  }, []);
+  }, [products]);
 
   useEffect(() => {
     if (!ready) return;
@@ -62,18 +64,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return;
       }
       try {
-        setLines(sanitizeCart(JSON.parse(e.newValue)));
+        setLines(sanitizeCart(JSON.parse(e.newValue), products));
       } catch {
         /* ignore */
       }
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
-  }, []);
+  }, [products]);
 
   const add = useCallback((input: AddInput) => {
     const qty = finiteQty(input.qty ?? 1, 1);
-    const product = getProduct(input.slug);
+    const product = products.find((item) => item.slug === input.slug);
     if (qty === null || qty < 1 || !product || !validateSelection(product, input.color, input.sizes)) return;
     const key = lineKey(input.slug, input.color, input.sizes);
     setLines((prev) => {
@@ -84,7 +86,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return [...prev, { key, slug: input.slug, color: input.color, sizes: input.sizes, qty: Math.min(MAX_LINE_QTY, qty) }];
     });
     setIsOpen(true);
-  }, []);
+  }, [products]);
 
   const setQty = useCallback((key: string, qty: number) => {
     const next = finiteQty(qty, 0);
@@ -102,9 +104,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<CartContextValue>(() => {
     const count = lines.reduce((n, l) => n + l.qty, 0);
-    const subtotal = lines.reduce((sum, l) => sum + toCents(getProduct(l.slug)?.price ?? 0) * l.qty, 0) / 100;
+    const subtotal = lines.reduce((sum, l) => sum + toCents(products.find((item) => item.slug === l.slug)?.price ?? 0) * l.qty, 0) / 100;
     return { ready, lines, count, subtotal, isOpen, openCart, closeCart, add, setQty, remove, clear };
-  }, [lines, ready, isOpen, openCart, closeCart, add, setQty, remove, clear]);
+  }, [lines, products, ready, isOpen, openCart, closeCart, add, setQty, remove, clear]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

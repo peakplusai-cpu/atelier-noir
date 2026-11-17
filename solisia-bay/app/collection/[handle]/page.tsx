@@ -5,7 +5,10 @@ import { Suspense } from "react";
 import FilterBar from "@/components/FilterBar";
 import ProductCard from "@/components/ProductCard";
 import { ALL_SIZES, COLLECTIONS, STYLE_LABELS, productSizes, productsFor } from "@/lib/catalog";
+import { getShop, publishedProducts } from "@/lib/shop";
 import type { Product, StyleKey } from "@/lib/types";
+
+export const dynamic = "force-dynamic";
 
 type Props = {
   params: Promise<{ handle: string }>;
@@ -52,7 +55,7 @@ export default async function CollectionPage({ params, searchParams }: Props) {
   const styles = list(sp.style);
   const sort = typeof sp.sort === "string" ? sp.sort : "featured";
 
-  const base = productsFor(handle);
+  const base = productsFor(handle, publishedProducts(await getShop()));
   const filtered = base.filter(
     (p) =>
       (styles.length === 0 || styles.includes(p.style)) &&

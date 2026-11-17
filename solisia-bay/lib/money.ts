@@ -36,10 +36,12 @@ export function parseMoneyToCents(value: string): number | null {
   return Number.isSafeInteger(cents) ? cents : null;
 }
 
-export function shippingFor(subtotal: number): number {
+export function shippingFor(subtotal: number, rules?: { threshold?: number; flat?: number }): number {
+  const threshold = rules?.threshold ?? SITE.freeShippingThreshold;
+  const flat = rules?.flat ?? SITE.flatShipping;
   if (!Number.isFinite(subtotal) || subtotal <= 0) return 0;
-  if (!(SITE.flatShipping > 0) || !(SITE.freeShippingThreshold > 0)) return 0;
-  return subtotal >= SITE.freeShippingThreshold ? 0 : SITE.flatShipping;
+  if (!(flat > 0) || !(threshold > 0)) return 0;
+  return subtotal >= threshold ? 0 : flat;
 }
 
 export function amountToFreeShipping(subtotal: number): number {

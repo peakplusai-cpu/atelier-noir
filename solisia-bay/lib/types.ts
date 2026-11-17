@@ -67,4 +67,8 @@ export type Product = {
   isNew?: boolean;
   lookWith: string[];
   media?: { front?: string; back?: string; gallery?: string[]; video?: string };
+  /** published is visible on the storefront. Draft is staff-only. */
+  status?: "published" | "draft";
+  /** Units left, keyed by `color|size label`. Missing inventory means the piece is not stock-tracked. */
+  inventory?: Record<string, number>;
 };

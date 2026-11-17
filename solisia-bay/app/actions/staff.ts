@@ -7,6 +7,7 @@ import { createStaffSession, destroyStaffSession, isStaff, staffReady } from "@/
 import { clientIpFrom } from "@/lib/guard";
 import { canTransition, isOrderStatus } from "@/lib/order-status";
 import { getOrder, isOrderCode, updateOrder, StorageError } from "@/lib/orders";
+import { releaseHold } from "@/lib/shop";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { rateLimit } from "@/lib/rate-limit";
 import { safeEqualString } from "@/lib/secret";
@@ -78,6 +79,10 @@ export async function setOrderStatus(form: FormData): Promise<void> {
   const order = await getOrder(code);
   if (!order || !canTransition(order.status, statusText)) redirect(order ? `/admin/orders/${code}` : "/admin");
   try {
+    if ((statusText === "cancelled" || statusText === "failed") && order.stockHeld) {
+      await releaseHold(order);
+      await updateOrder(code, { stockHeld: false });
+    }
     await updateOrder(code, { status: statusText }, [order.status]);
   } catch (err) {
     if (err instanceof StorageError) console.error("[staff] status update failed", err.message);

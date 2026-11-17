@@ -1,7 +1,7 @@
 import type { Colorway, Gender, ModelRef, Product, SizeSelector, StyleKey } from "./types";
 
-const WOMEN_SIZES = ["XS", "S", "M", "L", "XL"];
-const MEN_SIZES = ["S", "M", "L", "XL", "XXL"];
+export const WOMEN_SIZES = ["XS", "S", "M", "L", "XL"];
+export const MEN_SIZES = ["S", "M", "L", "XL", "XXL"];
 
 const womenSize: SizeSelector = { key: "size", label: "Size", options: WOMEN_SIZES };
 const menSize: SizeSelector = { key: "size", label: "Size", options: MEN_SIZES };
@@ -500,13 +500,14 @@ export function getProduct(slug: string): Product | undefined {
   return products.find((p) => p.slug === slug);
 }
 
-export function productsFor(handle: string): Product[] {
+export function productsFor(handle: string, source: Product[] = products): Product[] {
   const gender = COLLECTIONS[handle]?.gender;
-  return gender ? products.filter((p) => p.gender === gender) : products;
+  return gender ? source.filter((p) => p.gender === gender) : source;
 }
 
-export function bestsellers(limit = 8): Product[] {
-  return products.filter((p) => p.bestseller).slice(0, limit);
+export function bestsellers(limit = 8, source: Product[] = products): Product[] {
+  const picked = source.filter((p) => p.bestseller);
+  return (picked.length ? picked : source).slice(0, limit);
 }
 
 export function productSizes(p: Product): string[] {
@@ -527,4 +528,30 @@ export function validateSelection(
 ): boolean {
   if (!p.colors.some((c) => c.name === colorName)) return false;
   return p.selectors.every((s) => s.options.includes(sizes?.[s.key] ?? ""));
+}
+
+export function variantKey(color: string, size: string): string {
+  return `${color}|${size}`;
+}
+
+export function selectionCombos(p: Product): { sizes: Record<string, string>; label: string }[] {
+  let acc: Record<string, string>[] = [{}];
+  for (const selector of p.selectors) {
+    acc = acc.flatMap((base) => selector.options.map((option) => ({ ...base, [selector.key]: option })));
+  }
+  return acc.map((sizes) => ({ sizes, label: sizeLabel(p, sizes) }));
+}
+
+export function isPublished(p: Product): boolean {
+  return (p.status ?? "published") === "published";
+}
+
+export function stockOf(p: Product, color: string, size: string): number | null {
+  if (!p.inventory) return null;
+  return Math.max(0, Math.floor(p.inventory[variantKey(color, size)] ?? 0));
+}
+
+export function totalStock(p: Product): number | null {
+  if (!p.inventory) return null;
+  return Object.values(p.inventory).reduce((sum, qty) => sum + Math.max(0, Math.floor(Number(qty) || 0)), 0);
 }

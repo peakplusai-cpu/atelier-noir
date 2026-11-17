@@ -4,21 +4,21 @@ import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { useCart } from "./CartProvider";
 import ProductImage from "./ProductImage";
-import { getProduct, products, sizeLabel } from "@/lib/catalog";
-import { amountToFreeShipping, formatUsd, shippingFor } from "@/lib/money";
+import { sizeLabel } from "@/lib/catalog";
+import { useCatalog } from "./CatalogProvider";
+import { formatUsd, shippingFor } from "@/lib/money";
 import { SITE } from "@/lib/site";
 
-export function FreeShippingBar({ subtotal }: { subtotal: number }) {
-  const remaining = amountToFreeShipping(subtotal);
-  const pct =
-    SITE.freeShippingThreshold > 0 ? Math.min(100, Math.max(0, (subtotal / SITE.freeShippingThreshold) * 100)) : 100;
+export function FreeShippingBar({ subtotal, threshold = SITE.freeShippingThreshold }: { subtotal: number; threshold?: number }) {
+  const remaining = Math.max(0, Math.round((threshold - subtotal) * 100) / 100);
+  const pct = threshold > 0 ? Math.min(100, Math.max(0, (subtotal / threshold) * 100)) : 100;
   const unlocked = remaining === 0 && subtotal > 0;
   return (
     <div className="ship-bar" data-unlocked={unlocked}>
       <p>
         {subtotal <= 0 ? (
           <>
-            Free worldwide shipping on orders over <strong>{formatUsd(SITE.freeShippingThreshold)}</strong>
+            Free worldwide shipping on orders over <strong>{formatUsd(threshold)}</strong>
           </>
         ) : unlocked ? (
           <>You&rsquo;ve unlocked <strong>free worldwide shipping</strong></>
@@ -37,6 +37,7 @@ export function FreeShippingBar({ subtotal }: { subtotal: number }) {
 
 export default function CartDrawer() {
   const { isOpen, closeCart, lines, subtotal, setQty, remove, count } = useCart();
+  const { products, settings } = useCatalog();
   const closeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -53,8 +54,8 @@ export default function CartDrawer() {
     };
   }, [isOpen, closeCart]);
 
-  const shipping = shippingFor(subtotal);
-  const remaining = amountToFreeShipping(subtotal);
+  const shipping = shippingFor(subtotal, { threshold: settings.freeShippingThreshold, flat: settings.flatShipping });
+  const remaining = Math.max(0, Math.round((settings.freeShippingThreshold - subtotal) * 100) / 100);
   const inCart = new Set(lines.map((l) => l.slug));
   const suggestions =
     remaining > 0 && lines.length > 0
@@ -77,7 +78,7 @@ export default function CartDrawer() {
           </button>
         </div>
 
-        <FreeShippingBar subtotal={subtotal} />
+        <FreeShippingBar subtotal={subtotal} threshold={settings.freeShippingThreshold} />
 
         <div className="drawer-body">
           {lines.length === 0 ? (
@@ -91,7 +92,7 @@ export default function CartDrawer() {
           ) : (
             <ul className="cart-lines">
               {lines.map((l) => {
-                const p = getProduct(l.slug);
+                const p = products.find((item) => item.slug === l.slug);
                 if (!p) return null;
                 return (
                   <li key={l.key} className="cart-line">

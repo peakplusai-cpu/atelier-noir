@@ -6,7 +6,8 @@ import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { useCart } from "./CartProvider";
 import ProductImage from "./ProductImage";
 import { FreeShippingBar } from "./CartDrawer";
-import { getProduct, sizeLabel } from "@/lib/catalog";
+import { sizeLabel } from "@/lib/catalog";
+import { useCatalog } from "./CatalogProvider";
 import { COUNTRIES } from "@/lib/countries";
 import { formatUsd, shippingFor } from "@/lib/money";
 
@@ -15,6 +16,7 @@ type LockedOrder = {
   token: string;
   items: { slug: string; name: string; color: string; size: string; unitPrice: number; qty: number }[];
   subtotal: number;
+  discount?: number;
   shipping: number;
   total: number;
 };
@@ -32,12 +34,14 @@ type SummaryLine = {
 
 export default function CheckoutForm({ paypalClientId }: { paypalClientId: string }) {
   const { lines, subtotal, ready, setQty, remove } = useCart();
+  const { products, settings } = useCatalog();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [coupon, setCoupon] = useState("");
   const [locked, setLocked] = useState<LockedOrder | null>(null);
 
   const viewSubtotal = locked?.subtotal ?? subtotal;
-  const shipping = locked?.shipping ?? shippingFor(subtotal);
+  const shipping = locked?.shipping ?? shippingFor(subtotal, { threshold: settings.freeShippingThreshold, flat: settings.flatShipping });
   const total = locked?.total ?? viewSubtotal + shipping;
   const summary: SummaryLine[] = locked
     ? locked.items.map((item) => ({
@@ -50,7 +54,7 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
         lineTotal: item.unitPrice * item.qty,
       }))
     : lines.map((line) => {
-        const product = getProduct(line.slug);
+        const product = products.find((item) => item.slug === line.slug);
         return {
           key: line.key,
           slug: line.slug,
@@ -86,6 +90,7 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
             state: get("state"),
             postalCode: get("postalCode"),
           },
+          coupon,
           items: lines.map((line) => ({ slug: line.slug, color: line.color, sizes: line.sizes, qty: line.qty })),
         }),
       });
@@ -96,6 +101,7 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
         error?: string;
         items?: LockedOrder["items"];
         subtotal?: number;
+        discount?: number;
         shipping?: number;
         total?: number;
       };
@@ -113,6 +119,7 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
         token: data.token,
         items: data.items ?? [],
         subtotal: data.subtotal ?? 0,
+        discount: data.discount ?? 0,
         shipping: data.shipping ?? 0,
         total: data.total ?? 0,
       });
@@ -186,6 +193,10 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
             <span>Phone (optional, for the courier)</span>
             <input name="phone" type="tel" autoComplete="tel" maxLength={40} />
           </label>
+          <label className="field">
+            <span>Gift code (optional)</span>
+            <input value={coupon} onChange={(event) => setCoupon(event.target.value)} maxLength={24} autoComplete="off" />
+          </label>
         </fieldset>
 
         {error && (
@@ -244,10 +255,10 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
 
       <aside className="checkout-summary" aria-label="Order summary">
         <h2 className="serif">Order summary</h2>
-        <FreeShippingBar subtotal={viewSubtotal} />
+        <FreeShippingBar subtotal={viewSubtotal} threshold={settings.freeShippingThreshold} />
         <ul className="cart-lines">
           {summary.map((line) => {
-            const product = getProduct(line.slug);
+            const product = products.find((item) => item.slug === line.slug);
             if (!product && !locked) return null;
             return (
               <li key={line.key} className="cart-line">
@@ -290,6 +301,12 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
             <dt>Subtotal</dt>
             <dd>{formatUsd(viewSubtotal)}</dd>
           </div>
+          {(locked?.discount ?? 0) > 0 && (
+            <div>
+              <dt>Discount</dt>
+              <dd>-{formatUsd(locked?.discount ?? 0)}</dd>
+            </div>
+          )}
           <div>
             <dt>Shipping</dt>
             <dd>{shipping === 0 ? "Free" : formatUsd(shipping)}</dd>

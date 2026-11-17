@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { products } from "./catalog.ts";
 import { sanitizeCart } from "./cart-lines.ts";
 import { originAllowed } from "./guard.ts";
 import { centsToMoney, parseMoneyToCents, roundMoney, shippingFor, toCents } from "./money.ts";
@@ -60,6 +61,35 @@ test("zero, fractional, oversized and unknown lines are rejected", () => {
   const merged = priceCart([{ ...top, qty: 4 }, { ...top, qty: 3 }]);
   assert.equal(merged.items.length, 1);
   assert.equal(merged.items[0].qty, 7);
+});
+
+test("stock and coupon codes are enforced from the catalog passed in", () => {
+  const product = { ...products.find((item) => item.slug === top.slug)!, inventory: { "Dune|S": 1 } };
+  assert.throws(() => priceCart([{ ...top, qty: 2 }], [product]), PricingError);
+  const quoted = priceCart([top], undefined, {
+    coupon: "bay10",
+    now: Date.parse("2026-06-01T00:00:00Z"),
+    promotions: [{
+      id: "prm_test",
+      name: "Ten",
+      code: "BAY10",
+      enabled: true,
+      kind: "percent",
+      value: 10,
+      minSubtotal: 0,
+      scope: "all",
+      gender: "",
+      slug: "",
+      startsAt: "2026-01-01T00:00:00.000Z",
+      endsAt: "2026-12-01T00:00:00.000Z",
+      usageLimit: 0,
+      used: 0,
+      createdAt: "2026-01-01T00:00:00.000Z",
+    }],
+  });
+  assert.equal(quoted.discount, 6.8);
+  assert.equal(quoted.total, 73.2);
+  assert.throws(() => priceCart([top], undefined, { coupon: "NOPE" }), (err) => err instanceof PricingError && /isn't valid/.test(err.message));
 });
 
 test("a tampered stored total does not match the charge", () => {

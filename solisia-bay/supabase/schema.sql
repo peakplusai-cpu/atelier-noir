@@ -43,3 +43,26 @@ alter table public.solisia_orders drop constraint if exists solisia_orders_statu
 alter table public.solisia_orders
   add constraint solisia_orders_status_check
   check (status in ('pending', 'paid', 'shipped', 'completed', 'failed', 'cancelled', 'review'));
+
+-- Catalog, coupons, wall, settings, and order meta. Same statements as
+-- supabase/migrations/20261117_admin_store.sql.
+create table if not exists public.solisia_store (
+  id int primary key check (id = 1),
+  data jsonb not null default '{}'::jsonb,
+  version bigint not null default 0,
+  updated_at timestamptz not null default now()
+);
+
+insert into public.solisia_store (id)
+values (1)
+on conflict (id) do nothing;
+
+alter table public.solisia_store enable row level security;
+revoke all on table public.solisia_store from anon, authenticated;
+
+alter table public.solisia_orders
+  add column if not exists meta jsonb not null default '{}'::jsonb;
+
+insert into storage.buckets (id, name, public)
+values ('solisia-uploads', 'solisia-uploads', true)
+on conflict (id) do nothing;
