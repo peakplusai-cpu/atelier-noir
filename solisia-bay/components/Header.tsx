@@ -68,6 +68,9 @@ export default function Header() {
             SOLISIA <span>BAY</span>
           </Link>
           <div className="header-actions">
+            <Link href="/admin" className="nav-link-small staff-nav">
+              員工入口
+            </Link>
             <Link href="/policies/shipping-returns" className="nav-link-small">
               Shipping &amp; Returns
             </Link>
@@ -89,6 +92,9 @@ export default function Header() {
         ))}
         <Link href="/policies/shipping-returns" className="mobile-small" tabIndex={menu ? 0 : -1}>
           Shipping &amp; Returns
+        </Link>
+        <Link href="/admin" className="mobile-small staff-nav" tabIndex={menu ? 0 : -1}>
+          員工入口
         </Link>
       </div>
     </div>
