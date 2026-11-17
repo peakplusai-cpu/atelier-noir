@@ -35,6 +35,7 @@ export default async function DeskPage() {
       {orders.length === 0 ? (
         <p className="fine">還沒有訂單。</p>
       ) : (
+        <div className="staff-table-wrap">
         <table className="staff-table">
           <thead>
             <tr>
@@ -64,6 +65,7 @@ export default async function DeskPage() {
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </>
   );

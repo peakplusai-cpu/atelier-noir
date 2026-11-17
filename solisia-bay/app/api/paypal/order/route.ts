@@ -1,17 +1,33 @@
-import { NextResponse } from "next/server";
-import { createPayPalOrder } from "@/lib/paypal";
+import { apiJson } from "@/lib/api";
+import { clientIpFrom, originAllowed, readJson } from "@/lib/guard";
 import { getOrder, updateOrder } from "@/lib/orders";
+import { createPayPalOrder } from "@/lib/paypal";
+import { chargeCents } from "@/lib/pricing";
+import { rateLimit } from "@/lib/rate-limit";
+import { safeEqualString } from "@/lib/secret";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const body = (await request.json().catch(() => null)) as { code?: unknown; token?: unknown } | null;
-  const code = typeof body?.code === "string" ? body.code : "";
-  const token = typeof body?.token === "string" ? body.token : "";
+  if (!originAllowed(request)) return apiJson({ error: "Invalid request." }, 403);
+  const limit = rateLimit(`paypal-order:${clientIpFrom(request.headers)}`, 12, 10 * 60 * 1000);
+  if (!limit.ok) return apiJson({ error: "Too many payment attempts. Please wait and try again." }, 429);
+
+  let body: unknown;
+  try {
+    body = await readJson(request);
+  } catch {
+    return apiJson({ error: "Invalid request." }, 400);
+  }
+  const record = (body ?? {}) as { code?: unknown; token?: unknown };
+  const code = typeof record.code === "string" ? record.code : "";
+  const token = typeof record.token === "string" ? record.token : "";
 
   const order = code ? await getOrder(code).catch(() => null) : null;
-  if (!order || order.token !== token) return NextResponse.json({ error: "Order not found." }, { status: 404 });
-  if (order.status !== "pending") return NextResponse.json({ error: "This order can no longer be paid." }, { status: 409 });
+  if (!order || !safeEqualString(order.token, token)) return apiJson({ error: "Order not found." }, 404);
+  if (order.status !== "pending") return apiJson({ error: "This order can no longer be paid." }, 409);
+  if (chargeCents(order) === null) return apiJson({ error: "This order can no longer be paid." }, 409);
+  if (order.paymentOrderId) return apiJson({ id: order.paymentOrderId });
 
   try {
     const id = await createPayPalOrder({
@@ -19,12 +35,15 @@ export async function POST(request: Request) {
       subtotal: order.subtotal,
       shipping: order.shipping,
       total: order.total,
-      items: order.items.map((i) => ({ name: i.name, qty: i.qty, unitPrice: i.unitPrice })),
+      items: order.items.map((item) => ({ name: item.name, qty: item.qty, unitPrice: item.unitPrice })),
     });
-    await updateOrder(order.code, { paymentOrderId: id });
-    return NextResponse.json({ id });
+    const saved = await updateOrder(order.code, { paymentOrderId: id }, ["pending"], { requireUnsetPayment: true });
+    if (saved) return apiJson({ id });
+    const again = await getOrder(order.code);
+    if (again?.status === "pending" && again.paymentOrderId) return apiJson({ id: again.paymentOrderId });
+    return apiJson({ error: "This order can no longer be paid." }, 409);
   } catch (err) {
     console.error("[paypal] create order failed", err instanceof Error ? err.message : err);
-    return NextResponse.json({ error: "We couldn't start PayPal checkout. Please try again." }, { status: 502 });
+    return apiJson({ error: "We couldn't start PayPal checkout. Please try again." }, 502);
   }
 }

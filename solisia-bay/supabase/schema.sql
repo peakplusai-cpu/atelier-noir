@@ -5,7 +5,7 @@
 create table if not exists public.solisia_orders (
   code text primary key,
   token text not null,
-  status text not null default 'pending' check (status in ('pending', 'paid', 'shipped', 'completed', 'failed', 'cancelled')),
+  status text not null default 'pending' check (status in ('pending', 'paid', 'shipped', 'completed', 'failed', 'cancelled', 'review')),
   items jsonb not null default '[]'::jsonb,
   subtotal numeric(10, 2) not null,
   shipping numeric(10, 2) not null,
@@ -38,8 +38,8 @@ create table if not exists public.solisia_staff (
 
 alter table public.solisia_staff enable row level security;
 
--- If solisia_orders was created before shipped/completed existed, widen the status check.
+-- Re-run this block on an existing database so `review` (payment needs a manual check) is allowed.
 alter table public.solisia_orders drop constraint if exists solisia_orders_status_check;
 alter table public.solisia_orders
   add constraint solisia_orders_status_check
-  check (status in ('pending', 'paid', 'shipped', 'completed', 'failed', 'cancelled'));
+  check (status in ('pending', 'paid', 'shipped', 'completed', 'failed', 'cancelled', 'review'));

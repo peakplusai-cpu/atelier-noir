@@ -10,7 +10,8 @@ import { SITE } from "@/lib/site";
 
 export function FreeShippingBar({ subtotal }: { subtotal: number }) {
   const remaining = amountToFreeShipping(subtotal);
-  const pct = Math.min(100, (subtotal / SITE.freeShippingThreshold) * 100);
+  const pct =
+    SITE.freeShippingThreshold > 0 ? Math.min(100, Math.max(0, (subtotal / SITE.freeShippingThreshold) * 100)) : 100;
   const unlocked = remaining === 0 && subtotal > 0;
   return (
     <div className="ship-bar" data-unlocked={unlocked}>
@@ -46,10 +47,8 @@ export default function CartDrawer() {
       if (e.key === "Escape") closeCart();
     };
     document.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
     return () => {
       document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
       prevFocus?.focus?.();
     };
   }, [isOpen, closeCart]);

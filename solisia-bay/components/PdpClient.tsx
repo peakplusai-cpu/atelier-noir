@@ -6,7 +6,7 @@ import { ModelInfo, SizeGuidePanel, UnitToggle } from "./SizeGuide";
 import { useCart } from "./CartProvider";
 import { Accordion, AccordionItem } from "./Accordion";
 import { STYLE_LABELS } from "@/lib/catalog";
-import { formatUsd } from "@/lib/money";
+import { formatUsd, savings } from "@/lib/money";
 import { HYGIENE_COPY, RETURNS_COPY, SHIPPING_COPY } from "@/lib/policies";
 import { SITE } from "@/lib/site";
 import type { Unit } from "@/lib/sizes";
@@ -88,7 +88,7 @@ export default function PdpClient({ product }: { product: Product }) {
         <p className="eyebrow">{STYLE_LABELS[product.style]}</p>
         <h1 className="serif">{product.name}</h1>
         <p className="pdp-price price">
-          {product.compareAt && <s>{formatUsd(product.compareAt)}</s>}
+          {savings(product.price, product.compareAt) > 0 && <s>{formatUsd(product.compareAt!)}</s>}
           {formatUsd(product.price)}
           <span className="usd"> USD</span>
         </p>

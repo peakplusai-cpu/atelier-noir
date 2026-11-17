@@ -3,6 +3,8 @@ import Link from "next/link";
 import PaymentStatus from "@/components/PaymentStatus";
 import { formatUsd } from "@/lib/money";
 import { getOrder } from "@/lib/orders";
+import { safeEqualString } from "@/lib/secret";
+import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = { title: "Order confirmed", robots: { index: false } };
 export const dynamic = "force-dynamic";
@@ -15,12 +17,12 @@ export default async function SuccessPage({ searchParams }: Props) {
   const token = typeof sp.token === "string" ? sp.token : "";
   const order = code ? await getOrder(code).catch(() => null) : null;
 
-  if (!order || order.token !== token) {
+  if (!order || !safeEqualString(order.token, token)) {
     return (
       <section className="page narrow center">
         <p className="eyebrow">Order</p>
         <h1 className="serif">We couldn&rsquo;t find that order</h1>
-        <p>If you just paid, a confirmation email is on its way. Questions? Email us any time.</p>
+        <p>If you just paid, refresh this page in a moment. For help, email {SITE.email} with your order number.</p>
         <Link href="/collection/all" className="btn btn-solid">
           Continue shopping
         </Link>
@@ -28,23 +30,37 @@ export default async function SuccessPage({ searchParams }: Props) {
     );
   }
 
-  const failed = order.status === "failed" || order.status === "cancelled";
-  const paid = order.status === "paid";
+  const confirmed = order.status === "paid" || order.status === "shipped" || order.status === "completed";
+  const review = order.status === "review";
+  const cancelledAfterPay = order.status === "cancelled" && Boolean(order.paymentCaptureId || order.paidAt);
+  const failed = order.status === "failed" || (order.status === "cancelled" && !cancelledAfterPay);
 
   return (
     <section className="page narrow">
       <PaymentStatus code={order.code} token={order.token} status={order.status} />
       <div className="center">
-        <p className="eyebrow">{paid ? "Thank you" : failed ? "Payment not completed" : "Almost there"}</p>
+        <p className="eyebrow">{confirmed ? "Thank you" : failed ? "Payment not completed" : review ? "Payment received" : "Almost there"}</p>
         <h1 className="serif">
-          {paid ? "Your order is confirmed" : failed ? "We couldn\u2019t complete your order" : "Confirming your payment\u2026"}
+          {confirmed
+            ? "Your order is confirmed"
+            : cancelledAfterPay
+              ? "This order was cancelled"
+              : review
+                ? "We\u2019re checking this payment"
+                : failed
+                  ? "We couldn\u2019t complete your order"
+                  : "Confirming your payment\u2026"}
         </h1>
         <p>
-          {paid
-            ? `A receipt is on its way to ${order.email}. We'll email tracking details as soon as your order ships.`
-            : failed
-              ? "Your card was not charged. Please return to your bag and try again."
-              : "This usually takes a few seconds. This page will update automatically."}
+          {confirmed
+            ? `Keep this page as your receipt for ${order.email}. We'll email tracking details to that address when the order ships.`
+            : cancelledAfterPay
+              ? `This order was cancelled after payment. If you still see a PayPal charge, email ${SITE.email} and include ${order.code}.`
+              : review
+                ? `PayPal accepted a payment that doesn't match this order. Email ${SITE.email} with ${order.code} before placing it again.`
+                : failed
+                  ? "You can return to your bag and try again. If PayPal shows a charge, email us before you pay a second time."
+                  : "This usually takes a few seconds. This page will update automatically."}
         </p>
       </div>
 

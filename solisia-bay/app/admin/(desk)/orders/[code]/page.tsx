@@ -68,7 +68,15 @@ export default async function OrderPage({ params }: Props) {
             {address}
           </p>
           {order.paymentCaptureId && <p className="fine">PayPal capture {order.paymentCaptureId}</p>}
-          {order.status === "paid" && <p className="fine">標記取消不會自動退款，退款請到 PayPal 後台處理。</p>}
+          {order.paymentCaptureId && order.status === "pending" && (
+            <p className="form-error">已有 PayPal 扣款編號，但訂單仍是待付款。請勿出貨，先到 PayPal 核對。</p>
+          )}
+          {order.status === "review" && (
+            <p className="form-error">付款金額與訂單不一致。請勿出貨，到 PayPal 核對這筆 capture 並退款。</p>
+          )}
+          {(order.status === "paid" || order.status === "review" || (order.status === "cancelled" && order.paymentCaptureId)) && (
+            <p className="fine">標記取消不會自動退款，退款請到 PayPal 後台處理。</p>
+          )}
           {actions.length > 0 && (
             <div className="staff-actions">
               {actions.map((action) => (

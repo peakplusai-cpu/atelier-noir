@@ -45,7 +45,7 @@ export default async function ProductPage({ params }: Props) {
 
   return (
     <section className="page page-pdp">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld).replace(/</g, "\\u003c") }} />
       <PdpClient product={product} />
       {look.length > 0 && (
         <div className="look section">

@@ -19,10 +19,16 @@ export function LoginForm() {
   );
 }
 
-export function SetupForm() {
+export function SetupForm({ needsSetupToken }: { needsSetupToken: boolean }) {
   const [error, action, pending] = useActionState(setupStaff, "");
   return (
     <form action={action} className="staff-form">
+      {needsSetupToken && (
+        <label className="field">
+          <span>設定代碼</span>
+          <input name="setupToken" type="password" required autoComplete="off" />
+        </label>
+      )}
       <label className="field">
         <span>設定密碼</span>
         <input type="password" name="password" required minLength={8} autoComplete="new-password" />

@@ -29,13 +29,6 @@ export default function Header() {
 
   useEffect(() => setMenu(false), [pathname]);
 
-  useEffect(() => {
-    document.body.style.overflow = menu ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [menu]);
-
   return (
     <div className="chrome">
       <div className="announce">

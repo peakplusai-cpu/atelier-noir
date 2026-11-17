@@ -1,3 +1,6 @@
+import { centsToMoney, parseMoneyToCents, toCents } from "./money";
+import { chargeCents } from "./pricing";
+
 const LIVE = "https://api-m.paypal.com";
 const SANDBOX = "https://api-m.sandbox.paypal.com";
 
@@ -8,10 +11,6 @@ function apiBase(): string {
 
 export function paypalConfigured(): boolean {
   return Boolean(process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET);
-}
-
-export function paypalClientId(): string {
-  return process.env.PAYPAL_CLIENT_ID ?? "";
 }
 
 type PayPalError = Error & { status?: number };
@@ -46,8 +45,6 @@ async function accessToken(): Promise<string> {
   return res.access_token;
 }
 
-const money = (n: number) => n.toFixed(2);
-
 export type PayPalItem = { name: string; qty: number; unitPrice: number };
 
 export async function createPayPalOrder(input: {
@@ -57,6 +54,9 @@ export async function createPayPalOrder(input: {
   total: number;
   items: PayPalItem[];
 }): Promise<string> {
+  const expected = chargeCents(input);
+  if (expected === null) throw new Error("Order totals are inconsistent");
+  const itemCents = input.items.reduce((sum, item) => sum + toCents(item.unitPrice) * item.qty, 0);
   const token = await accessToken();
   const res = await paypal<{ id?: string }>("/v2/checkout/orders", {
     method: "POST",
@@ -69,16 +69,16 @@ export async function createPayPalOrder(input: {
           description: `SOLISIA BAY order ${input.code}`,
           amount: {
             currency_code: "USD",
-            value: money(input.total),
+            value: centsToMoney(expected),
             breakdown: {
-              item_total: { currency_code: "USD", value: money(input.subtotal) },
-              shipping: { currency_code: "USD", value: money(input.shipping) },
+              item_total: { currency_code: "USD", value: centsToMoney(itemCents) },
+              shipping: { currency_code: "USD", value: centsToMoney(expected - itemCents) },
             },
           },
-          items: input.items.map((i) => ({
-            name: i.name.slice(0, 127),
-            quantity: String(i.qty),
-            unit_amount: { currency_code: "USD", value: money(i.unitPrice) },
+          items: input.items.map((item) => ({
+            name: item.name.slice(0, 127),
+            quantity: String(item.qty),
+            unit_amount: { currency_code: "USD", value: centsToMoney(toCents(item.unitPrice)) },
           })),
         },
       ],
@@ -98,18 +98,22 @@ type PayPalOrder = {
 export type PayPalCapture = { captureId: string; amountCents: number; currency: string; customId: string };
 
 function readCapture(order: PayPalOrder): PayPalCapture | null {
+  if (order.status !== "COMPLETED") return null;
   const unit = order.purchase_units?.[0];
-  const capture = unit?.payments?.captures?.find((c) => c.status === "COMPLETED") ?? unit?.payments?.captures?.[0];
+  const capture = unit?.payments?.captures?.find((item) => item.status === "COMPLETED");
   if (!capture?.id || !capture.amount?.value || !unit?.custom_id) return null;
+  const amountCents = parseMoneyToCents(capture.amount.value);
+  if (amountCents === null) return null;
   return {
     captureId: capture.id,
-    amountCents: Math.round(parseFloat(capture.amount.value) * 100),
-    currency: capture.amount.currency_code ?? "",
+    amountCents,
+    currency: (capture.amount.currency_code ?? "").toUpperCase(),
     customId: unit.custom_id,
   };
 }
 
 export async function capturePayPalOrder(paypalOrderId: string): Promise<PayPalCapture> {
+  if (!/^[A-Za-z0-9_-]{8,40}$/.test(paypalOrderId)) throw new Error("Invalid PayPal order id");
   const token = await accessToken();
   let order: PayPalOrder;
   try {
@@ -119,9 +123,13 @@ export async function capturePayPalOrder(paypalOrderId: string): Promise<PayPalC
     }, token);
   } catch (err) {
     // A repeated capture of an already-captured order comes back as an error; read the order instead.
-    order = await paypal<PayPalOrder>(`/v2/checkout/orders/${encodeURIComponent(paypalOrderId)}`, { method: "GET" }, token);
+    try {
+      order = await paypal<PayPalOrder>(`/v2/checkout/orders/${encodeURIComponent(paypalOrderId)}`, { method: "GET" }, token);
+    } catch {
+      throw err;
+    }
   }
   const capture = readCapture(order);
-  if (!capture || order.status !== "COMPLETED") throw new Error("PayPal capture was not completed");
+  if (!capture) throw new Error("PayPal capture was not completed");
   return capture;
 }

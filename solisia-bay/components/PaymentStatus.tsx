@@ -10,7 +10,8 @@ export default function PaymentStatus({ code, token, status }: { code: string; t
   const cleared = useRef(false);
 
   useEffect(() => {
-    if (ready && !cleared.current && status !== "failed" && status !== "cancelled") {
+    const settled = status === "paid" || status === "shipped" || status === "completed" || status === "review";
+    if (ready && !cleared.current && settled) {
       cleared.current = true;
       clear();
     }
