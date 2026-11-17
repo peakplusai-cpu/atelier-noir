@@ -159,9 +159,11 @@ export default function PdpClient({ product }: { product: Product }) {
           <UnitToggle unit={unit} onChange={setUnit} />
         </div>
 
-        <button type="button" className="btn btn-solid btn-block" onClick={onAdd} disabled={soldOut}>
-          {soldOut ? "Sold out" : added ? "Added to bag" : complete ? `Add to bag \u00B7 ${formatUsd(product.price)}` : "Select your size"}
-        </button>
+        <div className="pdp-buy">
+          <button type="button" className="btn btn-solid btn-block" onClick={onAdd} disabled={soldOut}>
+            {soldOut ? "Sold out" : added ? "Added to bag" : complete ? `Add to bag \u00B7 ${formatUsd(product.price)}` : "Select your size"}
+          </button>
+        </div>
         {showError && !complete && <p className="form-error" role="alert">Please choose your size to continue.</p>}
         {soldOut && <p className="form-error" role="alert">This size is sold out.</p>}
         <ul className="perks">

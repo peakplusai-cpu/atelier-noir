@@ -1,5 +1,5 @@
 import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 const storageOrigin = "https://wgrwwuyxhdyakchuiubi.supabase.co";
 
@@ -107,6 +107,85 @@ test("the feed wall is a full-bleed marquee", async ({ page, request }) => {
   expect(tileBox?.height ?? 0).toBeGreaterThan(280);
   await tile.click();
   await expect(page).toHaveURL(/\/products\/calista-triangle-bikini-top/);
+});
+
+async function noHorizontalOverflow(page: Page) {
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
+}
+
+test("mobile pages stay on screen and the menu opens", async ({ page }) => {
+  const { mkdir } = await import("node:fs/promises");
+  await mkdir("/opt/cursor/artifacts/mobile-after", { recursive: true });
+  const publicPaths = ["/", "/collection/women", "/collection/all", "/policies/shipping-returns", "/policies/size-guide", "/checkout", "/checkout/success", "/no-such-page"];
+  for (const width of [360, 390, 430]) {
+    await page.setViewportSize({ width, height: 800 });
+    for (const path of publicPaths) {
+      await page.goto(path);
+      await noHorizontalOverflow(page);
+    }
+    await page.goto("/collection/women");
+    await page.getByRole("link", { name: "Calista Triangle Bikini Top" }).first().click();
+    await expect(page.getByRole("heading", { name: "Calista Triangle Bikini Top" })).toBeVisible();
+    await noHorizontalOverflow(page);
+    if (width === 390) await page.screenshot({ path: "/opt/cursor/artifacts/mobile-after/product-390.png", fullPage: true });
+    await page.getByRole("button", { name: "Open menu" }).click();
+    await expect(page.locator(".mobile-nav[data-open='true']").getByRole("link", { name: "Women" })).toBeVisible();
+    await noHorizontalOverflow(page);
+    if (width === 390) await page.screenshot({ path: "/opt/cursor/artifacts/mobile-after/menu-390.png" });
+    await page.getByRole("button", { name: "Close menu" }).click();
+    await page.getByRole("radio", { name: "S", exact: true }).click();
+    await page.getByRole("button", { name: /Add to bag/ }).click();
+    await expect(page.getByRole("dialog", { name: "Shopping cart" })).toBeVisible();
+    await noHorizontalOverflow(page);
+    if (width === 390) await page.screenshot({ path: "/opt/cursor/artifacts/mobile-after/cart-390.png" });
+    await page.getByRole("link", { name: /Checkout/ }).click();
+    await expect(page.getByRole("button", { name: /Continue to payment/ })).toBeVisible();
+    await noHorizontalOverflow(page);
+    if (width === 390) await page.screenshot({ path: "/opt/cursor/artifacts/mobile-after/checkout-390.png", fullPage: true });
+  }
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await page.screenshot({ path: "/opt/cursor/artifacts/mobile-after/home-390.png", fullPage: true });
+  await page.goto("/collection/women");
+  await page.screenshot({ path: "/opt/cursor/artifacts/mobile-after/collection-390.png", fullPage: false });
+  await page.goto("/policies/shipping-returns");
+  await page.screenshot({ path: "/opt/cursor/artifacts/mobile-after/policy-390.png", fullPage: false });
+  await page.goto("/no-such-page");
+  await page.screenshot({ path: "/opt/cursor/artifacts/mobile-after/missing-390.png", fullPage: false });
+  await page.goto("/checkout/success");
+  await page.screenshot({ path: "/opt/cursor/artifacts/mobile-after/success-390.png", fullPage: false });
+
+  await page.goto("/admin/products");
+  if (page.url().includes("/admin/setup")) {
+    await page.getByLabel("設定密碼").fill("correct horse");
+    await page.getByLabel("再次輸入").fill("correct horse");
+    await page.getByRole("button", { name: "建立並進入後台" }).click();
+  } else if (page.url().includes("/admin/login")) {
+    await page.screenshot({ path: "/opt/cursor/artifacts/mobile-after/admin-login-390.png", fullPage: false });
+    await page.getByLabel("密碼").fill("correct horse");
+    await page.getByRole("button", { name: "登入" }).click();
+  }
+  await expect(page.getByRole("heading", { name: "總覽" })).toBeVisible();
+  for (const path of ["/admin/products", "/admin/orders", "/admin/wall", "/admin/settings"]) {
+    await page.goto(path);
+    await noHorizontalOverflow(page);
+  }
+  await page.goto("/admin/products");
+  await page.screenshot({ path: "/opt/cursor/artifacts/mobile-after/admin-products-390.png", fullPage: false });
+  await page.getByRole("link", { name: "編輯" }).first().click();
+  await expect(page.getByRole("heading", { name: "編輯商品" })).toBeVisible();
+  await noHorizontalOverflow(page);
+  await page.screenshot({ path: "/opt/cursor/artifacts/mobile-after/admin-product-edit-390.png", fullPage: false });
+  await page.goto("/admin/wall");
+  await page.screenshot({ path: "/opt/cursor/artifacts/mobile-after/admin-wall-390.png", fullPage: false });
+  await page.setViewportSize({ width: 360, height: 800 });
+  await page.goto("/admin/orders");
+  await noHorizontalOverflow(page);
+  await page.setViewportSize({ width: 430, height: 900 });
+  await page.goto("/admin/settings");
+  await noHorizontalOverflow(page);
 });
 
 test("staff setup, settings, logout and login", async ({ page }) => {
