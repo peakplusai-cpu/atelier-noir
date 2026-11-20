@@ -2892,7 +2892,7 @@ main {
 }
 
 .zine-poster {
-  padding: calc(var(--chrome-h) + 36px) var(--gutter) 36px;
+  padding: calc(var(--chrome-h) + 28px) var(--gutter) 28px;
   display: grid;
   gap: 14px;
   justify-items: start;

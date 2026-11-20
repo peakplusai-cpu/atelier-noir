@@ -3,9 +3,9 @@ import ProductImage from "./ProductImage";
 import { getShop, publishedProducts } from "@/lib/shop";
 
 const TILES = [
-  { href: "/collection/women", label: "女裝 Women", sub: "會動的剪裁", slug: "amalfi-plunge-one-piece" },
-  { href: "/collection/men", label: "男裝 Men", sub: "滑板與街頭", slug: "havana-cuban-collar-shirt" },
-  { href: "/collection/couples", label: "雙人 Couples", sub: "兩個人一起穿", slug: "amalfi-couples-set" },
+  { href: "/collection/women", label: "女裝 Women", slug: "amalfi-plunge-one-piece" },
+  { href: "/collection/men", label: "男裝 Men", slug: "havana-cuban-collar-shirt" },
+  { href: "/collection/couples", label: "雙人 Couples", slug: "amalfi-couples-set" },
 ];
 
 export default async function CategoryTiles() {
@@ -23,7 +23,6 @@ export default async function CategoryTiles() {
               </div>
               <div className="tile-label">
                 <span className="serif">{t.label}</span>
-                <small>{t.sub}</small>
                 <span className="tile-arrow" aria-hidden>
                   &rarr;
                 </span>

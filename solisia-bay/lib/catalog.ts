@@ -472,30 +472,11 @@ export const GENDER_LABELS: Record<Gender, string> = {
   couples: "Couples Sets",
 };
 
-export const COLLECTIONS: Record<string, { title: string; eyebrow: string; blurb: string; gender?: Gender }> = {
-  all: {
-    title: "全部 The Collection",
-    eyebrow: "SELECT SHOP",
-    blurb: "Picked for the streets. Built for the session.",
-  },
-  women: {
-    title: "女裝 Women",
-    eyebrow: "Shop Women",
-    blurb: "女裝選品。Separates, one-pieces, and pieces that move.",
-    gender: "women",
-  },
-  men: {
-    title: "男裝 Men",
-    eyebrow: "Shop Men",
-    blurb: "男裝選品。Shirts, shorts, and session-ready cuts.",
-    gender: "men",
-  },
-  couples: {
-    title: "雙人 Couples Sets",
-    eyebrow: "Shop Couples",
-    blurb: "兩個人一起穿。Pieces for two, priced together.",
-    gender: "couples",
-  },
+export const COLLECTIONS: Record<string, { title: string; gender?: Gender }> = {
+  all: { title: "全部" },
+  women: { title: "女裝 Women", gender: "women" },
+  men: { title: "男裝 Men", gender: "men" },
+  couples: { title: "雙人 Couples Sets", gender: "couples" },
 };
 
 export function productBrand(product: Product): string {

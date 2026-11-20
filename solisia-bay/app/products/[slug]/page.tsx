@@ -16,8 +16,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!p) return {};
   return {
     title: p.name,
-    description: `${p.tagline} ${p.description}`.slice(0, 200),
-    openGraph: { title: p.name, description: p.tagline },
+    description: p.description.slice(0, 200),
+    openGraph: { title: p.name, description: p.description.slice(0, 200) },
   };
 }
 
@@ -49,12 +49,6 @@ export default async function ProductPage({ params }: Props) {
       <PdpClient product={product} />
       {look.length > 0 && (
         <div className="look section">
-          <div className="section-head">
-            <div>
-              <p className="eyebrow">Complete the look</p>
-              <h2 className="serif">Wear it with</h2>
-            </div>
-          </div>
           <div className="grid grid-3">
             {look.map((p) => (
               <ProductCard key={p.slug} product={p} />

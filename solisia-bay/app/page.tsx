@@ -1,4 +1,3 @@
-import Link from "next/link";
 import Hero from "@/components/Hero";
 import CategoryTiles from "@/components/CategoryTiles";
 import BestsellerCarousel from "@/components/BestsellerCarousel";
@@ -17,15 +16,6 @@ export default async function HomePage() {
       <PhotoWall posts={shop.wall} products={publishedProducts(shop)} />
       <CategoryTiles />
       <section className="section">
-        <div className="section-head">
-          <div>
-            <p className="eyebrow">Session picks</p>
-            <h2 className="serif">This season</h2>
-          </div>
-          <Link href="/collection/all" className="text-link">
-            全部 Shop all
-          </Link>
-        </div>
         <BestsellerCarousel items={items} />
       </section>
     </>

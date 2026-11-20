@@ -1,6 +1,5 @@
 export const SITE = {
   name: "CLACK",
-  tagline: "Picked for the streets. Built for the session.",
   currency: "USD",
   freeShippingThreshold: 120,
   flatShipping: 12,
