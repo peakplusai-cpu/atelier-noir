@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import FilterBar from "@/components/FilterBar";
 import ProductCard from "@/components/ProductCard";
-import { ALL_SIZES, COLLECTIONS, STYLE_LABELS, productSizes, productsFor } from "@/lib/catalog";
+import { ALL_SIZES, COLLECTIONS, STYLE_LABELS, productBrand, productSizes, productTags, productsFor } from "@/lib/catalog";
 import { getShop, publishedProducts } from "@/lib/shop";
 import type { Product, StyleKey } from "@/lib/types";
 
@@ -39,10 +39,10 @@ function sortProducts(items: Product[], sort: string): Product[] {
 }
 
 const TABS = [
-  { handle: "all", label: "All" },
-  { handle: "women", label: "Women" },
-  { handle: "men", label: "Men" },
-  { handle: "couples", label: "Couples Sets" },
+  { handle: "all", label: "全部 All" },
+  { handle: "women", label: "女裝 Women" },
+  { handle: "men", label: "男裝 Men" },
+  { handle: "couples", label: "雙人 Couples Sets" },
 ];
 
 export default async function CollectionPage({ params, searchParams }: Props) {
@@ -53,13 +53,17 @@ export default async function CollectionPage({ params, searchParams }: Props) {
   const sp = await searchParams;
   const sizes = list(sp.size);
   const styles = list(sp.style);
+  const brands = list(sp.brand);
+  const tags = list(sp.tag);
   const sort = typeof sp.sort === "string" ? sp.sort : "featured";
 
   const base = productsFor(handle, publishedProducts(await getShop()));
   const filtered = base.filter(
     (p) =>
       (styles.length === 0 || styles.includes(p.style)) &&
-      (sizes.length === 0 || productSizes(p).some((s) => sizes.includes(s)))
+      (sizes.length === 0 || productSizes(p).some((s) => sizes.includes(s))) &&
+      (brands.length === 0 || brands.includes(productBrand(p))) &&
+      (tags.length === 0 || productTags(p).some((tag) => tags.includes(tag)))
   );
   const items = sortProducts(filtered, sort);
 
@@ -86,6 +90,8 @@ export default async function CollectionPage({ params, searchParams }: Props) {
           <FilterBar
             sizes={sizeOptions}
             styles={styleKeys.map((k) => ({ value: k, label: STYLE_LABELS[k] }))}
+            brands={Array.from(new Set(base.map(productBrand).filter(Boolean))).sort()}
+            tags={Array.from(new Set(base.flatMap(productTags))).sort()}
             total={base.length}
             shown={items.length}
           />
@@ -95,12 +101,12 @@ export default async function CollectionPage({ params, searchParams }: Props) {
       {base.length === 0 ? (
         <div className="empty">
           <p className="eyebrow">Coming soon</p>
-          <p className="serif">New pieces are on the way.</p>
-          <p>This collection is empty for now. Please check back shortly.</p>
+          <p className="serif">選品還在路上。</p>
+          <p>這一區現在是空的。New pieces are on the way.</p>
         </div>
       ) : items.length === 0 ? (
         <div className="empty">
-          <p className="serif">Nothing matches those filters.</p>
+          <p className="serif">沒有符合的選品。Nothing matches those filters.</p>
           <Link href={`/collection/${handle}`} className="btn btn-outline">
             Clear filters
           </Link>

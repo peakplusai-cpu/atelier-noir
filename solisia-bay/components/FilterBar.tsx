@@ -12,11 +12,15 @@ function toggle(list: string[], v: string): string[] {
 export default function FilterBar({
   sizes,
   styles,
+  brands = [],
+  tags = [],
   total,
   shown,
 }: {
   sizes: string[];
   styles: Option[];
+  brands?: string[];
+  tags?: string[];
   total: number;
   shown: number;
 }) {
@@ -27,14 +31,18 @@ export default function FilterBar({
 
   const selectedSizes = (params.get("size") ?? "").split(",").filter(Boolean);
   const selectedStyles = (params.get("style") ?? "").split(",").filter(Boolean);
+  const selectedBrands = (params.get("brand") ?? "").split(",").filter(Boolean);
+  const selectedTags = (params.get("tag") ?? "").split(",").filter(Boolean);
   const sort = params.get("sort") ?? "featured";
-  const active = selectedSizes.length + selectedStyles.length;
+  const active = selectedSizes.length + selectedStyles.length + selectedBrands.length + selectedTags.length;
 
-  const push = (next: { size?: string[]; style?: string[]; sort?: string }) => {
+  const push = (next: { size?: string[]; style?: string[]; brand?: string[]; tag?: string[]; sort?: string }) => {
     const q = new URLSearchParams(params.toString());
     const set = (k: string, v: string | undefined) => (v ? q.set(k, v) : q.delete(k));
     if (next.size) set("size", next.size.join(","));
     if (next.style) set("style", next.style.join(","));
+    if (next.brand) set("brand", next.brand.join(","));
+    if (next.tag) set("tag", next.tag.join(","));
     if (next.sort !== undefined) set("sort", next.sort === "featured" ? "" : next.sort);
     const qs = q.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
@@ -44,7 +52,7 @@ export default function FilterBar({
     <div className="filters">
       <div className="filters-bar">
         <button type="button" className="filter-toggle" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-          Filter{active > 0 && <span className="filter-count">{active}</span>}
+          篩選 Filter{active > 0 && <span className="filter-count">{active}</span>}
           <span aria-hidden>{open ? "\u2212" : "+"}</span>
         </button>
         <p className="filters-result">
@@ -63,7 +71,7 @@ export default function FilterBar({
 
       <div className="filters-panel" data-open={open}>
         <div className="filter-group">
-          <h3>Style</h3>
+          <h3>款式 Style</h3>
           <div className="chips">
             {styles.map((s) => (
               <button
@@ -80,7 +88,7 @@ export default function FilterBar({
           </div>
         </div>
         <div className="filter-group">
-          <h3>Size</h3>
+          <h3>尺寸 Size</h3>
           <div className="chips">
             {sizes.map((s) => (
               <button
@@ -96,8 +104,46 @@ export default function FilterBar({
             ))}
           </div>
         </div>
+        {brands.length > 0 && (
+          <div className="filter-group">
+            <h3>品牌 Brand</h3>
+            <div className="chips">
+              {brands.map((brand) => (
+                <button
+                  key={brand}
+                  type="button"
+                  className="chip"
+                  data-active={selectedBrands.includes(brand)}
+                  aria-pressed={selectedBrands.includes(brand)}
+                  onClick={() => push({ brand: toggle(selectedBrands, brand) })}
+                >
+                  {brand}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {tags.length > 0 && (
+          <div className="filter-group">
+            <h3>場景 Tag</h3>
+            <div className="chips">
+              {tags.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  className="chip"
+                  data-active={selectedTags.includes(tag)}
+                  aria-pressed={selectedTags.includes(tag)}
+                  onClick={() => push({ tag: toggle(selectedTags, tag) })}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {active > 0 && (
-          <button type="button" className="link-btn" onClick={() => push({ size: [], style: [] })}>
+          <button type="button" className="link-btn" onClick={() => push({ size: [], style: [], brand: [], tag: [] })}>
             Clear all filters
           </button>
         )}

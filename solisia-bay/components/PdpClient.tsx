@@ -5,7 +5,7 @@ import ProductImage from "./ProductImage";
 import { ModelInfo, SizeGuidePanel, UnitToggle } from "./SizeGuide";
 import { useCart } from "./CartProvider";
 import { Accordion, AccordionItem } from "./Accordion";
-import { STYLE_LABELS, sizeLabel, stockOf } from "@/lib/catalog";
+import { STYLE_LABELS, productBrand, productTags, sizeLabel, stockOf } from "@/lib/catalog";
 import { formatUsd, savings } from "@/lib/money";
 import { useCatalog } from "./CatalogProvider";
 import { HYGIENE_COPY, RETURNS_COPY, SHIPPING_COPY } from "@/lib/policies";
@@ -89,9 +89,10 @@ export default function PdpClient({ product }: { product: Product }) {
       </div>
 
       <div className="pdp-info">
-        <p className="eyebrow">{STYLE_LABELS[product.style]}</p>
+        <p className="eyebrow">{productBrand(product) || "CLACK"} · {STYLE_LABELS[product.style]}</p>
         <h1 className="serif">{product.name}</h1>
-        <p className="pdp-price price">
+        {productTags(product).length > 0 && <p className="tag-row">{productTags(product).map((tag) => <span key={tag} className="sticker">{tag}</span>)}</p>}
+        <p className="pdp-price price price-sticker">
           {savings(product.price, product.compareAt) > 0 && <s>{formatUsd(product.compareAt!)}</s>}
           {formatUsd(product.price)}
           <span className="usd"> USD</span>
@@ -161,7 +162,7 @@ export default function PdpClient({ product }: { product: Product }) {
 
         <div className="pdp-buy">
           <button type="button" className="btn btn-solid btn-block" onClick={onAdd} disabled={soldOut}>
-            {soldOut ? "Sold out" : added ? "Added to bag" : complete ? `Add to bag \u00B7 ${formatUsd(product.price)}` : "Select your size"}
+            {soldOut ? "售完 Sold out" : added ? "已放入 Added to bag" : complete ? `加入購物袋 Add to bag \u00B7 ${formatUsd(product.price)}` : "先選尺寸 Select your size"}
           </button>
         </div>
         {showError && !complete && <p className="form-error" role="alert">Please choose your size to continue.</p>}

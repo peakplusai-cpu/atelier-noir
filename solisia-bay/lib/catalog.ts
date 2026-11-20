@@ -60,6 +60,8 @@ export const products: Product[] = [
     finish: "rib",
     hygiene: false,
     bestseller: true,
+    brand: "CLACK",
+    tags: ["街舞"],
     lookWith: ["calista-low-rise-bikini-bottom", "lido-linen-kaftan", "havana-cuban-collar-shirt"],
   },
   {
@@ -244,6 +246,8 @@ export const products: Product[] = [
     finish: "linen",
     hygiene: false,
     bestseller: true,
+    brand: "Havana Dept",
+    tags: ["滑板"],
     lookWith: ["havana-linen-shorts", "capri-tailored-swim-trunks", "havana-cuban-collar-set"],
   },
   {
@@ -470,29 +474,48 @@ export const GENDER_LABELS: Record<Gender, string> = {
 
 export const COLLECTIONS: Record<string, { title: string; eyebrow: string; blurb: string; gender?: Gender }> = {
   all: {
-    title: "The Collection",
-    eyebrow: "Resort 2027",
-    blurb: "Swim, linen and long-weekend wear for sea-facing days.",
+    title: "全部 The Collection",
+    eyebrow: "SELECT SHOP",
+    blurb: "街舞與滑板圈真的會穿的。Picked for the streets.",
   },
   women: {
-    title: "Women's Resort & Swim",
+    title: "女裝 Women",
     eyebrow: "Shop Women",
-    blurb: "Bikinis sold as separates, sculpting one-pieces and breezy linen cover-ups.",
+    blurb: "女裝選品。Separates, one-pieces, and pieces that move.",
     gender: "women",
   },
   men: {
-    title: "Men's Miami Resort Wear",
+    title: "男裝 Men",
     eyebrow: "Shop Men",
-    blurb: "Cuban collar shirts, linen sets and tailored swim trunks.",
+    blurb: "男裝選品。Shirts, shorts, and session-ready cuts.",
     gender: "men",
   },
   couples: {
-    title: "Couples Sets",
+    title: "雙人 Couples Sets",
     eyebrow: "Shop Couples",
-    blurb: "Matching in spirit, not in print. Pieces for two, priced together.",
+    blurb: "兩個人一起穿。Pieces for two, priced together.",
     gender: "couples",
   },
 };
+
+export function productBrand(product: Product): string {
+  return typeof product.brand === "string" ? product.brand.trim().slice(0, 40) : "";
+}
+
+export function productTags(product: Product): string[] {
+  if (!Array.isArray(product.tags)) return [];
+  const seen = new Set<string>();
+  const tags: string[] = [];
+  for (const tag of product.tags) {
+    if (typeof tag !== "string") continue;
+    const clean = tag.trim().slice(0, 24);
+    if (!clean || seen.has(clean)) continue;
+    seen.add(clean);
+    tags.push(clean);
+    if (tags.length >= 6) break;
+  }
+  return tags;
+}
 
 export const ALL_SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
 

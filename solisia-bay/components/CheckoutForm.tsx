@@ -171,19 +171,19 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
     <div className="checkout">
       <form className="checkout-form" onSubmit={onSubmit}>
         <fieldset disabled={Boolean(locked)}>
-          <h2 className="serif">Contact</h2>
+          <h2 className="serif">聯絡 Contact</h2>
           <label className="field">
-            <span>Email</span>
+            <span>電子郵件 Email</span>
             <input name="email" type="email" autoComplete="email" required maxLength={160} />
           </label>
 
-          <h2 className="serif">Shipping address</h2>
+          <h2 className="serif">收件 Shipping address</h2>
           <label className="field">
-            <span>Full name</span>
+            <span>姓名 Full name</span>
             <input name="name" autoComplete="name" required minLength={2} maxLength={100} />
           </label>
           <label className="field">
-            <span>Country / region</span>
+            <span>國家 Country / region</span>
             <select name="country" autoComplete="country-name" required defaultValue="">
               <option value="" disabled>
                 Select
@@ -194,7 +194,7 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
             </select>
           </label>
           <label className="field">
-            <span>Address</span>
+            <span>地址 Address</span>
             <input name="line1" autoComplete="address-line1" required minLength={3} maxLength={160} />
           </label>
           <label className="field">
@@ -203,7 +203,7 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
           </label>
           <div className="field-row">
             <label className="field">
-              <span>City</span>
+              <span>城市 City</span>
               <input name="city" autoComplete="address-level2" required minLength={2} maxLength={80} />
             </label>
             <label className="field">
@@ -211,7 +211,7 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
               <input name="state" autoComplete="address-level1" maxLength={80} />
             </label>
             <label className="field">
-              <span>Postal code</span>
+              <span>郵遞區號 Postal code</span>
               <input name="postalCode" autoComplete="postal-code" required minLength={2} maxLength={20} />
             </label>
           </div>
@@ -220,7 +220,7 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
             <input name="phone" type="tel" autoComplete="tel" maxLength={40} />
           </label>
           <label className="field">
-            <span>Gift code (optional)</span>
+            <span>優惠碼 Gift code (optional)</span>
             <input value={coupon} onChange={(event) => setCoupon(event.target.value)} maxLength={24} autoComplete="off" />
           </label>
         </fieldset>
@@ -358,7 +358,7 @@ function matchedQuote(coupon: string, quote: { total: number; discount: number; 
 
 function paymentLabel(coupon: string, fallback: number, quote: { total: number; discount: number; coupon: string } | null): string {
   const match = matchedQuote(coupon, quote);
-  if (match) return `Continue to payment \u00B7 ${formatUsd(match.total)}`;
-  if (coupon.trim()) return "Continue to payment";
-  return `Continue to payment \u00B7 ${formatUsd(fallback)}`;
+  if (match) return `前往付款 Continue to payment \u00B7 ${formatUsd(match.total)}`;
+  if (coupon.trim()) return "前往付款 Continue to payment";
+  return `前往付款 Continue to payment \u00B7 ${formatUsd(fallback)}`;
 }

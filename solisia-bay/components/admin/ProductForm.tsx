@@ -30,6 +30,8 @@ export function ProductForm({ product }: { product?: Product }) {
   const [published, setPublished] = useState((product?.status ?? "published") === "published");
   const [hygiene, setHygiene] = useState(Boolean(product?.hygiene));
   const [bestseller, setBestseller] = useState(Boolean(product?.bestseller));
+  const [brand, setBrand] = useState(product?.brand ?? "");
+  const [tags, setTags] = useState((product?.tags ?? []).join(", "));
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -65,6 +67,8 @@ export function ProductForm({ product }: { product?: Product }) {
     hygiene,
     bestseller,
     isNew: product?.isNew ?? false,
+    brand,
+    tags,
   });
 
   async function upload(files: FileList | null) {
@@ -93,6 +97,8 @@ export function ProductForm({ product }: { product?: Product }) {
         <h2>基本資料</h2>
         <label className="field"><span>名稱</span><input name="visible-name" value={name} onChange={(e) => setName(e.target.value)} required maxLength={120} /></label>
         <label className="field"><span>一句話</span><input value={tagline} onChange={(e) => setTagline(e.target.value)} maxLength={160} /></label>
+        <label className="field"><span>品牌 brand</span><input value={brand} onChange={(e) => setBrand(e.target.value)} maxLength={40} placeholder="CLACK" /></label>
+        <label className="field"><span>標籤 tags</span><input value={tags} onChange={(e) => setTags(e.target.value)} maxLength={160} placeholder="滑板, 街舞" /></label>
         <label className="field"><span>說明</span><textarea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} maxLength={2000} /></label>
         <label className="field"><span>細節（一行一項）</span><textarea rows={4} value={details} onChange={(e) => setDetails(e.target.value)} /></label>
         <div className="field-row">

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Cormorant_Garamond, Plus_Jakarta_Sans } from "next/font/google";
+import { Anton, Noto_Sans_TC, Permanent_Marker } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/components/CartProvider";
 import { CatalogProvider } from "@/components/CatalogProvider";
@@ -10,36 +10,40 @@ import { loadPublicShop } from "@/lib/expire-checkouts";
 import { publishedProducts } from "@/lib/shop";
 import { SITE, siteOrigin } from "@/lib/site";
 
-const display = Cormorant_Garamond({
+const display = Anton({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
-  style: ["normal", "italic"],
+  weight: "400",
   variable: "--font-display",
   display: "swap",
 });
-const sans = Plus_Jakarta_Sans({
+const marker = Permanent_Marker({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
+  weight: "400",
+  variable: "--font-marker",
+  display: "swap",
+});
+const sans = Noto_Sans_TC({
+  subsets: ["latin"],
+  weight: ["400", "500", "700", "900"],
   variable: "--font-sans",
   display: "swap",
 });
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteOrigin()),
-  title: { default: `${SITE.name} | Island Resort Wear & Swimwear`, template: `%s | ${SITE.name}` },
-  description:
-    "SOLISIA BAY: quiet-luxury island resort wear. Women's swimwear and cover-ups, men's Miami resort wear, and couples sets. Free worldwide shipping over $120.",
+  title: { default: `${SITE.name} | Streetwear Select Shop`, template: `%s | ${SITE.name}` },
+  description: `${SITE.name}: 街舞與滑板選品店。${SITE.tagline} ${SITE.taglineZh}`,
   applicationName: SITE.name,
   openGraph: {
     type: "website",
     siteName: SITE.name,
-    title: `${SITE.name} | Island Resort Wear & Swimwear`,
-    description: SITE.tagline,
+    title: `${SITE.name} | Streetwear Select Shop`,
+    description: `${SITE.tagline} ${SITE.taglineZh}`,
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#FAF8F5",
+  themeColor: "#0A0A0A",
 };
 
 export const dynamic = "force-dynamic";
@@ -47,7 +51,7 @@ export const dynamic = "force-dynamic";
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const shop = await loadPublicShop();
   return (
-    <html lang="en" className={`${display.variable} ${sans.variable}`}>
+    <html lang="zh-Hant" className={`${display.variable} ${marker.variable} ${sans.variable}`}>
       <body>
         <CatalogProvider value={{ products: publishedProducts(shop), settings: shop.settings }}>
           <CartProvider>

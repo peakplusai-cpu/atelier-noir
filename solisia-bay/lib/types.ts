@@ -71,4 +71,8 @@ export type Product = {
   status?: "published" | "draft";
   /** Units left, keyed by `color|size label`. Missing inventory means the piece is not stock-tracked. */
   inventory?: Record<string, number>;
+  /** Optional select-shop label, for example the label we picked the piece from. */
+  brand?: string;
+  /** Optional culture tags such as 滑板 or 街舞. */
+  tags?: string[];
 };
