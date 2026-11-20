@@ -476,7 +476,7 @@ export const COLLECTIONS: Record<string, { title: string; eyebrow: string; blurb
   all: {
     title: "全部 The Collection",
     eyebrow: "SELECT SHOP",
-    blurb: "街舞與滑板圈真的會穿的。Picked for the streets.",
+    blurb: "Picked for the streets. Built for the session.",
   },
   women: {
     title: "女裝 Women",

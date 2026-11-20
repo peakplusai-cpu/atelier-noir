@@ -11,7 +11,6 @@ export default function Footer() {
             <Wordmark />
           </p>
           <p>{SITE.tagline}</p>
-          <p>{SITE.taglineZh}</p>
         </div>
         <div>
           <h4>Shop</h4>

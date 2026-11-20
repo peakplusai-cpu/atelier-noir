@@ -1,4 +1,4 @@
-const WORDS = ["SKATE", "BREAK", "SELECT", "CLACK", "街舞", "滑板", "SESSION"];
+const WORDS = ["SKATE", "BREAK", "SELECT", "CLACK", "SESSION"];
 
 export function Ticker() {
   const run = (copy: string) =>
