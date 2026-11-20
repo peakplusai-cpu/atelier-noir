@@ -1,19 +1,11 @@
 import Link from "next/link";
-import { Ticker } from "./Ticker";
 import { Wordmark } from "./Wordmark";
-import { SITE } from "@/lib/site";
 
 export default function Hero() {
   return (
-    <section className="hero hero-zine" aria-label="CLACK select shop">
+    <section className="hero hero-zine" aria-label="CLACK">
       <div className="zine-poster">
         <Wordmark className="wordmark wordmark-hero" />
-        <p className="zine-en">{SITE.tagline}</p>
-        <div className="zine-stickers" aria-hidden="true">
-          <span>BREAK</span>
-          <span>SKATE</span>
-          <span>NO MALL</span>
-        </div>
         <div className="hero-cta">
           <Link href="/collection/women" className="btn btn-light">
             女裝 Women
@@ -26,7 +18,6 @@ export default function Hero() {
           </Link>
         </div>
       </div>
-      <Ticker />
     </section>
   );
 }

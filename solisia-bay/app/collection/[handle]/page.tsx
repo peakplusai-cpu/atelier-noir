@@ -22,7 +22,7 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { handle } = await params;
   const c = COLLECTIONS[handle];
-  return c ? { title: c.title, description: c.blurb } : {};
+  return c ? { title: c.title, description: "CLACK" } : {};
 }
 
 function list(v: string | string[] | undefined): string[] {
@@ -73,9 +73,7 @@ export default async function CollectionPage({ params, searchParams }: Props) {
   return (
     <section className="page">
       <header className="collection-head">
-        <p className="eyebrow">{collection.eyebrow}</p>
         <h1 className="serif">{collection.title}</h1>
-        <p className="lede">{collection.blurb}</p>
         <nav className="tabs" aria-label="Collections">
           {TABS.map((t) => (
             <Link key={t.handle} href={`/collection/${t.handle}`} data-active={t.handle === handle}>
@@ -100,13 +98,11 @@ export default async function CollectionPage({ params, searchParams }: Props) {
 
       {base.length === 0 ? (
         <div className="empty">
-          <p className="eyebrow">Coming soon</p>
-          <p className="serif">選品還在路上。</p>
-          <p>這一區現在是空的。New pieces are on the way.</p>
+          <p className="serif">尚無商品</p>
         </div>
       ) : items.length === 0 ? (
         <div className="empty">
-          <p className="serif">沒有符合的選品。Nothing matches those filters.</p>
+          <p className="serif">尚無商品</p>
           <Link href={`/collection/${handle}`} className="btn btn-outline">
             Clear filters
           </Link>

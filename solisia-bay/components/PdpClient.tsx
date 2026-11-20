@@ -7,9 +7,7 @@ import { useCart } from "./CartProvider";
 import { Accordion, AccordionItem } from "./Accordion";
 import { STYLE_LABELS, productBrand, productTags, sizeLabel, stockOf } from "@/lib/catalog";
 import { formatUsd, savings } from "@/lib/money";
-import { useCatalog } from "./CatalogProvider";
 import { HYGIENE_COPY, RETURNS_COPY, SHIPPING_COPY } from "@/lib/policies";
-import { SITE } from "@/lib/site";
 import type { Unit } from "@/lib/sizes";
 import type { Product } from "@/lib/types";
 import type { ArtView } from "./ProductArt";
@@ -25,7 +23,6 @@ const SLIDES: Slide[] = [
 
 export default function PdpClient({ product }: { product: Product }) {
   const { add } = useCart();
-  const { settings } = useCatalog();
   const [colorName, setColorName] = useState(product.colors[0].name);
   const [sizes, setSizes] = useState<Record<string, string>>({});
   const [slide, setSlide] = useState(0);
@@ -97,7 +94,6 @@ export default function PdpClient({ product }: { product: Product }) {
           {formatUsd(product.price)}
           <span className="usd"> USD</span>
         </p>
-        <p className="pdp-tagline">{product.tagline}</p>
 
         <div className="opt">
           <p className="opt-label">
@@ -167,11 +163,6 @@ export default function PdpClient({ product }: { product: Product }) {
         </div>
         {showError && !complete && <p className="form-error" role="alert">Please choose your size to continue.</p>}
         {soldOut && <p className="form-error" role="alert">This size is sold out.</p>}
-        <ul className="perks">
-          <li>Free worldwide shipping over ${settings.freeShippingThreshold} USD</li>
-          <li>{SITE.returnDays}-day returns</li>
-          <li>Secure checkout</li>
-        </ul>
 
         <p className="pdp-desc">{product.description}</p>
 

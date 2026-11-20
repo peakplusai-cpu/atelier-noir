@@ -10,7 +10,6 @@ export default function Footer() {
           <p className="logo logo-footer">
             <Wordmark />
           </p>
-          <p>{SITE.tagline}</p>
         </div>
         <div>
           <h4>Shop</h4>

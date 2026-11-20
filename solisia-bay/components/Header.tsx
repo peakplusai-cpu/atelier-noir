@@ -25,8 +25,7 @@ export default function Header({ announcement = "", freeShipping = SITE.freeShip
     <div className="chrome">
       <div className="announce">
         <p>
-          {announcement || `滿 $${freeShipping} USD 全球免運 · Free worldwide shipping`}
-          <span className="hide-sm"> &nbsp;·&nbsp; {SITE.returnDays} 天可退</span>
+          {announcement || `滿 $${freeShipping} USD 免運`}
         </p>
       </div>
       <header className="header">
