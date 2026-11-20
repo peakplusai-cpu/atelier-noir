@@ -83,8 +83,7 @@ export default function CartDrawer() {
         <div className="drawer-body">
           {lines.length === 0 ? (
             <div className="drawer-empty">
-              <p className="serif">袋子是空的。</p>
-              <p>Your bag is empty. 去挑一件會穿上場的。</p>
+              <p className="serif">Your bag is empty.</p>
               <Link href="/collection/all" className="btn btn-outline" onClick={closeCart}>
                 Shop the collection
               </Link>

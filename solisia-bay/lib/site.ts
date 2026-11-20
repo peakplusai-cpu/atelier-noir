@@ -1,7 +1,6 @@
 export const SITE = {
   name: "CLACK",
   tagline: "Picked for the streets. Built for the session.",
-  taglineZh: "街舞與滑板圈真的會穿的。",
   currency: "USD",
   freeShippingThreshold: 120,
   flatShipping: 12,

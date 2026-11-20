@@ -32,13 +32,13 @@ const sans = Noto_Sans_TC({
 export const metadata: Metadata = {
   metadataBase: new URL(siteOrigin()),
   title: { default: `${SITE.name} | Streetwear Select Shop`, template: `%s | ${SITE.name}` },
-  description: `${SITE.name}: 街舞與滑板選品店。${SITE.tagline} ${SITE.taglineZh}`,
+  description: `${SITE.name}. ${SITE.tagline}`,
   applicationName: SITE.name,
   openGraph: {
     type: "website",
     siteName: SITE.name,
     title: `${SITE.name} | Streetwear Select Shop`,
-    description: `${SITE.tagline} ${SITE.taglineZh}`,
+    description: SITE.tagline,
   },
 };
 

@@ -7,10 +7,8 @@ export default function Hero() {
   return (
     <section className="hero hero-zine" aria-label="CLACK select shop">
       <div className="zine-poster">
-        <p className="zine-kicker">SELECT SHOP · 選品店</p>
         <Wordmark className="wordmark wordmark-hero" />
         <p className="zine-en">{SITE.tagline}</p>
-        <p className="zine-zh">{SITE.taglineZh}</p>
         <div className="zine-stickers" aria-hidden="true">
           <span>BREAK</span>
           <span>SKATE</span>
