@@ -33,7 +33,7 @@ export default async function ProductPage({ params }: Props) {
     "@type": "Product",
     name: product.name,
     description: product.description,
-    brand: { "@type": "Brand", name: "SOLISIA BAY" },
+    brand: { "@type": "Brand", name: product.brand || "CLACK" },
     offers: {
       "@type": "Offer",
       url: `${siteOrigin()}/products/${product.slug}`,

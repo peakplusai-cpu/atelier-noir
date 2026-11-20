@@ -1,4 +1,4 @@
-# SOLISIA BAY
+# CLACK
 
 歐美跨境高端海島度假服飾品牌（Women's Resort & Swimwear / Men's Miami Resort Wear）的獨立電商網站。
 視覺走 Quiet Luxury：暖沙白 `#FAF8F5`、深海藍 `#1B365D`、陽光金棕 `#C5A059`、炭黑 `#1E1E1E`；標題 Cormorant Garamond，內文與價格 Plus Jakarta Sans。

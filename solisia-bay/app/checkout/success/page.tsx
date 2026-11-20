@@ -53,7 +53,7 @@ export default async function SuccessPage({ searchParams }: Props) {
         </h1>
         <p>
           {confirmed
-            ? `Keep this page as your receipt for ${order.email}. We'll email tracking details to that address when the order ships.`
+            ? `這是 ${order.email} 的 CLACK 收據。出貨後我們會把物流寄到這個信箱。Keep this page.`
             : cancelledAfterPay
               ? `This order was cancelled after payment. If you still see a PayPal charge, email ${SITE.email} and include ${order.code}.`
               : review
@@ -66,7 +66,7 @@ export default async function SuccessPage({ searchParams }: Props) {
 
       <div className="receipt">
         <div className="receipt-head">
-          <span>Order</span>
+          <span>CLACK 訂單</span>
           <strong>{order.code}</strong>
         </div>
         <ul>

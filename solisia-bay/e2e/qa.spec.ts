@@ -48,7 +48,7 @@ test("storefront browsing, cart and checkout validation", async ({ page }) => {
   await page.getByLabel("Email").fill("buyer@example.com");
   await page.getByLabel("Full name").fill("Ann Lee");
   await page.getByLabel("Country / region").selectOption("Taiwan");
-  await page.getByLabel("Address", { exact: true }).fill("1 Harbor Road");
+  await page.getByLabel("地址 Address").fill("1 Harbor Road");
   await page.getByLabel("City").fill("Taipei");
   await page.getByLabel("Postal code").fill("100");
   await page.getByLabel("Gift code (optional)").fill("NOT-A-CODE");
@@ -87,7 +87,7 @@ test("the feed wall is a full-bleed marquee", async ({ page, request }) => {
   await writeFile("data/shop.json", JSON.stringify(shop));
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
-  const wall = page.getByRole("region", { name: "From the bay" });
+  const wall = page.getByRole("region", { name: "CLACK wall" });
   await wall.scrollIntoViewIfNeeded();
   await page.evaluate(() => {
     document.querySelectorAll<HTMLElement>(".bay-wall-track").forEach((el) => {

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 import ProductImage from "./ProductImage";
-import { STYLE_LABELS } from "@/lib/catalog";
+import { STYLE_LABELS, productBrand, productTags } from "@/lib/catalog";
 import { formatUsd, savings } from "@/lib/money";
 import type { Product } from "@/lib/types";
 
@@ -44,17 +44,21 @@ export default function ProductCard({ product, priority }: { product: Product; p
         </span>
       </Link>
       <div className="card-info">
+        {productBrand(product) && <p className="card-brand">{productBrand(product)}</p>}
         <div className="card-row">
           <Link href={`/products/${product.slug}`} className="card-name">
             {product.name}
           </Link>
-          <span className="price">
+          <span className="price price-sticker">
             {savings(product.price, product.compareAt) > 0 && <s>{formatUsd(product.compareAt!)}</s>}
             {formatUsd(product.price)}
           </span>
         </div>
         <div className="card-row card-sub">
-          <span>{STYLE_LABELS[product.style]}</span>
+          <span>
+            {STYLE_LABELS[product.style]}
+            {productTags(product).length > 0 ? ` · ${productTags(product).join(" / ")}` : ""}
+          </span>
           <span className="swatches" role="group" aria-label="Colour">
             {product.colors.map((c) => (
               <button

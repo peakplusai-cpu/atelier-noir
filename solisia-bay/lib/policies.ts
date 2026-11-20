@@ -1,7 +1,7 @@
 import { SITE } from "./site";
 
 export const SHIPPING_COPY = [
-  `Free worldwide shipping on orders over $${SITE.freeShippingThreshold} USD. Orders under $${SITE.freeShippingThreshold} ship for a flat $${SITE.flatShipping} USD.`,
+  `滿 $${SITE.freeShippingThreshold} USD 全球免運。未滿額運費 $${SITE.flatShipping} USD。Free worldwide shipping over the threshold; a flat rate below it.`,
   "Orders are prepared within 1\u20133 business days. Typical delivery is 3\u20137 business days to the United States, 5\u201310 to Europe and 7\u201314 to the rest of the world. You will receive tracking by email once your order ships.",
   "Import duties and local taxes, where they apply, depend on your country and are shown or collected at checkout by our payment partner.",
 ];
@@ -20,7 +20,7 @@ export const HYGIENE_COPY = [
 
 export const POLICY_PAGES: Record<string, { title: string; sections: { heading: string; body: string[] }[] }> = {
   "shipping-returns": {
-    title: "Shipping & Returns",
+    title: "運送與退貨 Shipping & Returns",
     sections: [
       { heading: "Shipping", body: SHIPPING_COPY },
       { heading: "Returns & exchanges", body: RETURNS_COPY },

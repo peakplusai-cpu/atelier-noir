@@ -26,7 +26,7 @@ export default async function DeskLayout({ children }: { children: React.ReactNo
     <section className="staff-desk">
       <div className="staff-bar">
         <Link href="/admin" className="serif">
-          SOLISIA BAY
+          CLACK
         </Link>
         <span>員工後台</span>
         <Link href="/" className="link-btn">查看前台</Link>

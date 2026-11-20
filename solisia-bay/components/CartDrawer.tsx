@@ -68,9 +68,9 @@ export default function CartDrawer() {
   return (
     <div className="drawer-root" data-open={isOpen} aria-hidden={!isOpen}>
       <div className="drawer-scrim" onClick={closeCart} />
-      <aside className="drawer" role="dialog" aria-modal="true" aria-label="Shopping cart">
+      <aside className="drawer" role="dialog" aria-modal="true" aria-label="購物袋 Shopping cart">
         <div className="drawer-head">
-          <h2>Your Bag {count > 0 && <span>({count})</span>}</h2>
+          <h2>購物袋 Bag {count > 0 && <span>({count})</span>}</h2>
           <button ref={closeRef} type="button" className="icon-btn" aria-label="Close cart" onClick={closeCart}>
             <svg width="20" height="20" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.3">
               <path d="M5 5l12 12M17 5L5 17" />
@@ -83,8 +83,8 @@ export default function CartDrawer() {
         <div className="drawer-body">
           {lines.length === 0 ? (
             <div className="drawer-empty">
-              <p className="serif">Your bag is empty.</p>
-              <p>Start with the pieces everyone is packing this season.</p>
+              <p className="serif">袋子是空的。</p>
+              <p>Your bag is empty. 去挑一件會穿上場的。</p>
               <Link href="/collection/all" className="btn btn-outline" onClick={closeCart}>
                 Shop the collection
               </Link>
@@ -159,7 +159,7 @@ export default function CartDrawer() {
               </div>
             </dl>
             <Link href="/checkout" className="btn btn-solid btn-block" onClick={closeCart}>
-              Checkout &middot; {formatUsd(subtotal + shipping)}
+              結帳 Checkout &middot; {formatUsd(subtotal + shipping)}
             </Link>
             <p className="fine">Secure checkout, powered by PayPal.</p>
           </div>

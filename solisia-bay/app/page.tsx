@@ -20,11 +20,11 @@ export default async function HomePage() {
       <section className="section">
         <div className="section-head">
           <div>
-            <p className="eyebrow">Best sellers</p>
-            <h2 className="serif">The pieces everyone is packing</h2>
+            <p className="eyebrow">Session picks</p>
+            <h2 className="serif">這季會穿上場的</h2>
           </div>
           <Link href="/collection/all" className="text-link">
-            Shop all
+            全部 Shop all
           </Link>
         </div>
         <BestsellerCarousel items={items} />

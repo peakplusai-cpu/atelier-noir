@@ -13,7 +13,7 @@ export function PhotoWall({ posts, products }: { posts: WallPost[]; products: Pr
       const inner = (
         <>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={frame.image} alt={hidden ? "" : frame.caption || "SOLISIA BAY"} />
+          <img src={frame.image} alt={hidden ? "" : frame.caption || "CLACK"} />
           {frame.caption ? <span className="bay-wall-caption">{frame.caption}</span> : null}
         </>
       );
@@ -28,7 +28,7 @@ export function PhotoWall({ posts, products }: { posts: WallPost[]; products: Pr
       );
     });
   return (
-    <section className="bay-wall" aria-label="From the bay" style={{ ["--wall-duration" as string]: `${seconds}s` }}>
+    <section className="bay-wall" aria-label="CLACK wall" style={{ ["--wall-duration" as string]: `${seconds}s` }}>
       <div className="bay-wall-viewport">
         <div className="bay-wall-track">
           <div className="bay-wall-set">{strip("a")}</div>

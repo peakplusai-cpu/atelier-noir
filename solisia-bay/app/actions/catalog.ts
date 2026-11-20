@@ -95,6 +95,12 @@ export async function saveProduct(_prev: string, form: FormData): Promise<string
   const status = payload.status === "draft" ? "draft" : "published";
   const tagline = text(payload.tagline, 160);
   const description = text(payload.description, 2000);
+  const brand = text(payload.brand, 40);
+  const tags = text(payload.tags, 160)
+    .split(/[,，]/)
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .slice(0, 6);
 
   let error = "";
   await mutateShop((shop) => {
@@ -115,6 +121,8 @@ export async function saveProduct(_prev: string, form: FormData): Promise<string
       compareAt: compareAt > price ? compareAt : undefined,
       tagline: tagline || name,
       description: description || tagline || name,
+      brand: brand || undefined,
+      tags: tags.length ? tags : undefined,
       details: details.length ? details : existing?.details ?? [],
       colors,
       selectors,

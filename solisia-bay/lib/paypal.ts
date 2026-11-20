@@ -70,10 +70,11 @@ export async function createPayPalOrder(input: {
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
       intent: "CAPTURE",
+      application_context: { brand_name: "CLACK" },
       purchase_units: [
         {
           custom_id: input.code,
-          description: `SOLISIA BAY order ${input.code}`,
+          description: `CLACK order ${input.code}`,
           amount: {
             currency_code: "USD",
             value: centsToMoney(expected),

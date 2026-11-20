@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" fill="#1B365D"/>
-  <circle cx="32" cy="27" r="11" fill="none" stroke="#C5A059" stroke-width="2.4"/>
-  <path d="M8 40q6-5 12 0t12 0t12 0t12 0" fill="none" stroke="#FAF8F5" stroke-width="2.4" stroke-linecap="round"/>
-  <path d="M8 49q6-5 12 0t12 0t12 0t12 0" fill="none" stroke="#FAF8F5" stroke-width="2.4" stroke-linecap="round" opacity=".55"/>
+  <rect width="64" height="64" fill="#111111"/>
+  <text x="6" y="42" fill="#D6FF00" font-family="Impact, Arial Narrow, sans-serif" font-size="22" letter-spacing="1">CLACK</text>
+  <path d="M14 46c1 6 0 10-1 12" fill="none" stroke="#D6FF00" stroke-width="2" stroke-linecap="round"/>
+  <path d="M34 44c1 5 2 8 1 11" fill="none" stroke="#E10600" stroke-width="2" stroke-linecap="round"/>
 </svg>
