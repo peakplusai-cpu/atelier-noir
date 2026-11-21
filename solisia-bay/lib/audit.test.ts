@@ -12,8 +12,8 @@ import { rateLimit, resetRateLimits } from "./rate-limit.ts";
 import { safeEqualString } from "./secret.ts";
 import { createStaffToken, staffTokenValid } from "./session-token.ts";
 
-const top = { slug: "calista-triangle-bikini-top", color: "Dune", sizes: { size: "S" }, qty: 1 };
-const bottom = { slug: "calista-low-rise-bikini-bottom", color: "Dune", sizes: { size: "M" }, qty: 1 };
+const top = { slug: "clack-box-tee", color: "Black", sizes: { size: "S" }, qty: 1 };
+const bottom = { slug: "clack-oxford-shirt", color: "White", sizes: { size: "M" }, qty: 1 };
 
 test("shipping thresholds and non-finite subtotals", () => {
   assert.equal(shippingFor(120), 0);
@@ -64,7 +64,7 @@ test("zero, fractional, oversized and unknown lines are rejected", () => {
 });
 
 test("stock and coupon codes are enforced from the catalog passed in", () => {
-  const product = { ...products.find((item) => item.slug === top.slug)!, inventory: { "Dune|S": 1 } };
+  const product = { ...products.find((item) => item.slug === top.slug)!, inventory: { "Black|S": 1 } };
   assert.throws(() => priceCart([{ ...top, qty: 2 }], [product]), PricingError);
   const quoted = priceCart([top], undefined, {
     coupon: "bay10",
@@ -102,7 +102,7 @@ test("cart storage drops invalid lines and caps duplicates", () => {
   const lines = sanitizeCart([
     { ...top, qty: 8 },
     { ...top, qty: 8 },
-    { slug: "nope", color: "Dune", sizes: { size: "S" }, qty: 1 },
+    { slug: "nope", color: "Black", sizes: { size: "S" }, qty: 1 },
     { ...top, color: "Missing", qty: 2 },
     { ...bottom, qty: 1.8 },
   ]);

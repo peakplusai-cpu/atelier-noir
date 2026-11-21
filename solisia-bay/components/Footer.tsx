@@ -14,13 +14,11 @@ export default function Footer() {
           <h4>Shop</h4>
           <Link href="/collection/women">女裝 Women</Link>
           <Link href="/collection/men">男裝 Men</Link>
-          <Link href="/collection/couples">雙人 Couples Sets</Link>
           <Link href="/collection/all">全部 Shop All</Link>
         </div>
         <div>
           <h4>Help</h4>
           <Link href="/policies/shipping-returns">Shipping &amp; Returns</Link>
-          <Link href="/policies/swimwear-hygiene">Swimwear Hygiene Liner</Link>
           <Link href="/policies/size-guide">Size Guide</Link>
           <a href={`mailto:${SITE.email}`}>{SITE.email}</a>
           <Link href="/admin" className="staff-entry">

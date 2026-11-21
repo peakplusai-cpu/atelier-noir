@@ -12,33 +12,9 @@ export type SizeChart = {
 const r = (a: number, b: number): Range => [a, b];
 
 export const SIZE_CHARTS: Record<ChartKey, SizeChart> = {
-  womenTop: {
-    title: "Women's Bikini Top",
-    note: "Body measurements. If you are between sizes, size up for comfort or down for support.",
-    columns: ["Bust", "Underbust"],
-    rows: [
-      { size: "XS", values: [r(78, 82), r(63, 67)] },
-      { size: "S", values: [r(82, 86), r(67, 71)] },
-      { size: "M", values: [r(86, 90), r(71, 75)] },
-      { size: "L", values: [r(90, 96), r(75, 81)] },
-      { size: "XL", values: [r(96, 102), r(81, 87)] },
-    ],
-  },
-  womenBottom: {
-    title: "Women's Bikini Bottom",
-    note: "Body measurements. Bottoms are sold separately and can be sized independently from tops.",
-    columns: ["Waist", "Hip"],
-    rows: [
-      { size: "XS", values: [r(60, 64), r(86, 90)] },
-      { size: "S", values: [r(64, 68), r(90, 94)] },
-      { size: "M", values: [r(68, 72), r(94, 98)] },
-      { size: "L", values: [r(72, 78), r(98, 104)] },
-      { size: "XL", values: [r(78, 84), r(104, 110)] },
-    ],
-  },
-  womenOnePiece: {
-    title: "Women's One-Piece",
-    note: "Body measurements. Choose by your fullest measurement; torso length is allowed for in the cut.",
+  women: {
+    title: "Women",
+    note: "Body measurements. If you are between sizes, choose the larger size.",
     columns: ["Bust", "Waist", "Hip"],
     rows: [
       { size: "XS", values: [r(78, 82), r(60, 64), r(86, 90)] },
@@ -48,40 +24,16 @@ export const SIZE_CHARTS: Record<ChartKey, SizeChart> = {
       { size: "XL", values: [r(96, 102), r(78, 84), r(104, 110)] },
     ],
   },
-  womenDress: {
-    title: "Women's Linen Kaftan",
-    note: "Body measurements. Cut with a relaxed, oversized fall; choose your usual size.",
-    columns: ["Bust", "Waist", "Hip"],
+  men: {
+    title: "Men",
+    note: "Body measurements. If you are between sizes, choose the larger size.",
+    columns: ["Chest", "Waist", "Hip"],
     rows: [
-      { size: "XS", values: [r(78, 82), r(60, 64), r(86, 90)] },
-      { size: "S", values: [r(82, 86), r(64, 68), r(90, 94)] },
-      { size: "M", values: [r(86, 90), r(68, 72), r(94, 98)] },
-      { size: "L", values: [r(90, 96), r(72, 78), r(98, 104)] },
-      { size: "XL", values: [r(96, 102), r(78, 84), r(104, 110)] },
-    ],
-  },
-  menShirt: {
-    title: "Men's Shirt",
-    note: "Body measurements. Our shirts have a relaxed fit; size down for a closer cut.",
-    columns: ["Chest", "Waist", "Shoulder"],
-    rows: [
-      { size: "S", values: [r(92, 98), r(78, 84), r(44, 45)] },
-      { size: "M", values: [r(98, 104), r(84, 90), r(46, 47)] },
-      { size: "L", values: [r(104, 110), r(90, 96), r(48, 49)] },
-      { size: "XL", values: [r(110, 118), r(96, 104), r(50, 51)] },
-      { size: "XXL", values: [r(118, 126), r(104, 112), r(52, 53)] },
-    ],
-  },
-  menBottom: {
-    title: "Men's Shorts & Trunks",
-    note: "Body measurements. Waistbands are elasticated and stretch with you.",
-    columns: ["Waist", "Hip"],
-    rows: [
-      { size: "S", values: [r(76, 81), r(92, 97)] },
-      { size: "M", values: [r(81, 86), r(97, 102)] },
-      { size: "L", values: [r(86, 92), r(102, 108)] },
-      { size: "XL", values: [r(92, 99), r(108, 115)] },
-      { size: "XXL", values: [r(99, 107), r(115, 123)] },
+      { size: "S", values: [r(88, 94), r(74, 80), r(90, 96)] },
+      { size: "M", values: [r(94, 100), r(80, 86), r(96, 102)] },
+      { size: "L", values: [r(100, 106), r(86, 92), r(102, 108)] },
+      { size: "XL", values: [r(106, 114), r(92, 100), r(108, 116)] },
+      { size: "XXL", values: [r(114, 122), r(100, 108), r(116, 124)] },
     ],
   },
 };

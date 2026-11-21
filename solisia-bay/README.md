@@ -1,7 +1,6 @@
 # CLACK
 
-歐美跨境高端海島度假服飾品牌（Women's Resort & Swimwear / Men's Miami Resort Wear）的獨立電商網站。
-視覺走 Quiet Luxury：暖沙白 `#FAF8F5`、深海藍 `#1B365D`、陽光金棕 `#C5A059`、炭黑 `#1E1E1E`；標題 Cormorant Garamond，內文與價格 Plus Jakarta Sans。
+一般服飾選品店。女裝與男裝。白底、黑字。
 
 Next.js 15 + TypeScript，金流使用 PayPal Checkout（JS SDK 按鈕 + 伺服器端 Orders v2 API），訂單存在 Supabase。
 
@@ -46,9 +45,9 @@ capture 時會核對編號、幣別（USD）與金額完全一致才標記已付
 
 ## 功能
 
-- **首頁**：全螢幕度假氛圍 Hero、男女雙線入口（Shop Women / Shop Men / Couples Sets）、熱銷單品輪播、品牌故事。
-- **商品列表** `/collection/[all|women|men|couples]`：依尺寸、款式（比基尼上身／下身拆賣、古巴領襯衫、古巴領套裝、泳褲…）篩選與排序（狀態寫進網址可分享）；滑鼠懸停切換模特兒背面，若商品設定 `media.video` 則播放動態實穿影片。
-- **商品詳情** `/products/[slug]`：cm / inch 一鍵切換的尺碼表（含模特兒身高體重與穿著尺碼）、衛生貼條與運送／退換貨折疊選單、Complete the Look 搭配推薦、Product JSON-LD。
+- **首頁**：置中 CLACK 標誌、女裝與男裝入口、商品。
+- **商品列表** `/collection/[all|women|men]`：依尺寸、款式（T-shirt、Shirt、Hoodie、Jacket、Pants、Shorts、Accessories）篩選與排序。
+- **商品詳情** `/products/[slug]`：cm / inch 一鍵切換的尺碼表（含模特兒身高體重與穿著尺碼）、運送／退換貨折疊選單、Complete the Look 搭配推薦、Product JSON-LD。
 - **側邊購物車**：「滿 $120 USD 全球免運」動態進度條，自動計算還差多少、湊單推薦；購物車存在 localStorage。
 - **員工入口**：頁尾「員工專用入口」。第一次進入設定密碼。後台有總覽、商品、優惠碼、動態牆、訂單、客戶與運費設定。取消已付款訂單不會自動退 PayPal 款，但會把庫存加回去。
 - **結帳**：站內填寫收件資料 → 建立訂單 → PayPal Checkout 按鈕（JS SDK）完成付款 → 伺服器呼叫 Orders v2 API capture 並核對金額後標記已付款 → 成功頁顯示收據。
@@ -64,4 +63,4 @@ media: { front: "/products/xxx-front.jpg", back: "/products/xxx-back.jpg", galle
 
 首頁 Hero 同理，在 `lib/site.ts` 設定 `heroImage` / `heroVideo`。
 
-運費規則、免運門檻、退貨天數在 `lib/site.ts`；運送／退換貨／衛生貼條文案在 `lib/policies.ts`（目前為預設範本，請依實際政策調整）。
+運費規則、免運門檻、退貨天數在 `lib/site.ts`；運送／退換貨文案在 `lib/policies.ts`（目前為預設範本，請依實際政策調整）。

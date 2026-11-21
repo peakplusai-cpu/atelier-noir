@@ -29,7 +29,7 @@ type ExpireApi = {
 };
 
 let api: ExpireApi;
-const line = { slug: "calista-triangle-bikini-top", color: "Dune", sizes: { size: "S" }, qty: 1, price: 1 };
+const line = { slug: "clack-box-tee", color: "Black", sizes: { size: "S" }, qty: 1, price: 1 };
 
 before(async () => {
   const expire = await import("./expire-checkouts.ts");
@@ -78,7 +78,7 @@ test("cron bearer check requires a configured secret", () => {
 
 test("a pending checkout older than 45 minutes returns stock once", async () => {
   const code = await holdOrder();
-  const before = (await api.getShop()).products.find((item) => item.slug === line.slug)?.inventory?.["Dune|S"] ?? 0;
+  const before = (await api.getShop()).products.find((item) => item.slug === line.slug)?.inventory?.["Black|S"] ?? 0;
   age(code, 10);
   const fresh = await api.expireAbandonedCheckouts({ inspect: async () => ({ kind: "open" }) });
   assert.equal(fresh.cancelled.includes(code), false);
@@ -87,10 +87,10 @@ test("a pending checkout older than 45 minutes returns stock once", async () => 
   assert.deepEqual(first.cancelled, [code]);
   assert.equal((await api.getOrder(code))?.status, "cancelled");
   assert.equal((await api.getOrder(code))?.stockHeld, false);
-  assert.equal((await api.getShop()).products.find((item) => item.slug === line.slug)?.inventory?.["Dune|S"], before + 1);
+  assert.equal((await api.getShop()).products.find((item) => item.slug === line.slug)?.inventory?.["Black|S"], before + 1);
   const second = await api.expireAbandonedCheckouts({ inspect: async () => ({ kind: "open" }) });
   assert.equal(second.cancelled.includes(code), false);
-  assert.equal((await api.getShop()).products.find((item) => item.slug === line.slug)?.inventory?.["Dune|S"], before + 1);
+  assert.equal((await api.getShop()).products.find((item) => item.slug === line.slug)?.inventory?.["Black|S"], before + 1);
 });
 
 test("a captured PayPal order is not cancelled", async () => {
@@ -101,14 +101,14 @@ test("a captured PayPal order is not cancelled", async () => {
   if (!row) throw new Error("missing");
   row.paymentOrderId = "PAYPALORDER123";
   writeFileSync(process.env.SOLISIA_DATA_FILE!, JSON.stringify(orders));
-  const stock = (await api.getShop()).products.find((item) => item.slug === line.slug)?.inventory?.["Dune|S"];
+  const stock = (await api.getShop()).products.find((item) => item.slug === line.slug)?.inventory?.["Black|S"];
   const result = await api.expireAbandonedCheckouts({
     inspect: async () => ({ kind: "captured", capture: null }),
   });
   assert.equal(result.kept.includes(code), true);
   assert.equal(result.cancelled.includes(code), false);
   assert.equal((await api.getOrder(code))?.status, "pending");
-  assert.equal((await api.getShop()).products.find((item) => item.slug === line.slug)?.inventory?.["Dune|S"], stock);
+  assert.equal((await api.getShop()).products.find((item) => item.slug === line.slug)?.inventory?.["Black|S"], stock);
 });
 
 test("an unknown PayPal status keeps the reservation", async () => {
@@ -164,17 +164,17 @@ test("a PayPal id is checked, and a slow check does not cancel the hold", async 
 test("checkout and the public catalog release a hold older than 45 minutes first", async () => {
   await api.mutateShop((shop) => {
     const product = shop.products.find((item) => item.slug === line.slug);
-    if (product?.inventory) product.inventory["Dune|S"] = 1;
+    if (product?.inventory) product.inventory["Black|S"] = 1;
   });
   const code = await holdOrder();
-  assert.equal((await api.getShop()).products.find((item) => item.slug === line.slug)?.inventory?.["Dune|S"], 0);
+  assert.equal((await api.getShop()).products.find((item) => item.slug === line.slug)?.inventory?.["Black|S"], 0);
   age(code, 46);
   const shown = await api.loadPublicShop();
-  assert.equal(shown.products.find((item) => item.slug === line.slug)?.inventory?.["Dune|S"], 1);
+  assert.equal(shown.products.find((item) => item.slug === line.slug)?.inventory?.["Black|S"], 1);
   assert.equal((await api.getOrder(code))?.status, "cancelled");
   await api.mutateShop((shop) => {
     const product = shop.products.find((item) => item.slug === line.slug);
-    if (product?.inventory) product.inventory["Dune|S"] = 0;
+    if (product?.inventory) product.inventory["Black|S"] = 0;
   });
   const held = JSON.parse(readFileSync(process.env.SOLISIA_DATA_FILE!, "utf8")) as { code: string; status: string; createdAt: string; stockHeld: boolean }[];
   const row = held.find((item) => item.code === code);
@@ -186,7 +186,7 @@ test("checkout and the public catalog release a hold older than 45 minutes first
   const again = await api.reserveCheckout([line], "");
   assert.equal(again.items[0]?.qty, 1);
   assert.equal((await api.getOrder(code))?.status, "cancelled");
-  assert.equal((await api.getShop()).products.find((item) => item.slug === line.slug)?.inventory?.["Dune|S"], 0);
+  assert.equal((await api.getShop()).products.find((item) => item.slug === line.slug)?.inventory?.["Black|S"], 0);
 });
 
 test("cleanup expire fixture", () => {

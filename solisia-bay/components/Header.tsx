@@ -9,7 +9,6 @@ import { SITE } from "@/lib/site";
 const NAV = [
   { href: "/collection/women", label: "女裝 Women" },
   { href: "/collection/men", label: "男裝 Men" },
-  { href: "/collection/couples", label: "雙人 Couples Sets" },
   { href: "/collection/all", label: "全部 Shop All" },
 ];
 

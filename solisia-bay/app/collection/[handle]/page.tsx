@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import FilterBar from "@/components/FilterBar";
 import ProductCard from "@/components/ProductCard";
-import { ALL_SIZES, COLLECTIONS, STYLE_LABELS, productBrand, productSizes, productTags, productsFor } from "@/lib/catalog";
+import { ALL_SIZES, COLLECTIONS, productBrand, productSizes, productTags, productsFor, styleLabel } from "@/lib/catalog";
 import { getShop, publishedProducts } from "@/lib/shop";
 import type { Product, StyleKey } from "@/lib/types";
 
@@ -42,7 +42,6 @@ const TABS = [
   { handle: "all", label: "全部 All" },
   { handle: "women", label: "女裝 Women" },
   { handle: "men", label: "男裝 Men" },
-  { handle: "couples", label: "雙人 Couples Sets" },
 ];
 
 export default async function CollectionPage({ params, searchParams }: Props) {
@@ -87,7 +86,7 @@ export default async function CollectionPage({ params, searchParams }: Props) {
         <Suspense fallback={null}>
           <FilterBar
             sizes={sizeOptions}
-            styles={styleKeys.map((k) => ({ value: k, label: STYLE_LABELS[k] }))}
+            styles={styleKeys.map((k) => ({ value: k, label: styleLabel(k) }))}
             brands={Array.from(new Set(base.map(productBrand).filter(Boolean))).sort()}
             tags={Array.from(new Set(base.flatMap(productTags))).sort()}
             total={base.length}

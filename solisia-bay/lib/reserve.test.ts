@@ -34,36 +34,36 @@ before(async () => {
   };
 });
 
-const line = { slug: "calista-triangle-bikini-top", color: "Dune", sizes: { size: "S" }, qty: 1, price: 1 };
+const line = { slug: "clack-box-tee", color: "Black", sizes: { size: "S" }, qty: 1, price: 1 };
 
 test("reserve ignores client price, holds stock, and releases it", async () => {
   const beforeShop = (await api.getShop()).products.find((item) => item.slug === line.slug)!;
-  const start = beforeShop.inventory?.["Dune|S"] ?? 0;
+  const start = beforeShop.inventory?.["Black|S"] ?? 0;
   const priced = await api.reserveCheckout([{ ...line, qty: 2 }], "");
   assert.equal(priced.items[0].unitPrice, 68);
   assert.equal(priced.items[0].qty, 2);
   const held = (await api.getShop()).products.find((item) => item.slug === line.slug)!;
-  assert.equal(held.inventory?.["Dune|S"], start - 2);
+  assert.equal(held.inventory?.["Black|S"], start - 2);
   await api.releaseHold({ items: priced.items, promoId: priced.promoId, stockHeld: true });
   const after = (await api.getShop()).products.find((item) => item.slug === line.slug)!;
-  assert.equal(after.inventory?.["Dune|S"], start);
+  assert.equal(after.inventory?.["Black|S"], start);
 });
 
 test("two reservations cannot oversell the last unit", async () => {
   await api.mutateShop((shop) => {
     const product = shop.products.find((item) => item.slug === line.slug);
-    if (product?.inventory) product.inventory["Dune|S"] = 1;
+    if (product?.inventory) product.inventory["Black|S"] = 1;
   });
   const results = await Promise.allSettled([api.reserveCheckout([line], ""), api.reserveCheckout([line], "")]);
   assert.equal(results.filter((result) => result.status === "fulfilled").length, 1);
   assert.equal(results.filter((result) => result.status === "rejected").length, 1);
-  assert.equal((await api.getShop()).products.find((item) => item.slug === line.slug)?.inventory?.["Dune|S"], 0);
+  assert.equal((await api.getShop()).products.find((item) => item.slug === line.slug)?.inventory?.["Black|S"], 0);
 });
 
 test("a coupon cannot be reused past its limit", async () => {
   await api.mutateShop((shop) => {
     const product = shop.products.find((item) => item.slug === line.slug);
-    if (product?.inventory) product.inventory["Dune|S"] = 5;
+    if (product?.inventory) product.inventory["Black|S"] = 5;
     shop.promotions.push({
       id: "prm_once",
       name: "Once",

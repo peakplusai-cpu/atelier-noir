@@ -39,8 +39,8 @@ test("storefront browsing, cart and checkout validation", async ({ page }) => {
   expect(overflow).toBeLessThanOrEqual(1);
   await page.goto("/collection/women?sort=price-asc");
   await expect(page.getByRole("heading", { name: /Women/ })).toBeVisible();
-  await page.getByRole("link", { name: "Calista Triangle Bikini Top" }).first().click();
-  await expect(page.getByRole("heading", { name: "Calista Triangle Bikini Top" })).toBeVisible();
+  await page.getByRole("link", { name: "Box Tee" }).first().click();
+  await expect(page.getByRole("heading", { name: "Box Tee" })).toBeVisible();
   await page.getByRole("radio", { name: "S", exact: true }).click();
   await page.getByRole("button", { name: /Add to bag/ }).click();
   await expect(page.getByRole("dialog", { name: "Shopping cart" })).toBeVisible();
@@ -80,11 +80,11 @@ test("home shows the centered mark and the shop underneath", async ({ page }) =>
   await page.goto("/");
   await expect(page.getByRole("link", { name: "CLACK home" })).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Primary" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Calista Triangle Bikini Top" }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "Box Tee" }).first()).toBeVisible();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(1);
-  await page.goto("/products/calista-triangle-bikini-top");
-  await expect(page.getByRole("heading", { name: "Calista Triangle Bikini Top" })).toBeVisible();
+  await page.goto("/products/clack-box-tee");
+  await expect(page.getByRole("heading", { name: "Box Tee" })).toBeVisible();
 });
 
 async function noHorizontalOverflow(page: Page) {
@@ -103,8 +103,8 @@ test("mobile pages stay on screen and the menu opens", async ({ page }) => {
       await noHorizontalOverflow(page);
     }
     await page.goto("/collection/women");
-    await page.getByRole("link", { name: "Calista Triangle Bikini Top" }).first().click();
-    await expect(page.getByRole("heading", { name: "Calista Triangle Bikini Top" })).toBeVisible();
+    await page.getByRole("link", { name: "Box Tee" }).first().click();
+    await expect(page.getByRole("heading", { name: "Box Tee" })).toBeVisible();
     await noHorizontalOverflow(page);
     if (width === 390) await page.screenshot({ path: "/opt/cursor/artifacts/mobile-after/product-390.png", fullPage: true });
     await page.getByRole("button", { name: "Open menu" }).click();
