@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Anton, Noto_Sans_TC, Permanent_Marker } from "next/font/google";
+import { Noto_Sans_TC } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/components/CartProvider";
 import { CatalogProvider } from "@/components/CatalogProvider";
@@ -8,18 +8,6 @@ import { loadPublicShop } from "@/lib/expire-checkouts";
 import { publishedProducts } from "@/lib/shop";
 import { SITE, siteOrigin } from "@/lib/site";
 
-const display = Anton({
-  subsets: ["latin"],
-  weight: "400",
-  variable: "--font-display",
-  display: "swap",
-});
-const marker = Permanent_Marker({
-  subsets: ["latin"],
-  weight: "400",
-  variable: "--font-marker",
-  display: "swap",
-});
 const sans = Noto_Sans_TC({
   subsets: ["latin"],
   weight: ["400", "500", "700", "900"],
@@ -49,7 +37,7 @@ export const dynamic = "force-dynamic";
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const shop = await loadPublicShop();
   return (
-    <html lang="zh-Hant" className={`${display.variable} ${marker.variable} ${sans.variable}`}>
+    <html lang="zh-Hant" className={sans.variable}>
       <body>
         <CatalogProvider value={{ products: publishedProducts(shop), settings: shop.settings }}>
           <CartProvider>

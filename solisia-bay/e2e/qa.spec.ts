@@ -75,12 +75,12 @@ test("policies, missing pages, and order lookup do not leak", async ({ page, req
   expect(upload.status()).toBe(401);
 });
 
-test("the home page is a white mark and product urls still open", async ({ page }) => {
+test("home shows the centered mark and the shop underneath", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/");
-  await expect(page.getByRole("img", { name: "CLACK" })).toBeVisible();
-  await expect(page.getByRole("navigation")).toHaveCount(0);
-  await expect(page.getByRole("region", { name: "CLACK wall" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "CLACK home" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Primary" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Calista Triangle Bikini Top" }).first()).toBeVisible();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(1);
   await page.goto("/products/calista-triangle-bikini-top");
