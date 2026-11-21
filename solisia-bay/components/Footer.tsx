@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Wordmark } from "./Wordmark";
 import { SITE } from "@/lib/site";
 
 export default function Footer() {
@@ -8,7 +7,7 @@ export default function Footer() {
       <div className="footer-top">
         <div className="footer-brand">
           <p className="logo logo-footer">
-            <Wordmark />
+            <img src="/clack-logo.png" alt="CLACK" />
           </p>
         </div>
         <div>

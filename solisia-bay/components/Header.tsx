@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useCart } from "./CartProvider";
-import { Wordmark } from "./Wordmark";
 import { SITE } from "@/lib/site";
 
 const NAV = [
@@ -49,7 +48,7 @@ export default function Header({ announcement = "", freeShipping = SITE.freeShip
             ))}
           </nav>
           <Link href="/" className="logo" aria-label="CLACK home">
-            <Wordmark />
+            <img src="/clack-logo.png" alt="" />
           </Link>
           <div className="header-actions">
             <Link href="/admin" className="nav-link-small staff-nav">
