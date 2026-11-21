@@ -57,6 +57,28 @@ body::before {
   background-size: 3px 3px;
 }
 
+body:has(.blank-home) {
+  background: #fff;
+}
+
+body:has(.blank-home)::before {
+  display: none;
+}
+
+.blank-home {
+  min-height: 100vh;
+  background: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 56px 24px 40px;
+}
+
+.blank-home img {
+  width: min(260px, 70vw);
+  height: auto;
+}
+
 body:has(.drawer-root[data-open="true"]),
 body:has(.mobile-nav[data-open="true"]),
 body:has(.modal[data-open="true"]) {
