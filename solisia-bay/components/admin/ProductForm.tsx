@@ -16,8 +16,8 @@ export function ProductForm({ product }: { product?: Product }) {
   const [details, setDetails] = useState((product?.details ?? []).join("\n"));
   const [price, setPrice] = useState(product ? String(product.price) : "");
   const [compareAt, setCompareAt] = useState(product?.compareAt ? String(product.compareAt) : "");
-  const [gender, setGender] = useState<Gender>(product?.gender ?? "women");
-  const [style, setStyle] = useState<StyleKey>(product?.style ?? "bikini-top");
+  const [gender, setGender] = useState<Gender>(product?.gender === "men" ? "men" : "women");
+  const [style, setStyle] = useState<StyleKey>(product && product.style in STYLE_LABELS ? product.style : "tee");
   const [colors, setColors] = useState<Colorway[]>(product?.colors ?? [{ name: "", hex: "#C5A059" }]);
   const [herSizes, setHerSizes] = useState(sizeText(product, "women"));
   const [hisSizes, setHisSizes] = useState(sizeText(product, "men"));
@@ -28,7 +28,6 @@ export function ProductForm({ product }: { product?: Product }) {
   });
   const [photos, setPhotos] = useState<string[]>(photosOf(product));
   const [published, setPublished] = useState((product?.status ?? "published") === "published");
-  const [hygiene, setHygiene] = useState(Boolean(product?.hygiene));
   const [bestseller, setBestseller] = useState(Boolean(product?.bestseller));
   const [brand, setBrand] = useState(product?.brand ?? "");
   const [tags, setTags] = useState((product?.tags ?? []).join(", "));
@@ -38,12 +37,7 @@ export function ProductForm({ product }: { product?: Product }) {
 
   const draft = useMemo(() => {
     const selectors =
-      gender === "couples"
-        ? [
-            { key: "her", label: "Her size", options: splitSizes(herSizes, WOMEN_SIZES) },
-            { key: "his", label: "His size", options: splitSizes(hisSizes, MEN_SIZES) },
-          ]
-        : [{ key: "size", label: "Size", options: splitSizes(gender === "men" ? hisSizes : herSizes, gender === "men" ? MEN_SIZES : WOMEN_SIZES) }];
+      [{ key: "size", label: "Size", options: splitSizes(gender === "men" ? hisSizes : herSizes, gender === "men" ? MEN_SIZES : WOMEN_SIZES) }];
     return { selectors, colors: colors.filter((color) => color.name.trim()) } as Pick<Product, "selectors" | "colors">;
   }, [gender, herSizes, hisSizes, colors]);
 
@@ -64,7 +58,6 @@ export function ProductForm({ product }: { product?: Product }) {
     inventory,
     photos,
     status: published ? "published" : "draft",
-    hygiene,
     bestseller,
     isNew: product?.isNew ?? false,
     brand,
@@ -104,9 +97,8 @@ export function ProductForm({ product }: { product?: Product }) {
         <div className="field-row">
           <label className="field"><span>分類</span>
             <select value={gender} onChange={(e) => setGender(e.target.value as Gender)}>
-              <option value="women">Women</option>
-              <option value="men">Men</option>
-              <option value="couples">Couples / Sets</option>
+              <option value="women">女裝 Women</option>
+              <option value="men">男裝 Men</option>
             </select>
           </label>
           <label className="field"><span>款式</span>
@@ -124,7 +116,6 @@ export function ProductForm({ product }: { product?: Product }) {
         </div>
         <label className="check"><input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)} /> 上架（前台可見）</label>
         <label className="check"><input type="checkbox" checked={bestseller} onChange={(e) => setBestseller(e.target.checked)} /> 熱銷</label>
-        <label className="check"><input type="checkbox" checked={hygiene} onChange={(e) => setHygiene(e.target.checked)} /> 有衛生貼條</label>
       </section>
       <section className="admin-panel">
         <h2>顏色、尺寸、庫存</h2>
@@ -136,8 +127,8 @@ export function ProductForm({ product }: { product?: Product }) {
           </div>
         ))}
         <button type="button" className="btn btn-outline" onClick={() => setColors((list) => [...list, { name: "", hex: "#1B365D" }])}>新增顏色</button>
-        {gender !== "men" && <label className="field"><span>{gender === "couples" ? "她的尺寸" : "尺寸"}</span><input value={herSizes} onChange={(e) => setHerSizes(e.target.value)} placeholder={WOMEN_SIZES.join(", ")} /></label>}
-        {gender !== "women" && <label className="field"><span>{gender === "couples" ? "他的尺寸" : "尺寸"}</span><input value={hisSizes} onChange={(e) => setHisSizes(e.target.value)} placeholder={MEN_SIZES.join(", ")} /></label>}
+        {gender !== "men" && <label className="field"><span>尺寸</span><input value={herSizes} onChange={(e) => setHerSizes(e.target.value)} placeholder={WOMEN_SIZES.join(", ")} /></label>}
+        {gender === "men" && <label className="field"><span>尺寸</span><input value={hisSizes} onChange={(e) => setHisSizes(e.target.value)} placeholder={MEN_SIZES.join(", ")} /></label>}
         <div className="stock-grid">
           {draft.colors.flatMap((color) => slots.map((slot) => {
             const key = variantKey(color.name, slot.label);

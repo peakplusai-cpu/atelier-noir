@@ -90,15 +90,14 @@ export function SizeGuidePanel({
         <div className="tabs tabs-small" role="tablist">
           {charts.map((c, i) => (
             <button key={c} type="button" role="tab" aria-selected={i === tab} data-active={i === tab} onClick={() => setTab(i)}>
-              {SIZE_CHARTS[c].title.replace("Women's ", "Her ").replace("Men's ", "His ")}
+              {SIZE_CHARTS[c].title}
             </button>
           ))}
         </div>
       )}
       <SizeChartTable chartKey={key} unit={unit} highlight={highlight} />
       <p className="fine">
-        Measure over your underwear (or swimwear) without pulling the tape tight. Between sizes? Choose the larger size for
-        a relaxed fit.
+        Measure without pulling the tape tight. Between sizes, choose the larger size.
       </p>
     </div>
   );
@@ -113,11 +112,9 @@ export function StandaloneSizeGuide() {
         <p className="eyebrow">Unit</p>
         <UnitToggle unit={unit} onChange={setUnit} />
       </div>
-      {keys
-        .filter((k) => k !== "womenDress")
-        .map((k) => (
-          <SizeChartTable key={k} chartKey={k} unit={unit} />
-        ))}
+      {keys.map((k) => (
+        <SizeChartTable key={k} chartKey={k} unit={unit} />
+      ))}
     </div>
   );
 }

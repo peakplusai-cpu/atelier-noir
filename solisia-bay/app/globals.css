@@ -586,7 +586,7 @@ main {
   object-fit: cover;
 }
 
-/* Portrait photo: a wide hero crops sky and sand, and the pier stays in the middle. */
+/* Portrait photo sits in the middle of a wide frame. */
 .hero-photo {
   object-position: center 50%;
 }
@@ -766,7 +766,7 @@ main {
 
 .tiles-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: clamp(12px, 1.6vw, 24px);
 }
 
@@ -788,11 +788,11 @@ main {
 .tile-label {
   position: absolute;
   inset: auto 0 0 0;
-  padding: 80px 26px 26px;
+  padding: 56px 26px 22px;
   display: grid;
   gap: 4px;
   color: #fff;
-  background: linear-gradient(to top, rgba(18, 38, 74, 0.78), rgba(18, 38, 74, 0));
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0));
 }
 
 .tile-label .serif {
@@ -820,9 +820,6 @@ main {
 @media (max-width: 800px) {
   .tiles-grid {
     grid-template-columns: 1fr;
-  }
-  .tile-media {
-    aspect-ratio: 5 / 4;
   }
 }
 

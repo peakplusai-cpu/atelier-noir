@@ -3,9 +3,8 @@ import ProductImage from "./ProductImage";
 import { getShop, publishedProducts } from "@/lib/shop";
 
 const TILES = [
-  { href: "/collection/women", label: "女裝 Women", slug: "amalfi-plunge-one-piece" },
-  { href: "/collection/men", label: "男裝 Men", slug: "havana-cuban-collar-shirt" },
-  { href: "/collection/couples", label: "雙人 Couples", slug: "amalfi-couples-set" },
+  { href: "/collection/women", label: "女裝 Women", slug: "clack-box-tee" },
+  { href: "/collection/men", label: "男裝 Men", slug: "clack-oxford-shirt" },
 ];
 
 export default async function CategoryTiles() {

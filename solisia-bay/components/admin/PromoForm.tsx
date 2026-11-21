@@ -45,7 +45,6 @@ export function PromoForm({ promo, products }: { promo?: Promotion; products: Pr
             <select name="gender" defaultValue={promo?.gender || "women"}>
               <option value="women">Women</option>
               <option value="men">Men</option>
-              <option value="couples">Couples</option>
             </select>
           </label>
           <label className="field"><span>商品</span>

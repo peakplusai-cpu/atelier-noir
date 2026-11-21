@@ -35,27 +35,13 @@ const her: ModelRef = { label: "Her", heightCm: 176, weightKg: 56, wears: "S" };
 const him: ModelRef = { label: "Him", heightCm: 188, weightKg: 79, wears: "M" };
 
 const ART: Record<StyleKey, ArtKind[]> = {
-  "bikini-top": ["triangleTop"],
-  "bikini-bottom": ["bikiniBottom"],
-  "one-piece": ["onePieceFront"],
-  "cover-up": ["kaftan"],
-  "cuban-shirt": ["cubanShirt"],
-  "cuban-set": ["cubanSet"],
-  "swim-trunks": ["trunks"],
-  shorts: ["bermuda"],
-  "couples-set": ["bikiniSet", "trunks"],
-};
-
-const CHARTS: Record<StyleKey, ChartKey[]> = {
-  "bikini-top": ["womenTop"],
-  "bikini-bottom": ["womenBottom"],
-  "one-piece": ["womenOnePiece"],
-  "cover-up": ["womenDress"],
-  "cuban-shirt": ["menShirt"],
-  "cuban-set": ["menShirt", "menBottom"],
-  "swim-trunks": ["menBottom"],
-  shorts: ["menBottom"],
-  "couples-set": ["womenTop", "womenBottom", "menBottom"],
+  tee: ["tee"],
+  shirt: ["shirt"],
+  hoodie: ["hoodie"],
+  jacket: ["jacket"],
+  pants: ["pants"],
+  shorts: ["shorts"],
+  accessory: ["accessory"],
 };
 
 if (typeof window !== "undefined") {
@@ -103,9 +89,10 @@ export function publishedProducts(shop: ShopData): Product[] {
   return shop.products.filter((product) => (product.status ?? "published") === "published");
 }
 
-export function defaultsFor(gender: Gender, style: StyleKey): Pick<Product, "art" | "charts" | "models" | "finish" | "lookWith" | "care" | "hygiene"> {
-  const models = gender === "men" ? [him] : gender === "couples" ? [her, him] : [her];
-  return { art: ART[style], charts: CHARTS[style], models, finish: "solid", lookWith: [], care: [], hygiene: style !== "cuban-shirt" && style !== "shorts" };
+export function defaultsFor(gender: Gender, style: StyleKey): Pick<Product, "art" | "charts" | "models" | "finish" | "lookWith" | "care"> {
+  const models = gender === "men" ? [him] : [her];
+  const charts: ChartKey[] = gender === "men" ? ["men"] : ["women"];
+  return { art: ART[style] ?? ["tee"], charts, models, finish: "solid", lookWith: [], care: [] };
 }
 
 function normalize(raw: Partial<ShopData> | null | undefined): ShopData {

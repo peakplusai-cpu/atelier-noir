@@ -11,8 +11,8 @@ import { normalizeCoupon, type PromoKind, type PromoScope, type Promotion, type 
 import { defaultsFor, getShop, mutateShop, newId, slugify, type ShopSettings } from "@/lib/shop";
 import type { Colorway, Gender, Product, SizeSelector, StyleKey } from "@/lib/types";
 
-const GENDERS: Gender[] = ["women", "men", "couples"];
-const STYLES: StyleKey[] = ["bikini-top", "bikini-bottom", "one-piece", "cover-up", "cuban-shirt", "cuban-set", "swim-trunks", "shorts", "couples-set"];
+const GENDERS: Gender[] = ["women", "men"];
+const STYLES: StyleKey[] = ["tee", "shirt", "hoodie", "jacket", "pants", "shorts", "accessory"];
 
 async function guard(): Promise<void> {
   const headerList = await headers();
@@ -37,12 +37,6 @@ function num(value: unknown): number {
 }
 
 function selectorsFor(gender: Gender, her: string[], his: string[]): SizeSelector[] {
-  if (gender === "couples") {
-    return [
-      { key: "her", label: "Her size", options: her.length ? her : [...WOMEN_SIZES] },
-      { key: "his", label: "His size", options: his.length ? his : [...MEN_SIZES] },
-    ];
-  }
   const options = gender === "men" ? (his.length ? his : [...MEN_SIZES]) : her.length ? her : [...WOMEN_SIZES];
   return [{ key: "size", label: "Size", options }];
 }
@@ -126,7 +120,6 @@ export async function saveProduct(_prev: string, form: FormData): Promise<string
       details: details.length ? details : existing?.details ?? [],
       colors,
       selectors,
-      hygiene: Boolean(payload.hygiene),
       bestseller: Boolean(payload.bestseller),
       isNew: Boolean(payload.isNew),
       status,

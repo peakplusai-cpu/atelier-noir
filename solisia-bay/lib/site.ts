@@ -6,7 +6,7 @@ export const SITE = {
   returnDays: 30,
   email: "hello@solisiabay.com",
   // Drop real campaign media into /public and set these to switch the hero from the art-directed scene to photography/video.
-  heroImage: "/hero/pier.jpg",
+  heroImage: "",
   heroVideo: "",
 } as const;
 

@@ -5,9 +5,9 @@ import ProductImage from "./ProductImage";
 import { ModelInfo, SizeGuidePanel, UnitToggle } from "./SizeGuide";
 import { useCart } from "./CartProvider";
 import { Accordion, AccordionItem } from "./Accordion";
-import { STYLE_LABELS, productBrand, productTags, sizeLabel, stockOf } from "@/lib/catalog";
+import { productBrand, productTags, sizeLabel, stockOf, styleLabel } from "@/lib/catalog";
 import { formatUsd, savings } from "@/lib/money";
-import { HYGIENE_COPY, RETURNS_COPY, SHIPPING_COPY } from "@/lib/policies";
+import { RETURNS_COPY, SHIPPING_COPY } from "@/lib/policies";
 import type { Unit } from "@/lib/sizes";
 import type { Product } from "@/lib/types";
 import type { ArtView } from "./ProductArt";
@@ -86,7 +86,7 @@ export default function PdpClient({ product }: { product: Product }) {
       </div>
 
       <div className="pdp-info">
-        <p className="eyebrow">{productBrand(product) || "CLACK"} · {STYLE_LABELS[product.style]}</p>
+        <p className="eyebrow">{productBrand(product) || "CLACK"} · {styleLabel(product.style)}</p>
         <h1 className="serif">{product.name}</h1>
         {productTags(product).length > 0 && <p className="tag-row">{productTags(product).map((tag) => <span key={tag} className="sticker">{tag}</span>)}</p>}
         <p className="pdp-price price price-sticker">
@@ -180,13 +180,6 @@ export default function PdpClient({ product }: { product: Product }) {
               Open the full size chart ({unit === "cm" ? "cm" : "inch"})
             </button>
           </AccordionItem>
-          {product.hygiene && (
-            <AccordionItem title="Hygiene Liner">
-              {HYGIENE_COPY.map((t) => (
-                <p key={t}>{t}</p>
-              ))}
-            </AccordionItem>
-          )}
           <AccordionItem title="Shipping">
             {SHIPPING_COPY.map((t) => (
               <p key={t}>{t}</p>
