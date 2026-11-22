@@ -26,7 +26,7 @@ export function PromoForm({ promo, products }: { promo?: Promotion; products: Pr
           <label className="field"><span>類型</span>
             <select name="kind" defaultValue={promo?.kind ?? "percent"}>
               <option value="percent">百分比</option>
-              <option value="amount">固定金額 USD</option>
+              <option value="amount">固定金額 TWD</option>
               <option value="shipping">免運</option>
             </select>
           </label>

@@ -1,5 +1,7 @@
 import { apiJson } from "@/lib/api";
 import { clientIpFrom, originAllowed, readJson } from "@/lib/guard";
+import { translateError } from "@/lib/i18n";
+import { marketFromRequest } from "@/lib/market";
 import { getOrder, updateOrder, type OrderStatus } from "@/lib/orders";
 import { capturePayPalOrder } from "@/lib/paypal";
 import { chargeCents } from "@/lib/pricing";
@@ -30,15 +32,16 @@ async function markReview(code: string, captureId: string, amountCents: number):
 }
 
 export async function POST(request: Request) {
-  if (!originAllowed(request)) return apiJson({ error: "Invalid request." }, 403);
+  const say = (message: string) => translateError(marketFromRequest(request).lang, message);
+  if (!originAllowed(request)) return apiJson({ error: say("Invalid request.") }, 403);
   const limit = rateLimit(`paypal-capture:${clientIpFrom(request.headers)}`, 12, 10 * 60 * 1000);
-  if (!limit.ok) return apiJson({ error: "Too many payment attempts. Please wait and try again." }, 429);
+  if (!limit.ok) return apiJson({ error: say("Too many payment attempts. Please wait and try again.") }, 429);
 
   let body: unknown;
   try {
     body = await readJson(request);
   } catch {
-    return apiJson({ error: "Invalid request." }, 400);
+    return apiJson({ error: say("Invalid request.") }, 400);
   }
   const record = (body ?? {}) as { code?: unknown; token?: unknown; paypalOrderId?: unknown };
   const code = typeof record.code === "string" ? record.code : "";
@@ -46,21 +49,21 @@ export async function POST(request: Request) {
   const paypalOrderId = typeof record.paypalOrderId === "string" ? record.paypalOrderId : "";
 
   const order = code ? await getOrder(code).catch(() => null) : null;
-  if (!order || !safeEqualString(order.token, token)) return apiJson({ error: "Order not found." }, 404);
+  if (!order || !safeEqualString(order.token, token)) return apiJson({ error: say("Order not found.") }, 404);
   if (SETTLED.includes(order.status)) return apiJson({ ok: true });
   if (order.status !== "pending" || !order.paymentOrderId || order.paymentOrderId === "demo" || !safeEqualString(order.paymentOrderId, paypalOrderId)) {
-    return apiJson({ error: "This payment doesn't match the order." }, 409);
+    return apiJson({ error: say("This payment doesn't match the order.") }, 409);
   }
   const expected = chargeCents(order);
-  if (expected === null) return apiJson({ error: "This payment doesn't match the order." }, 409);
+  if (expected === null) return apiJson({ error: say("This payment doesn't match the order.") }, 409);
 
   try {
     const capture = await capturePayPalOrder(paypalOrderId);
-    if (!safeEqualString(capture.customId, order.code) || capture.currency !== "USD" || capture.amountCents !== expected) {
+    if (!safeEqualString(capture.customId, order.code) || capture.currency !== (order.currency || "USD") || capture.amountCents !== expected) {
       console.error("[paypal] capture mismatch", { code: order.code, capture, expected });
       await markReview(order.code, capture.captureId, capture.amountCents);
       return apiJson(
-        { error: "The payment amount didn't match the order. Please contact us before trying again." },
+        { error: say("The payment amount didn't match the order. Please contact us before trying again.") },
         409
       );
     }

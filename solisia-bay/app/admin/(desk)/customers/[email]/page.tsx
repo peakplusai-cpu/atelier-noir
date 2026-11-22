@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { listOrders } from "@/lib/orders";
-import { formatUsd } from "@/lib/money";
+import { formatMoney } from "@/lib/money";
 import { STATUS_LABEL } from "@/lib/staff-labels";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +22,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ email
           {orders.map((order) => (
             <li key={order.code}>
               <span><Link href={`/admin/orders/${order.code}`}>{order.code}</Link><small>{STATUS_LABEL[order.status]}</small></span>
-              <span>{formatUsd(order.total)}</span>
+              <span>{formatMoney(order.total, order.currency || "TWD", "zh")}</span>
             </li>
           ))}
         </ul>

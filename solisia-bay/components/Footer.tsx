@@ -1,7 +1,10 @@
 import Link from "next/link";
+import { t } from "@/lib/i18n";
+import { getMarket } from "@/lib/market-server";
 import { SITE } from "@/lib/site";
 
-export default function Footer() {
+export default async function Footer() {
+  const { lang } = await getMarket();
   return (
     <footer className="footer">
       <div className="footer-top">
@@ -11,28 +14,28 @@ export default function Footer() {
           </p>
         </div>
         <div>
-          <h4>Shop</h4>
-          <Link href="/collection/women">女裝 Women</Link>
-          <Link href="/collection/men">男裝 Men</Link>
-          <Link href="/collection/all">全部 Shop All</Link>
+          <h4>{t(lang, "shop")}</h4>
+          <Link href="/collection/women">{t(lang, "navWomen")}</Link>
+          <Link href="/collection/men">{t(lang, "navMen")}</Link>
+          <Link href="/collection/all">{t(lang, "navAll")}</Link>
         </div>
         <div>
-          <h4>Help</h4>
-          <Link href="/policies/shipping-returns">Shipping &amp; Returns</Link>
-          <Link href="/policies/size-guide">Size Guide</Link>
+          <h4>{t(lang, "help")}</h4>
+          <Link href="/policies/shipping-returns">{t(lang, "shippingReturns")}</Link>
+          <Link href="/policies/size-guide">{t(lang, "sizeGuide")}</Link>
           <a href={`mailto:${SITE.email}`}>{SITE.email}</a>
           <Link href="/admin" className="staff-entry">
-            員工專用入口
+            {t(lang, "staff")}
           </Link>
         </div>
         <div>
-          <h4>結帳 Secure checkout</h4>
-          <p className="footer-note">付款由 PayPal 處理。CLACK 看不到、也不保存你的卡號。</p>
+          <h4>{t(lang, "checkoutTitle")}</h4>
+          <p className="footer-note">{t(lang, "paypalNote")}</p>
         </div>
       </div>
       <div className="footer-bottom">
-        <p>&copy; {new Date().getFullYear()} CLACK. All rights reserved.</p>
-        <p>價格皆為 USD。</p>
+        <p>&copy; {new Date().getFullYear()} CLACK</p>
+        <p>{t(lang, "pricedIn")}</p>
       </div>
     </footer>
   );

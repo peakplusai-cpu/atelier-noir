@@ -1,10 +1,13 @@
 "use client";
 
 import { useRef } from "react";
+import { t } from "@/lib/i18n";
 import ProductCard from "./ProductCard";
+import { useMarket } from "./MarketProvider";
 import type { Product } from "@/lib/types";
 
 export default function BestsellerCarousel({ items }: { items: Product[] }) {
+  const { lang } = useMarket();
   const track = useRef<HTMLDivElement>(null);
 
   const scroll = (dir: 1 | -1) => {
@@ -18,14 +21,14 @@ export default function BestsellerCarousel({ items }: { items: Product[] }) {
   return (
     <div className="carousel">
       <div className="carousel-controls">
-        <button type="button" className="round-btn" aria-label="Previous products" onClick={() => scroll(-1)}>
+        <button type="button" className="round-btn" aria-label={t(lang, "prev")} onClick={() => scroll(-1)}>
           &larr;
         </button>
-        <button type="button" className="round-btn" aria-label="Next products" onClick={() => scroll(1)}>
+        <button type="button" className="round-btn" aria-label={t(lang, "next")} onClick={() => scroll(1)}>
           &rarr;
         </button>
       </div>
-      <div className="carousel-track" ref={track} tabIndex={0} aria-label="Best sellers">
+      <div className="carousel-track" ref={track} tabIndex={0} aria-label={t(lang, "bestsellers")}>
         {items.map((p, i) => (
           <div className="slide" key={p.slug}>
             <ProductCard product={p} priority={i < 3} />

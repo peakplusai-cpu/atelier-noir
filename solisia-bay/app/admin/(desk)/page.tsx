@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { listOrders, StorageError, type Order } from "@/lib/orders";
 import { totalStock } from "@/lib/catalog";
-import { formatUsd } from "@/lib/money";
+import { formatMoney, formatUsd } from "@/lib/money";
 import { STATUS_LABEL } from "@/lib/staff-labels";
 import { getShop } from "@/lib/shop";
 
@@ -22,7 +22,7 @@ export default async function DashboardPage() {
   const shop = await getShop();
   const published = shop.products.filter((product) => (product.status ?? "published") === "published");
   const open = orders.filter((order) => order.status === "paid" || order.status === "shipped");
-  const revenue = orders.filter((order) => order.status === "paid" || order.status === "shipped" || order.status === "completed").reduce((sum, order) => sum + order.total, 0);
+  const revenue = orders.filter((order) => order.status === "paid" || order.status === "shipped" || order.status === "completed").reduce((sum, order) => sum + (order.baseTotal || (order.currency === "TWD" ? order.total : 0)), 0);
   const customers = new Set(orders.map((order) => order.email.toLowerCase())).size;
   const low = published.filter((product) => {
     const stock = totalStock(product);
@@ -61,7 +61,7 @@ export default async function DashboardPage() {
                   <td>{order.name}<small>{order.email}</small></td>
                   <td>{when(order.createdAt)}</td>
                   <td><span className={`staff-status status-${order.status}`}>{STATUS_LABEL[order.status]}</span></td>
-                  <td>{formatUsd(order.total)}</td>
+                  <td>{formatMoney(order.total, order.currency || "TWD", "zh")}</td>
                 </tr>
               ))}
             </tbody>

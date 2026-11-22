@@ -1,14 +1,21 @@
+import { currencyDecimals, roundCurrency } from "./currency";
 import { SITE } from "./site";
 
-export function formatUsd(amount: number): string {
-  const safe = Number.isFinite(amount) ? amount : 0;
-  const whole = Number.isInteger(safe);
-  return new Intl.NumberFormat("en-US", {
+export function formatMoney(amount: number, currency = "TWD", lang: "zh" | "en" = "en"): string {
+  const digits = currencyDecimals(currency);
+  const safe = roundCurrency(Number.isFinite(amount) ? amount : 0, currency);
+  return new Intl.NumberFormat(lang === "zh" ? "zh-Hant" : "en", {
     style: "currency",
-    currency: SITE.currency,
-    minimumFractionDigits: whole ? 0 : 2,
-    maximumFractionDigits: 2,
+    currency,
+    currencyDisplay: "code",
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
   }).format(safe);
+}
+
+/** Admin totals are the stored TWD amounts. */
+export function formatUsd(amount: number): string {
+  return formatMoney(amount, "TWD", "zh");
 }
 
 export function roundMoney(amount: number): number {

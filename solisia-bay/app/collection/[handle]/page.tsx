@@ -4,7 +4,9 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import FilterBar from "@/components/FilterBar";
 import ProductCard from "@/components/ProductCard";
-import { ALL_SIZES, COLLECTIONS, productBrand, productSizes, productTags, productsFor, styleLabel } from "@/lib/catalog";
+import { ALL_SIZES, COLLECTIONS, productBrand, productSizes, productTags, productsFor } from "@/lib/catalog";
+import { styleText, t } from "@/lib/i18n";
+import { getMarket } from "@/lib/market-server";
 import { getShop, publishedProducts } from "@/lib/shop";
 import type { Product, StyleKey } from "@/lib/types";
 
@@ -22,7 +24,10 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { handle } = await params;
   const c = COLLECTIONS[handle];
-  return c ? { title: c.title, description: "CLACK" } : {};
+  if (!c) return {};
+  const market = await getMarket();
+  const title = handle === "women" ? t(market.lang, "navWomen") : handle === "men" ? t(market.lang, "navMen") : t(market.lang, "navAll");
+  return { title, description: "CLACK" };
 }
 
 function list(v: string | string[] | undefined): string[] {
@@ -39,15 +44,17 @@ function sortProducts(items: Product[], sort: string): Product[] {
 }
 
 const TABS = [
-  { handle: "all", label: "全部 All" },
-  { handle: "women", label: "女裝 Women" },
-  { handle: "men", label: "男裝 Men" },
-];
+  { handle: "all", label: "navAll" },
+  { handle: "women", label: "navWomen" },
+  { handle: "men", label: "navMen" },
+] as const;
 
 export default async function CollectionPage({ params, searchParams }: Props) {
   const { handle } = await params;
   const collection = COLLECTIONS[handle];
   if (!collection) notFound();
+  const market = await getMarket();
+  const title = handle === "women" ? t(market.lang, "navWomen") : handle === "men" ? t(market.lang, "navMen") : t(market.lang, "navAll");
 
   const sp = await searchParams;
   const sizes = list(sp.size);
@@ -72,11 +79,11 @@ export default async function CollectionPage({ params, searchParams }: Props) {
   return (
     <section className="page">
       <header className="collection-head">
-        <h1 className="serif">{collection.title}</h1>
-        <nav className="tabs" aria-label="Collections">
-          {TABS.map((t) => (
-            <Link key={t.handle} href={`/collection/${t.handle}`} data-active={t.handle === handle}>
-              {t.label}
+        <h1 className="serif">{title}</h1>
+        <nav className="tabs" aria-label={t(market.lang, "collections")}>
+          {TABS.map((tab) => (
+            <Link key={tab.handle} href={`/collection/${tab.handle}`} data-active={tab.handle === handle}>
+              {t(market.lang, tab.label)}
             </Link>
           ))}
         </nav>
@@ -86,7 +93,7 @@ export default async function CollectionPage({ params, searchParams }: Props) {
         <Suspense fallback={null}>
           <FilterBar
             sizes={sizeOptions}
-            styles={styleKeys.map((k) => ({ value: k, label: styleLabel(k) }))}
+            styles={styleKeys.map((k) => ({ value: k, label: styleText(k, market.lang) }))}
             brands={Array.from(new Set(base.map(productBrand).filter(Boolean))).sort()}
             tags={Array.from(new Set(base.flatMap(productTags))).sort()}
             total={base.length}
@@ -97,13 +104,13 @@ export default async function CollectionPage({ params, searchParams }: Props) {
 
       {base.length === 0 ? (
         <div className="empty">
-          <p className="serif">尚無商品</p>
+          <p className="serif">{t(market.lang, "emptyCatalog")}</p>
         </div>
       ) : items.length === 0 ? (
         <div className="empty">
-          <p className="serif">尚無商品</p>
+          <p className="serif">{t(market.lang, "emptyFilter")}</p>
           <Link href={`/collection/${handle}`} className="btn btn-outline">
-            Clear filters
+            {t(market.lang, "clearFilters")}
           </Link>
         </div>
       ) : (

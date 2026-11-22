@@ -64,7 +64,7 @@ export async function saveProduct(_prev: string, form: FormData): Promise<string
   const style = STYLES.includes(payload.style as StyleKey) ? (payload.style as StyleKey) : null;
   if (!gender || !style) return "請選擇分類";
   const price = Math.round(num(payload.price) * 100) / 100;
-  if (price <= 0 || price > 100_000) return "售價必須大於 0，且不可超過 100000";
+  if (price <= 0 || price > 1_000_000) return "售價必須大於 0，且不可超過 1000000";
   const compareAt = Math.round(num(payload.compareAt) * 100) / 100;
   const colors = (Array.isArray(payload.colors) ? payload.colors : [])
     .map((color) => {
@@ -89,6 +89,8 @@ export async function saveProduct(_prev: string, form: FormData): Promise<string
   const status = payload.status === "draft" ? "draft" : "published";
   const tagline = text(payload.tagline, 160);
   const description = text(payload.description, 2000);
+  const nameEn = text(payload.nameEn, 120);
+  const descriptionEn = text(payload.descriptionEn, 2000);
   const brand = text(payload.brand, 40);
   const tags = text(payload.tags, 160)
     .split(/[,，]/)
@@ -109,12 +111,14 @@ export async function saveProduct(_prev: string, form: FormData): Promise<string
       ...(existing ?? defaultsFor(gender, style)),
       slug: nextSlug,
       name,
+      nameEn: nameEn || undefined,
       gender,
       style,
       price,
       compareAt: compareAt > price ? compareAt : undefined,
       tagline: tagline || name,
       description: description || tagline || name,
+      descriptionEn: descriptionEn || undefined,
       brand: brand || undefined,
       tags: tags.length ? tags : undefined,
       details: details.length ? details : existing?.details ?? [],

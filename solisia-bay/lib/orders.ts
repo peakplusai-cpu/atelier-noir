@@ -28,6 +28,16 @@ export type Order = {
   shipping: number;
   total: number;
   currency: string;
+  /** Catalog total in TWD before conversion. */
+  baseCurrency: string;
+  baseSubtotal: number;
+  baseShipping: number;
+  baseDiscount: number;
+  baseTotal: number;
+  /** Currency shown to the visitor. PayPal may charge `currency` instead. */
+  displayCurrency: string;
+  displayTotal: number;
+  fxRate: number;
   email: string;
   name: string;
   phone: string;
@@ -109,6 +119,14 @@ function fromRow(r: Row): Order {
     shippingWaived: Boolean(meta.shippingWaived),
     shipThreshold: Number(meta.shipThreshold ?? SITE.freeShippingThreshold),
     shipFlat: Number(meta.shipFlat ?? SITE.flatShipping),
+    baseCurrency: "TWD",
+    baseSubtotal: Number(meta.baseSubtotal ?? r.subtotal),
+    baseShipping: Number(meta.baseShipping ?? r.shipping),
+    baseDiscount: Number(meta.baseDiscount ?? meta.discount ?? 0),
+    baseTotal: Number(meta.baseTotal ?? r.total),
+    displayCurrency: typeof meta.displayCurrency === "string" ? meta.displayCurrency : r.currency,
+    displayTotal: Number(meta.displayTotal ?? r.total),
+    fxRate: Number(meta.fxRate ?? (r.currency === "TWD" ? 1 : 0)),
   };
 }
 
@@ -139,6 +157,13 @@ function toRow(o: Order): Row {
       shippingWaived: o.shippingWaived,
       shipThreshold: o.shipThreshold,
       shipFlat: o.shipFlat,
+      baseSubtotal: o.baseSubtotal,
+      baseShipping: o.baseShipping,
+      baseDiscount: o.baseDiscount,
+      baseTotal: o.baseTotal,
+      displayCurrency: o.displayCurrency,
+      displayTotal: o.displayTotal,
+      fxRate: o.fxRate,
     },
   };
 }
@@ -152,7 +177,18 @@ function readFileStore(): Order[] {
     throw new StorageError("Order file is unreadable.");
   }
   if (!Array.isArray(parsed)) throw new StorageError("Order file is unreadable.");
-  return parsed as Order[];
+  return (parsed as Order[]).map((order) => ({
+    ...order,
+    currency: order.currency || "TWD",
+    baseCurrency: order.baseCurrency || "TWD",
+    baseSubtotal: order.baseSubtotal ?? order.subtotal,
+    baseShipping: order.baseShipping ?? order.shipping,
+    baseDiscount: order.baseDiscount ?? order.discount ?? 0,
+    baseTotal: order.baseTotal ?? order.total,
+    displayCurrency: order.displayCurrency || order.currency || "TWD",
+    displayTotal: order.displayTotal ?? order.total,
+    fxRate: order.fxRate ?? (order.currency === "USD" ? 0 : 1),
+  }));
 }
 
 function writeFileStore(orders: Order[]): void {
@@ -189,7 +225,21 @@ export type NewOrder = Pick<
   | "shippingWaived"
   | "shipThreshold"
   | "shipFlat"
->;
+> &
+  Partial<
+    Pick<
+      Order,
+      | "currency"
+      | "baseCurrency"
+      | "baseSubtotal"
+      | "baseShipping"
+      | "baseDiscount"
+      | "baseTotal"
+      | "displayCurrency"
+      | "displayTotal"
+      | "fxRate"
+    >
+  >;
 
 export async function createOrder(input: NewOrder): Promise<Order> {
   const order: Order = {
@@ -197,7 +247,15 @@ export async function createOrder(input: NewOrder): Promise<Order> {
     code: newCode(),
     token: randomBytes(16).toString("hex"),
     status: "pending",
-    currency: "USD",
+    currency: input.currency || "TWD",
+    baseCurrency: "TWD",
+    baseSubtotal: input.baseSubtotal ?? input.subtotal,
+    baseShipping: input.baseShipping ?? input.shipping,
+    baseDiscount: input.baseDiscount ?? input.discount,
+    baseTotal: input.baseTotal ?? input.total,
+    displayCurrency: input.displayCurrency || input.currency || "TWD",
+    displayTotal: input.displayTotal ?? input.total,
+    fxRate: input.fxRate ?? 1,
     paymentOrderId: null,
     paymentCaptureId: null,
     amountPaidCents: null,

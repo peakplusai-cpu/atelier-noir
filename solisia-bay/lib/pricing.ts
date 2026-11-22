@@ -13,6 +13,8 @@ export type PricedItem = {
   color: string;
   size: string;
   unitPrice: number;
+  /** Catalog price in TWD, kept after the line is converted for checkout. */
+  unitPriceTwd?: number;
   qty: number;
   gender?: Gender;
 };

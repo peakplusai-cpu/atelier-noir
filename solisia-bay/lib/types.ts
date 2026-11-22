@@ -22,12 +22,16 @@ export type ModelRef = {
 export type Product = {
   slug: string;
   name: string;
+  /** English name. Traditional Chinese uses `name`. */
+  nameEn?: string;
   gender: Gender;
   style: StyleKey;
   price: number;
   compareAt?: number;
   tagline: string;
   description: string;
+  /** English description. Traditional Chinese uses `description`. */
+  descriptionEn?: string;
   details: string[];
   care: string[];
   colors: Colorway[];

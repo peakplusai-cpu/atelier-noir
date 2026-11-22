@@ -9,7 +9,11 @@ import { FreeShippingBar } from "./CartDrawer";
 import { sizeLabel } from "@/lib/catalog";
 import { useCatalog } from "./CatalogProvider";
 import { COUNTRIES } from "@/lib/countries";
-import { formatUsd, shippingFor } from "@/lib/money";
+import { chargeCurrency } from "@/lib/currency";
+import { previewTotals } from "@/lib/fx";
+import { colorLabel, localizedName, t } from "@/lib/i18n";
+import { formatMoney } from "@/lib/money";
+import { useMarket } from "./MarketProvider";
 
 type LockedOrder = {
   code: string;
@@ -19,6 +23,9 @@ type LockedOrder = {
   discount?: number;
   shipping: number;
   total: number;
+  currency: string;
+  displayCurrency: string;
+  displayTotal: number;
 };
 
 type SummaryLine = {
@@ -33,12 +40,15 @@ type SummaryLine = {
 };
 
 export default function CheckoutForm({ paypalClientId }: { paypalClientId: string }) {
-  const { lines, subtotal, ready, setQty, remove } = useCart();
+  const { lines, ready, setQty, remove } = useCart();
   const { products, settings } = useCatalog();
+  const market = useMarket();
+  const lang = market.lang;
+  const money = (amount: number, currency = market.currency) => formatMoney(amount, currency, lang);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [coupon, setCoupon] = useState("");
-  const [quote, setQuote] = useState<{ total: number; discount: number; coupon: string } | null>(null);
+  const [quote, setQuote] = useState<{ total: number; discount: number; coupon: string; currency: string; chargeTotal: number } | null>(null);
   const [locked, setLocked] = useState<LockedOrder | null>(null);
 
   useEffect(() => {
@@ -57,18 +67,32 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
         }),
       })
         .then((res) => res.json())
-        .then((data: { total?: number; discount?: number; coupon?: string; error?: string }) => {
-          if (data.coupon && typeof data.total === "number") setQuote({ total: data.total, discount: data.discount ?? 0, coupon: data.coupon });
-          else setQuote(null);
+        .then((data: { total?: number; discount?: number; coupon?: string; error?: string; currency?: string; chargeTotal?: number }) => {
+          if (data.coupon && typeof data.total === "number") {
+            setQuote({ total: data.total, discount: data.discount ?? 0, coupon: data.coupon, currency: data.currency ?? market.currency, chargeTotal: data.chargeTotal ?? data.total });
+          } else setQuote(null);
         })
         .catch(() => setQuote(null));
     }, 350);
     return () => window.clearTimeout(timer);
   }, [coupon, lines]);
 
-  const viewSubtotal = locked?.subtotal ?? subtotal;
-  const shipping = locked?.shipping ?? shippingFor(subtotal, { threshold: settings.freeShippingThreshold, flat: settings.flatShipping });
-  const total = locked?.total ?? viewSubtotal + shipping;
+  const preview = previewTotals(
+    lines.map((line) => ({ unitPrice: products.find((item) => item.slug === line.slug)?.price ?? 0, qty: line.qty })),
+    { threshold: settings.freeShippingThreshold, flat: settings.flatShipping },
+    market.currency,
+    market.rates
+  );
+  const payableCode = chargeCurrency(market.currency);
+  const payablePreview = payableCode === market.currency ? preview : previewTotals(
+    lines.map((line) => ({ unitPrice: products.find((item) => item.slug === line.slug)?.price ?? 0, qty: line.qty })),
+    { threshold: settings.freeShippingThreshold, flat: settings.flatShipping },
+    payableCode,
+    market.rates
+  );
+  const viewSubtotal = locked?.subtotal ?? preview.subtotal;
+  const shipping = locked?.shipping ?? preview.shipping;
+  const total = locked?.total ?? preview.total;
   const summary: SummaryLine[] = locked
     ? locked.items.map((item) => ({
         key: `${item.slug}|${item.color}|${item.size}`,
@@ -84,11 +108,13 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
         return {
           key: line.key,
           slug: line.slug,
-          name: product?.name ?? "",
+          name: product ? localizedName(product, lang) : "",
           color: line.color,
           size: product ? sizeLabel(product, line.sizes) : "",
           qty: line.qty,
-          lineTotal: (product?.price ?? 0) * line.qty,
+          lineTotal: product
+            ? previewTotals([{ unitPrice: product.price, qty: line.qty }], { threshold: settings.freeShippingThreshold, flat: settings.flatShipping }, market.currency, market.rates).subtotal
+            : 0,
           cartKey: line.key,
         };
       });
@@ -130,9 +156,12 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
         discount?: number;
         shipping?: number;
         total?: number;
+        currency?: string;
+        displayCurrency?: string;
+        displayTotal?: number;
       };
       if (!res.ok || !data.code || !data.token) {
-        setError(data.error ?? "Something went wrong. Please try again.");
+        setError(data.error ?? t(lang, "generic"));
         setBusy(false);
         return;
       }
@@ -148,10 +177,13 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
         discount: data.discount ?? 0,
         shipping: data.shipping ?? 0,
         total: data.total ?? 0,
+        currency: data.currency ?? payableCode,
+        displayCurrency: data.displayCurrency ?? market.currency,
+        displayTotal: data.displayTotal ?? data.total ?? 0,
       });
       setBusy(false);
     } catch {
-      setError("Network error. Please check your connection and try again.");
+      setError(t(lang, "network"));
       setBusy(false);
     }
   }
@@ -159,9 +191,9 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
   if (ready && lines.length === 0 && !locked) {
     return (
       <div className="empty">
-        <p className="serif">Your bag is empty.</p>
+        <p className="serif">{t(lang, "emptyBag")}</p>
         <Link href="/collection/all" className="btn btn-solid">
-          Shop the collection
+          {t(lang, "shopCollection")}
         </Link>
       </div>
     );
@@ -171,22 +203,22 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
     <div className="checkout">
       <form className="checkout-form" onSubmit={onSubmit}>
         <fieldset disabled={Boolean(locked)}>
-          <h2 className="serif">聯絡 Contact</h2>
+          <h2 className="serif">{t(lang, "contact")}</h2>
           <label className="field">
-            <span>電子郵件 Email</span>
+            <span>{t(lang, "email")}</span>
             <input name="email" type="email" autoComplete="email" required maxLength={160} />
           </label>
 
-          <h2 className="serif">收件 Shipping address</h2>
+          <h2 className="serif">{t(lang, "shipAddress")}</h2>
           <label className="field">
-            <span>姓名 Full name</span>
+            <span>{t(lang, "fullName")}</span>
             <input name="name" autoComplete="name" required minLength={2} maxLength={100} />
           </label>
           <label className="field">
-            <span>國家 Country / region</span>
+            <span>{t(lang, "country")}</span>
             <select name="country" autoComplete="country-name" required defaultValue="">
               <option value="" disabled>
-                Select
+                {t(lang, "select")}
               </option>
               {COUNTRIES.map((country) => (
                 <option key={country}>{country}</option>
@@ -194,33 +226,33 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
             </select>
           </label>
           <label className="field">
-            <span>地址 Address</span>
+            <span>{t(lang, "address")}</span>
             <input name="line1" autoComplete="address-line1" required minLength={3} maxLength={160} />
           </label>
           <label className="field">
-            <span>Apartment, suite, etc. (optional)</span>
+            <span>{t(lang, "line2")}</span>
             <input name="line2" autoComplete="address-line2" maxLength={160} />
           </label>
           <div className="field-row">
             <label className="field">
-              <span>城市 City</span>
+              <span>{t(lang, "city")}</span>
               <input name="city" autoComplete="address-level2" required minLength={2} maxLength={80} />
             </label>
             <label className="field">
-              <span>State / province</span>
+              <span>{t(lang, "state")}</span>
               <input name="state" autoComplete="address-level1" maxLength={80} />
             </label>
             <label className="field">
-              <span>郵遞區號 Postal code</span>
+              <span>{t(lang, "postal")}</span>
               <input name="postalCode" autoComplete="postal-code" required minLength={2} maxLength={20} />
             </label>
           </div>
           <label className="field">
-            <span>Phone (optional, for the courier)</span>
+            <span>{t(lang, "phone")}</span>
             <input name="phone" type="tel" autoComplete="tel" maxLength={40} />
           </label>
           <label className="field">
-            <span>優惠碼 Gift code (optional)</span>
+            <span>{t(lang, "coupon")}</span>
             <input value={coupon} onChange={(event) => setCoupon(event.target.value)} maxLength={24} autoComplete="off" />
           </label>
         </fieldset>
@@ -233,9 +265,9 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
         {locked ? (
           <div className="paypal-box">
             <p className="fine">
-              Order {locked.code} &middot; {formatUsd(locked.total)}. Pay securely with PayPal.
+              {t(lang, "orderLine", { code: locked.code, amount: money(locked.total, locked.currency) })}
             </p>
-            <PayPalScriptProvider options={{ clientId: paypalClientId, currency: "USD", intent: "capture" }}>
+            <PayPalScriptProvider options={{ clientId: paypalClientId, currency: locked.currency, intent: "capture" }}>
               <PayPalButtons
                 style={{ layout: "vertical", shape: "rect", label: "pay" }}
                 createOrder={async () => {
@@ -245,7 +277,7 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
                     body: JSON.stringify({ code: locked.code, token: locked.token }),
                   });
                   const data = (await res.json().catch(() => ({}))) as { id?: string; error?: string };
-                  if (!res.ok || !data.id) throw new Error(data.error ?? "Could not start PayPal");
+                  if (!res.ok || !data.id) throw new Error(data.error ?? t(lang, "payStart"));
                   return data.id;
                 }}
                 onApprove={async (data) => {
@@ -256,32 +288,32 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
                   });
                   const payload = (await res.json().catch(() => ({}))) as { error?: string };
                   if (!res.ok) {
-                    setError(payload.error ?? "Payment could not be completed.");
+                    setError(payload.error ?? t(lang, "payFailed"));
                     return;
                   }
                   window.location.assign(
                     `/checkout/success?order=${encodeURIComponent(locked.code)}&token=${encodeURIComponent(locked.token)}`
                   );
                 }}
-                onCancel={() => setError("Payment cancelled. You can try PayPal again below.")}
-                onError={() => setError("PayPal ran into a problem. Please try again.")}
+                onCancel={() => setError(t(lang, "payCancelled"))}
+                onError={() => setError(t(lang, "payProblem"))}
               />
             </PayPalScriptProvider>
           </div>
         ) : (
           <button type="submit" className="btn btn-solid btn-block" disabled={busy || !ready}>
-            {busy ? "Preparing secure payment\u2026" : paymentLabel(coupon, total, quote)}
+            {busy ? t(lang, "preparing") : paymentLabel(lang, coupon, total, quote, (amount) => money(amount))}
           </button>
         )}
         <p className="fine">
-          Payment is processed securely by PayPal. By continuing you agree to our{" "}
-          <Link href="/policies/shipping-returns">shipping &amp; returns policy</Link>.
+          {t(lang, "payNote")}{" "}
+          <Link href="/policies/shipping-returns">{t(lang, "policyLink")}</Link>.
         </p>
       </form>
 
-      <aside className="checkout-summary" aria-label="Order summary">
-        <h2 className="serif">Order summary</h2>
-        <FreeShippingBar subtotal={viewSubtotal} threshold={settings.freeShippingThreshold} />
+      <aside className="checkout-summary" aria-label={t(lang, "summary")}>
+        <h2 className="serif">{t(lang, "summary")}</h2>
+        <FreeShippingBar subtotal={locked ? locked.subtotal : preview.subtotal} threshold={locked ? payablePreview.threshold : preview.threshold} />
         <ul className="cart-lines">
           {summary.map((line) => {
             const product = products.find((item) => item.slug === line.slug);
@@ -294,27 +326,27 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
                 <div className="cart-meta">
                   <span className="cart-name">{line.name}</span>
                   <p className="cart-opts">
-                    {line.color} · {line.size}
+                    {colorLabel(line.color, lang)} · {line.size}
                   </p>
                   <div className="cart-row">
                     {locked || !line.cartKey ? (
-                      <span className="cart-opts">Qty {line.qty}</span>
+                      <span className="cart-opts">{t(lang, "qty")} {line.qty}</span>
                     ) : (
                       <div className="qty">
-                        <button type="button" onClick={() => line.cartKey && setQty(line.cartKey, line.qty - 1)} aria-label="Decrease quantity">
+                        <button type="button" onClick={() => line.cartKey && setQty(line.cartKey, line.qty - 1)} aria-label={t(lang, "decrease")}>
                           &minus;
                         </button>
                         <span>{line.qty}</span>
-                        <button type="button" onClick={() => line.cartKey && setQty(line.cartKey, line.qty + 1)} aria-label="Increase quantity">
+                        <button type="button" onClick={() => line.cartKey && setQty(line.cartKey, line.qty + 1)} aria-label={t(lang, "increase")}>
                           +
                         </button>
                       </div>
                     )}
-                    <span className="price">{formatUsd(line.lineTotal)}</span>
+                    <span className="price">{money(line.lineTotal, locked?.currency)}</span>
                   </div>
                   {!locked && line.cartKey && (
                     <button type="button" className="link-btn" onClick={() => line.cartKey && remove(line.cartKey)}>
-                      Remove
+                      {t(lang, "remove")}
                     </button>
                   )}
                 </div>
@@ -324,24 +356,27 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
         </ul>
         <dl className="totals">
           <div>
-            <dt>Subtotal</dt>
-            <dd>{formatUsd(viewSubtotal)}</dd>
+            <dt>{t(lang, "subtotal")}</dt>
+            <dd>{money(viewSubtotal, locked?.currency)}</dd>
           </div>
-          {(locked?.discount ?? 0) > 0 && (
+          {(locked?.discount ?? matchedQuote(coupon, quote)?.discount ?? 0) > 0 && (
             <div>
-              <dt>Discount</dt>
-              <dd>-{formatUsd(locked?.discount ?? 0)}</dd>
+              <dt>{t(lang, "discount")}</dt>
+              <dd>-{money(locked?.discount ?? matchedQuote(coupon, quote)?.discount ?? 0, locked?.currency)}</dd>
             </div>
           )}
           <div>
-            <dt>Shipping</dt>
-            <dd>{shipping === 0 ? "Free" : formatUsd(shipping)}</dd>
+            <dt>{t(lang, "shipping")}</dt>
+            <dd>{shipping === 0 ? t(lang, "free") : money(shipping, locked?.currency)}</dd>
           </div>
           <div className="totals-grand">
-            <dt>Total (USD)</dt>
-            <dd>{formatUsd(locked ? total : matchedQuote(coupon, quote)?.total ?? total)}</dd>
+            <dt>{t(lang, "total")}</dt>
+            <dd>{money(locked ? total : matchedQuote(coupon, quote)?.total ?? total, locked?.currency)}</dd>
           </div>
         </dl>
+        {(locked ? locked.currency !== locked.displayCurrency : payableCode !== market.currency) && (
+          <p className="fine">{t(lang, "paypalCharges", { amount: money(locked ? locked.total : quote?.chargeTotal ?? payablePreview.total, locked?.currency ?? payableCode) })}</p>
+        )}
       </aside>
     </div>
   );
@@ -351,14 +386,14 @@ function normalizeCode(value: string): string {
   return value.trim().replace(/\s+/g, "").toUpperCase();
 }
 
-function matchedQuote(coupon: string, quote: { total: number; discount: number; coupon: string } | null) {
+function matchedQuote<T extends { total: number; discount: number; coupon: string }>(coupon: string, quote: T | null) {
   if (!quote || !coupon.trim()) return null;
   return normalizeCode(quote.coupon) === normalizeCode(coupon) ? quote : null;
 }
 
-function paymentLabel(coupon: string, fallback: number, quote: { total: number; discount: number; coupon: string } | null): string {
+function paymentLabel(lang: "zh" | "en", coupon: string, fallback: number, quote: { total: number; discount: number; coupon: string } | null, money: (amount: number) => string): string {
   const match = matchedQuote(coupon, quote);
-  if (match) return `前往付款 Continue to payment \u00B7 ${formatUsd(match.total)}`;
-  if (coupon.trim()) return "前往付款 Continue to payment";
-  return `前往付款 Continue to payment \u00B7 ${formatUsd(fallback)}`;
+  if (match) return `${t(lang, "continuePay")} \u00B7 ${money(match.total)}`;
+  if (coupon.trim()) return t(lang, "continuePay");
+  return `${t(lang, "continuePay")} \u00B7 ${money(fallback)}`;
 }
