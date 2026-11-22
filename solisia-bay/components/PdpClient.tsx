@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import ProductImage from "./ProductImage";
 import { ModelInfo, SizeGuidePanel, UnitToggle } from "./SizeGuide";
 import { useCart } from "./CartProvider";
@@ -44,6 +44,7 @@ export default function PdpClient({ product }: { product: Product }) {
   const [guideOpen, setGuideOpen] = useState(false);
   const [showError, setShowError] = useState(false);
   const [added, setAdded] = useState(false);
+  const swipeRef = useRef<HTMLDivElement>(null);
 
   const complete = product.selectors.every((s) => sizes[s.key]);
   const available = complete ? stockOf(product, colorName, sizeLabel(product, sizes)) : null;
@@ -66,6 +67,12 @@ export default function PdpClient({ product }: { product: Product }) {
   };
 
   const current = slides[slide] ?? slides[0];
+  const slideLabel = (s: Slide) => (s.label in { front: 1, back: 1, detail: 1, fabric: 1 } ? t(lang, s.label as MessageKey) : s.label);
+  const goToSlide = (index: number) => {
+    const scroller = swipeRef.current;
+    if (scroller) scroller.scrollTo({ left: index * scroller.clientWidth, behavior: "smooth" });
+    setSlide(index);
+  };
 
   return (
     <div className="pdp">
@@ -73,7 +80,7 @@ export default function PdpClient({ product }: { product: Product }) {
         <ul className="thumbs" aria-label={t(lang, "views")}>
           {slides.map((s, i) => (
             <li key={s.id}>
-              <button type="button" data-active={i === slide} onClick={() => setSlide(i)} aria-label={t(lang, "view", { label: s.label in { front: 1, back: 1, detail: 1, fabric: 1 } ? t(lang, s.label as MessageKey) : s.label })}>
+              <button type="button" data-active={i === slide} onClick={() => goToSlide(i)} aria-label={t(lang, "view", { label: slideLabel(s) })}>
                 {s.src ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={s.src} alt="" className="art" />
@@ -95,7 +102,35 @@ export default function PdpClient({ product }: { product: Product }) {
           ) : (
             <ProductImage product={product} view={current.view} colorName={colorName} priority />
           )}
-          <span className="gallery-label">{current.label in { front: 1, back: 1, detail: 1, fabric: 1 } ? t(lang, current.label as MessageKey) : current.label}</span>
+          <span className="gallery-label">{slideLabel(current)}</span>
+        </div>
+        <div
+          className="gallery-swipe"
+          ref={swipeRef}
+          onScroll={(event) => {
+            const scroller = event.currentTarget;
+            if (!scroller.clientWidth) return;
+            const index = Math.round(scroller.scrollLeft / scroller.clientWidth);
+            setSlide((prev) => (prev === index ? prev : index));
+          }}
+        >
+          {slides.map((s) => (
+            <div className="gallery-frame" key={s.id}>
+              {s.video ? (
+                <video className="art" src={s.video} muted loop playsInline autoPlay />
+              ) : s.src ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={s.src} alt={name} className="art" />
+              ) : (
+                <ProductImage product={product} view={s.view} colorName={colorName} priority={s.id === "front"} stamp="-swipe" />
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="gallery-dots" role="tablist" aria-label={t(lang, "views")}>
+          {slides.map((s, i) => (
+            <button key={s.id} type="button" role="tab" data-active={i === slide} aria-selected={i === slide} aria-label={slideLabel(s)} onClick={() => goToSlide(i)} />
+          ))}
         </div>
       </div>
 

@@ -16,7 +16,7 @@ export async function PhotoWall({ posts, products }: { posts: WallPost[]; produc
       const inner = (
         <>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={frame.image} alt={hidden ? "" : frame.caption || "CLACK"} />
+          <img src={frame.image} alt={hidden ? "" : frame.caption || "CLACK"} loading="lazy" decoding="async" />
           {frame.caption ? <span className="bay-wall-caption">{frame.caption}</span> : null}
         </>
       );

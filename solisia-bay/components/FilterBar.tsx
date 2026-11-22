@@ -72,7 +72,14 @@ export default function FilterBar({
         </label>
       </div>
 
-      <div className="filters-panel" data-open={open}>
+      {open && <button type="button" className="sheet-scrim" aria-label={t(lang, "closeMenu")} onClick={() => setOpen(false)} />}
+      <div className="filters-panel" data-open={open} role="dialog" aria-modal={open} aria-label={t(lang, "filter")}>
+        <div className="sheet-head">
+          <h2>{t(lang, "filter")}</h2>
+          <button type="button" className="icon-btn" aria-label={t(lang, "closeMenu")} onClick={() => setOpen(false)}>
+            <svg width="20" height="20" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.3"><path d="M5 5l12 12M17 5L5 17" /></svg>
+          </button>
+        </div>
         <div className="filter-group">
           <h3>{t(lang, "style")}</h3>
           <div className="chips">
