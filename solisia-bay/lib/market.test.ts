@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { chargeCurrency } from "./currency.ts";
 import { currencyFor, languageFor, marketFromRequest, resolveMarket } from "./market.ts";
 
 test("missing geo defaults to Traditional Chinese and TWD", () => {
@@ -8,6 +9,20 @@ test("missing geo defaults to Traditional Chinese and TWD", () => {
   assert.equal(market.lang, "zh");
   assert.equal(market.currency, "TWD");
   assert.equal(resolveMarket("", "nope").lang, "zh");
+});
+
+test("China defaults to Traditional Chinese and CNY, Taiwan stays TWD", () => {
+  assert.deepEqual(resolveMarket("CN", null), { country: "CN", lang: "zh", currency: "CNY" });
+  assert.deepEqual(resolveMarket("cn", null), { country: "CN", lang: "zh", currency: "CNY" });
+  assert.equal(chargeCurrency(resolveMarket("CN", null).currency), "USD");
+  assert.deepEqual(resolveMarket("TW", null), { country: "TW", lang: "zh", currency: "TWD" });
+  assert.equal(chargeCurrency(resolveMarket("TW", null).currency), "TWD");
+  const request = new Request("https://solisiabay.vercel.app/api/quote", {
+    headers: { "x-vercel-ip-country": "CN" },
+  });
+  const market = marketFromRequest(request);
+  assert.equal(market.lang, "zh");
+  assert.equal(market.currency, "CNY");
 });
 
 test("country picks language and currency", () => {
