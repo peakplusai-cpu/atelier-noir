@@ -1,6 +1,6 @@
 export const SITE = {
   name: "CLACK",
-  currency: "USD",
+  currency: "TWD",
   freeShippingThreshold: 120,
   flatShipping: 12,
   returnDays: 30,

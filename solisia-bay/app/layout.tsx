@@ -3,8 +3,11 @@ import { Noto_Sans_TC } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/components/CartProvider";
 import { CatalogProvider } from "@/components/CatalogProvider";
+import { MarketProvider } from "@/components/MarketProvider";
 import { StoreChrome } from "@/components/StoreChrome";
 import { loadPublicShop } from "@/lib/expire-checkouts";
+import { getRates } from "@/lib/fx";
+import { getMarket } from "@/lib/market-server";
 import { publishedProducts } from "@/lib/shop";
 import { SITE, siteOrigin } from "@/lib/site";
 
@@ -17,13 +20,13 @@ const sans = Noto_Sans_TC({
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteOrigin()),
-  title: { default: `${SITE.name} | Streetwear Select Shop`, template: `%s | ${SITE.name}` },
+  title: { default: SITE.name, template: `%s | ${SITE.name}` },
   description: "CLACK",
   applicationName: SITE.name,
   openGraph: {
     type: "website",
     siteName: SITE.name,
-    title: `${SITE.name} | Streetwear Select Shop`,
+    title: SITE.name,
     description: "CLACK",
   },
 };
@@ -35,17 +38,19 @@ export const viewport: Viewport = {
 export const dynamic = "force-dynamic";
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const shop = await loadPublicShop();
+  const [shop, market, rates] = await Promise.all([loadPublicShop(), getMarket(), getRates()]);
   return (
-    <html lang="zh-Hant" className={sans.variable}>
+    <html lang={market.lang === "zh" ? "zh-Hant" : "en"} className={sans.variable}>
       <body>
-        <CatalogProvider value={{ products: publishedProducts(shop), settings: shop.settings }}>
-          <CartProvider>
-            <StoreChrome announcement={shop.settings.announcement} freeShipping={shop.settings.freeShippingThreshold}>
-              {children}
-            </StoreChrome>
-          </CartProvider>
-        </CatalogProvider>
+        <MarketProvider value={{ ...market, rates }}>
+          <CatalogProvider value={{ products: publishedProducts(shop), settings: shop.settings }}>
+            <CartProvider>
+              <StoreChrome announcement={shop.settings.announcement} freeShipping={shop.settings.freeShippingThreshold}>
+                {children}
+              </StoreChrome>
+            </CartProvider>
+          </CatalogProvider>
+        </MarketProvider>
       </body>
     </html>
   );

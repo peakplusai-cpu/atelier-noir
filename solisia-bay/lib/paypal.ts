@@ -1,4 +1,5 @@
-import { centsToMoney, parseMoneyToCents, toCents } from "./money";
+import { paypalAmount, paypalCaptureToCents } from "./currency";
+import { toCents } from "./money";
 import { chargeCents } from "./pricing";
 
 const LIVE = "https://api-m.paypal.com";
@@ -54,6 +55,7 @@ export async function createPayPalOrder(input: {
   shipping: number;
   discount?: number;
   total: number;
+  currency: string;
   shippingWaived?: boolean;
   shipThreshold?: number;
   shipFlat?: number;
@@ -61,9 +63,11 @@ export async function createPayPalOrder(input: {
 }): Promise<string> {
   const expected = chargeCents(input);
   if (expected === null) throw new Error("Order totals are inconsistent");
+  const currency = input.currency || "USD";
   const itemCents = input.items.reduce((sum, item) => sum + toCents(item.unitPrice) * item.qty, 0);
   const discountCents = toCents(input.discount ?? 0);
   const shippingCents = expected - itemCents + discountCents;
+  const money = (cents: number) => paypalAmount(cents, currency);
   const token = await accessToken();
   const res = await paypal<{ id?: string }>("/v2/checkout/orders", {
     method: "POST",
@@ -76,18 +80,18 @@ export async function createPayPalOrder(input: {
           custom_id: input.code,
           description: `CLACK order ${input.code}`,
           amount: {
-            currency_code: "USD",
-            value: centsToMoney(expected),
+            currency_code: currency,
+            value: money(expected),
             breakdown: {
-              item_total: { currency_code: "USD", value: centsToMoney(itemCents) },
-              shipping: { currency_code: "USD", value: centsToMoney(shippingCents) },
-              ...(discountCents > 0 ? { discount: { currency_code: "USD", value: centsToMoney(discountCents) } } : {}),
+              item_total: { currency_code: currency, value: money(itemCents) },
+              shipping: { currency_code: currency, value: money(Math.max(0, shippingCents)) },
+              ...(discountCents > 0 ? { discount: { currency_code: currency, value: money(discountCents) } } : {}),
             },
           },
           items: input.items.map((item) => ({
             name: item.name.slice(0, 127),
             quantity: String(item.qty),
-            unit_amount: { currency_code: "USD", value: centsToMoney(toCents(item.unitPrice)) },
+            unit_amount: { currency_code: currency, value: money(toCents(item.unitPrice)) },
           })),
         },
       ],
@@ -111,12 +115,13 @@ function readCapture(order: PayPalOrder): PayPalCapture | null {
   const unit = order.purchase_units?.[0];
   const capture = unit?.payments?.captures?.find((item) => item.status === "COMPLETED");
   if (!capture?.id || !capture.amount?.value || !unit?.custom_id) return null;
-  const amountCents = parseMoneyToCents(capture.amount.value);
+  const currency = (capture.amount.currency_code ?? "").toUpperCase();
+  const amountCents = paypalCaptureToCents(capture.amount.value, currency);
   if (amountCents === null) return null;
   return {
     captureId: capture.id,
     amountCents,
-    currency: (capture.amount.currency_code ?? "").toUpperCase(),
+    currency,
     customId: unit.custom_id,
   };
 }

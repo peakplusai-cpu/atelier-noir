@@ -1,27 +1,29 @@
 import Link from "next/link";
 import ProductImage from "./ProductImage";
+import { t, type MessageKey } from "@/lib/i18n";
+import { getMarket } from "@/lib/market-server";
 import { getShop, publishedProducts } from "@/lib/shop";
 
-const TILES = [
-  { href: "/collection/women", label: "女裝 Women", slug: "clack-box-tee" },
-  { href: "/collection/men", label: "男裝 Men", slug: "clack-oxford-shirt" },
+const TILES: { href: string; label: MessageKey; slug: string }[] = [
+  { href: "/collection/women", label: "navWomen", slug: "clack-box-tee" },
+  { href: "/collection/men", label: "navMen", slug: "clack-oxford-shirt" },
 ];
 
 export default async function CategoryTiles() {
-  const live = publishedProducts(await getShop());
+  const [live, market] = await Promise.all([getShop().then(publishedProducts), getMarket()]);
   return (
     <section id="entry" className="section tiles">
       <div className="tiles-grid">
-        {TILES.map((t) => {
-          const p = live.find((item) => item.slug === t.slug);
+        {TILES.map((tile) => {
+          const p = live.find((item) => item.slug === tile.slug);
           if (!p) return null;
           return (
-            <Link key={t.href} href={t.href} className="tile">
+            <Link key={tile.href} href={tile.href} className="tile">
               <div className="tile-media">
                 <ProductImage product={p} view="front" />
               </div>
               <div className="tile-label">
-                <span className="serif">{t.label}</span>
+                <span className="serif">{t(market.lang, tile.label)}</span>
                 <span className="tile-arrow" aria-hidden>
                   &rarr;
                 </span>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { listOrders, StorageError } from "@/lib/orders";
-import { formatUsd } from "@/lib/money";
+import { formatMoney } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +25,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
       name: mine[0]?.name ?? email,
       count: mine.length,
       open: mine.filter((order) => order.status === "paid" || order.status === "shipped").length,
-      spent: mine.filter((order) => order.status === "paid" || order.status === "shipped" || order.status === "completed").reduce((sum, order) => sum + order.total, 0),
+      spent: mine.filter((order) => order.status === "paid" || order.status === "shipped" || order.status === "completed").reduce((sum, order) => sum + (order.baseTotal || (order.currency === "TWD" ? order.total : 0)), 0),
       last: mine[0]?.createdAt ?? "",
     }))
     .filter((row) => !needle || `${row.name} ${row.email}`.toLowerCase().includes(needle))
@@ -54,7 +54,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
                   <td><Link href={`/admin/customers/${encodeURIComponent(row.email)}`}>{row.name}</Link><small>{row.email}</small></td>
                   <td>{row.count}</td>
                   <td>{row.open}</td>
-                  <td>{formatUsd(row.spent)}</td>
+                  <td>{formatMoney(row.spent, "TWD", "zh")}</td>
                 </tr>
               ))}
             </tbody>

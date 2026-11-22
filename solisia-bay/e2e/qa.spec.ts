@@ -10,6 +10,8 @@ test("security headers allow only this Supabase project for images", async ({ re
   expect(csp).not.toContain("*.supabase.co");
   expect(response.headers()["x-content-type-options"]).toBe("nosniff");
   expect(response.headers()["x-frame-options"]).toBe("DENY");
+  expect(response.headers()["cache-control"] ?? "").toContain("private");
+  expect(response.headers()["cache-control"] ?? "").toContain("no-store");
 });
 
 test("a Supabase upload image is not blocked by CSP", async ({ page }) => {
@@ -38,27 +40,27 @@ test("storefront browsing, cart and checkout validation", async ({ page }) => {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(1);
   await page.goto("/collection/women?sort=price-asc");
-  await expect(page.getByRole("heading", { name: /Women/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "女裝" })).toBeVisible();
   await page.getByRole("link", { name: "Box Tee" }).first().click();
   await expect(page.getByRole("heading", { name: "Box Tee" })).toBeVisible();
   await page.getByRole("radio", { name: "S", exact: true }).click();
-  await page.getByRole("button", { name: /Add to bag/ }).click();
-  await expect(page.getByRole("dialog", { name: "Shopping cart" })).toBeVisible();
-  await page.getByRole("link", { name: /Checkout/ }).click();
-  await page.getByLabel("Email").fill("buyer@example.com");
-  await page.getByLabel("Full name").fill("Ann Lee");
-  await page.getByLabel("Country / region").selectOption("Taiwan");
-  await page.getByLabel("地址 Address").fill("1 Harbor Road");
-  await page.getByLabel("City").fill("Taipei");
-  await page.getByLabel("Postal code").fill("100");
-  await page.getByLabel("Gift code (optional)").fill("NOT-A-CODE");
-  await page.getByRole("button", { name: /Continue to payment/ }).click();
-  await expect(page.getByText("That code isn't valid.")).toBeVisible();
+  await page.getByRole("button", { name: /加入購物袋/ }).click();
+  await expect(page.getByRole("dialog", { name: "購物袋" })).toBeVisible();
+  await page.getByRole("link", { name: /結帳/ }).click();
+  await page.getByLabel("電子郵件").fill("buyer@example.com");
+  await page.getByLabel("姓名").fill("Ann Lee");
+  await page.getByLabel("國家／地區").selectOption("Taiwan");
+  await page.getByLabel("地址", { exact: true }).fill("1 Harbor Road");
+  await page.getByLabel("城市").fill("Taipei");
+  await page.getByLabel("郵遞區號").fill("100");
+  await page.getByLabel("優惠碼（選填）").fill("NOT-A-CODE");
+  await page.getByRole("button", { name: /前往付款/ }).click();
+  await expect(page.getByText("這個優惠碼無法使用。")).toBeVisible();
 });
 
 test("policies, missing pages, and order lookup do not leak", async ({ page, request }) => {
   await page.goto("/policies/shipping-returns");
-  await expect(page.getByRole("heading", { name: "Shipping & Returns" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "運送與退貨" })).toBeVisible();
   const missing = await page.goto("/products/not-a-real-dress");
   expect(missing?.status()).toBe(404);
   const order = await request.get("/api/orders/SB-000000-ABCDEF?token=00000000000000000000000000000000");
@@ -79,12 +81,18 @@ test("home shows the centered mark and the shop underneath", async ({ page }) =>
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/");
   await expect(page.getByRole("link", { name: "CLACK home" })).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "Primary" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "主要" })).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("lang", "zh-Hant");
   await expect(page.getByRole("link", { name: "Box Tee" }).first()).toBeVisible();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(1);
   await page.goto("/products/clack-box-tee");
   await expect(page.getByRole("heading", { name: "Box Tee" })).toBeVisible();
+  await page.context().addCookies([{ name: "clack_pref", value: "en.USD", url: "http://127.0.0.1:3200" }]);
+  await page.goto("/");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.getByRole("link", { name: "Women" }).first()).toBeVisible();
+  await page.context().clearCookies();
 });
 
 async function noHorizontalOverflow(page: Page) {
@@ -107,18 +115,18 @@ test("mobile pages stay on screen and the menu opens", async ({ page }) => {
     await expect(page.getByRole("heading", { name: "Box Tee" })).toBeVisible();
     await noHorizontalOverflow(page);
     if (width === 390) await page.screenshot({ path: "/opt/cursor/artifacts/mobile-after/product-390.png", fullPage: true });
-    await page.getByRole("button", { name: "Open menu" }).click();
-    await expect(page.locator(".mobile-nav[data-open='true']").getByRole("link", { name: "Women" })).toBeVisible();
+    await page.getByRole("button", { name: "開啟選單" }).click();
+    await expect(page.locator(".mobile-nav[data-open='true']").getByRole("link", { name: "女裝" })).toBeVisible();
     await noHorizontalOverflow(page);
     if (width === 390) await page.screenshot({ path: "/opt/cursor/artifacts/mobile-after/menu-390.png" });
-    await page.getByRole("button", { name: "Close menu" }).click();
+    await page.getByRole("button", { name: "關閉選單" }).click();
     await page.getByRole("radio", { name: "S", exact: true }).click();
-    await page.getByRole("button", { name: /Add to bag/ }).click();
-    await expect(page.getByRole("dialog", { name: "Shopping cart" })).toBeVisible();
+    await page.getByRole("button", { name: /加入購物袋/ }).click();
+    await expect(page.getByRole("dialog", { name: "購物袋" })).toBeVisible();
     await noHorizontalOverflow(page);
     if (width === 390) await page.screenshot({ path: "/opt/cursor/artifacts/mobile-after/cart-390.png" });
-    await page.getByRole("link", { name: /Checkout/ }).click();
-    await expect(page.getByRole("button", { name: /Continue to payment/ })).toBeVisible();
+    await page.getByRole("link", { name: /結帳/ }).click();
+    await expect(page.getByRole("button", { name: /前往付款/ })).toBeVisible();
     await noHorizontalOverflow(page);
     if (width === 390) await page.screenshot({ path: "/opt/cursor/artifacts/mobile-after/checkout-390.png", fullPage: true });
   }

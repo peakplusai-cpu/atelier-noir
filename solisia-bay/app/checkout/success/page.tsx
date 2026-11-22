@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import PaymentStatus from "@/components/PaymentStatus";
-import { formatUsd } from "@/lib/money";
+import { t } from "@/lib/i18n";
+import { getMarket } from "@/lib/market-server";
+import { formatMoney } from "@/lib/money";
 import { getOrder } from "@/lib/orders";
 import { safeEqualString } from "@/lib/secret";
 import { SITE } from "@/lib/site";
 
-export const metadata: Metadata = { title: "Order confirmed", robots: { index: false } };
+export const metadata: Metadata = { title: "CLACK", robots: { index: false } };
 export const dynamic = "force-dynamic";
 
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
@@ -16,15 +18,17 @@ export default async function SuccessPage({ searchParams }: Props) {
   const code = typeof sp.order === "string" ? sp.order : "";
   const token = typeof sp.token === "string" ? sp.token : "";
   const order = code ? await getOrder(code).catch(() => null) : null;
+  const { lang } = await getMarket();
+  const money = (amount: number, currency: string) => formatMoney(amount, currency, lang);
 
   if (!order || !safeEqualString(order.token, token)) {
     return (
       <section className="page narrow center">
-        <p className="eyebrow">Order</p>
-        <h1 className="serif">We couldn&rsquo;t find that order</h1>
-        <p>If you just paid, refresh this page in a moment. For help, email {SITE.email} with your order number.</p>
+        <p className="eyebrow">{t(lang, "order")}</p>
+        <h1 className="serif">{t(lang, "missingOrder")}</h1>
+        <p>{t(lang, "missingOrderBody", { email: SITE.email })}</p>
         <Link href="/collection/all" className="btn btn-solid">
-          Continue shopping
+          {t(lang, "continueShopping")}
         </Link>
       </section>
     );
@@ -34,75 +38,79 @@ export default async function SuccessPage({ searchParams }: Props) {
   const review = order.status === "review";
   const cancelledAfterPay = order.status === "cancelled" && Boolean(order.paymentCaptureId || order.paidAt);
   const failed = order.status === "failed" || (order.status === "cancelled" && !cancelledAfterPay);
+  const currency = order.currency || "TWD";
 
   return (
     <section className="page narrow">
       <PaymentStatus code={order.code} token={order.token} status={order.status} />
       <div className="center">
-        <p className="eyebrow">{confirmed ? "Thank you" : failed ? "Payment not completed" : review ? "Payment received" : "Almost there"}</p>
+        <p className="eyebrow">{confirmed ? t(lang, "thanks") : failed ? t(lang, "notPaid") : review ? t(lang, "paymentReceived") : t(lang, "almost")}</p>
         <h1 className="serif">
           {confirmed
-            ? "Your order is confirmed"
+            ? t(lang, "confirmed")
             : cancelledAfterPay
-              ? "This order was cancelled"
+              ? t(lang, "cancelled")
               : review
-                ? "We\u2019re checking this payment"
+                ? t(lang, "checking")
                 : failed
-                  ? "We couldn\u2019t complete your order"
-                  : "Confirming your payment\u2026"}
+                  ? t(lang, "couldNot")
+                  : t(lang, "confirming")}
         </h1>
         <p>
           {confirmed
-            ? `這是 ${order.email} 的 CLACK 收據。出貨後我們會把物流寄到這個信箱。Keep this page.`
+            ? t(lang, "receipt", { email: order.email })
             : cancelledAfterPay
-              ? `This order was cancelled after payment. If you still see a PayPal charge, email ${SITE.email} and include ${order.code}.`
+              ? t(lang, "cancelledBody", { email: SITE.email, code: order.code })
               : review
-                ? `PayPal accepted a payment that doesn't match this order. Email ${SITE.email} with ${order.code} before placing it again.`
+                ? t(lang, "reviewBody", { email: SITE.email, code: order.code })
                 : failed
-                  ? "You can return to your bag and try again. If PayPal shows a charge, email us before you pay a second time."
-                  : "This usually takes a few seconds. This page will update automatically."}
+                  ? t(lang, "failedBody")
+                  : t(lang, "pendingBody")}
         </p>
       </div>
 
       <div className="receipt">
         <div className="receipt-head">
-          <span>CLACK 訂單</span>
+          <span>{t(lang, "clackOrder")}</span>
           <strong>{order.code}</strong>
         </div>
         <ul>
-          {order.items.map((i, idx) => (
+          {order.items.map((item, idx) => (
             <li key={idx}>
               <span>
-                {i.name} <small>{i.color} · {i.size} × {i.qty}</small>
+                {item.name} <small>{item.color} · {item.size} × {item.qty}</small>
               </span>
-              <span>{formatUsd(i.unitPrice * i.qty)}</span>
+              <span>{money(item.unitPrice * item.qty, currency)}</span>
             </li>
           ))}
         </ul>
         <dl className="totals">
           <div>
-            <dt>Subtotal</dt>
-            <dd>{formatUsd(order.subtotal)}</dd>
+            <dt>{t(lang, "subtotal")}</dt>
+            <dd>{money(order.subtotal, currency)}</dd>
           </div>
           <div>
-            <dt>Shipping</dt>
-            <dd>{order.shipping === 0 ? "Free" : formatUsd(order.shipping)}</dd>
+            <dt>{t(lang, "shipping")}</dt>
+            <dd>{order.shipping === 0 ? t(lang, "free") : money(order.shipping, currency)}</dd>
           </div>
           <div className="totals-grand">
-            <dt>Total</dt>
-            <dd>{formatUsd(order.total)}</dd>
+            <dt>{t(lang, "total")}</dt>
+            <dd>{money(order.total, currency)}</dd>
           </div>
         </dl>
+        {order.displayCurrency && order.displayCurrency !== currency && (
+          <p className="fine">{t(lang, "paypalCharges", { amount: money(order.total, currency) })}</p>
+        )}
+        {currency !== "TWD" && order.baseTotal > 0 && <p className="fine">{t(lang, "baseTwd", { amount: money(order.baseTotal, "TWD") })}</p>}
         <p className="fine">
-          Shipping to {order.name}, {order.address.line1}
-          {order.address.line2 ? `, ${order.address.line2}` : ""}, {order.address.city} {order.address.postalCode},{" "}
-          {order.address.country}
+          {t(lang, "shippingTo")} {order.name}, {order.address.line1}
+          {order.address.line2 ? `, ${order.address.line2}` : ""}, {order.address.city} {order.address.postalCode}, {order.address.country}
         </p>
       </div>
 
       <div className="center">
         <Link href={failed ? "/checkout" : "/collection/all"} className="btn btn-outline">
-          {failed ? "Return to checkout" : "Continue shopping"}
+          {failed ? t(lang, "checkout") : t(lang, "continueShopping")}
         </Link>
       </div>
     </section>

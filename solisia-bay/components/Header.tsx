@@ -3,35 +3,42 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useCart } from "./CartProvider";
+import { convertAmount } from "@/lib/fx";
+import { t } from "@/lib/i18n";
+import { formatMoney } from "@/lib/money";
 import { SITE } from "@/lib/site";
+import { useCart } from "./CartProvider";
+import { LocaleSwitch } from "./LocaleSwitch";
+import { useMarket } from "./MarketProvider";
 
 const NAV = [
-  { href: "/collection/women", label: "女裝 Women" },
-  { href: "/collection/men", label: "男裝 Men" },
-  { href: "/collection/all", label: "全部 Shop All" },
-];
+  { href: "/collection/women", key: "navWomen" },
+  { href: "/collection/men", key: "navMen" },
+  { href: "/collection/all", key: "navAll" },
+] as const;
 
 export default function Header({ announcement = "", freeShipping = SITE.freeShippingThreshold }: { announcement?: string; freeShipping?: number }) {
   const pathname = usePathname();
   const { count, openCart, ready } = useCart();
+  const market = useMarket();
   const [menu, setMenu] = useState(false);
+  const lang = market.lang;
+  const threshold = convertAmount(freeShipping, market.currency, market.rates);
 
   useEffect(() => setMenu(false), [pathname]);
 
   return (
     <div className="chrome">
       <div className="announce">
-        <p>
-          {announcement || `滿 $${freeShipping} USD 免運`}
-        </p>
+        <p>{announcement || t(lang, "freeOver", { amount: formatMoney(threshold, market.currency, lang) })}</p>
+        <LocaleSwitch />
       </div>
       <header className="header">
         <div className="header-inner">
           <button
             type="button"
             className="icon-btn menu-btn"
-            aria-label={menu ? "關閉選單 Close menu" : "開啟選單 Open menu"}
+            aria-label={menu ? t(lang, "closeMenu") : t(lang, "openMenu")}
             aria-expanded={menu}
             onClick={() => setMenu((v) => !v)}
           >
@@ -39,10 +46,10 @@ export default function Header({ announcement = "", freeShipping = SITE.freeShip
               {menu ? <path d="M5 5l12 12M17 5L5 17" /> : <path d="M3 7h16M3 15h16" />}
             </svg>
           </button>
-          <nav className="nav" aria-label="Primary">
+          <nav className="nav" aria-label={t(lang, "primary")}>
             {NAV.map((n) => (
               <Link key={n.href} href={n.href} data-active={pathname === n.href}>
-                {n.label}
+                {t(lang, n.key)}
               </Link>
             ))}
           </nav>
@@ -51,12 +58,12 @@ export default function Header({ announcement = "", freeShipping = SITE.freeShip
           </Link>
           <div className="header-actions">
             <Link href="/admin" className="nav-link-small staff-nav">
-              員工入口
+              {t(lang, "staff")}
             </Link>
             <Link href="/policies/shipping-returns" className="nav-link-small">
-              運送 Shipping
+              {t(lang, "shippingLink")}
             </Link>
-            <button type="button" className="icon-btn cart-btn" aria-label={`Open cart, ${count} items`} onClick={openCart}>
+            <button type="button" className="icon-btn cart-btn" aria-label={t(lang, "openCart", { count })} onClick={openCart}>
               <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.3">
                 <path d="M4 7h14l-1 12H5L4 7z" />
                 <path d="M8 7V5.5a3 3 0 016 0V7" />
@@ -69,14 +76,14 @@ export default function Header({ announcement = "", freeShipping = SITE.freeShip
       <div className="mobile-nav" data-open={menu} aria-hidden={!menu}>
         {NAV.map((n) => (
           <Link key={n.href} href={n.href} tabIndex={menu ? 0 : -1}>
-            {n.label}
+            {t(lang, n.key)}
           </Link>
         ))}
         <Link href="/policies/shipping-returns" className="mobile-small" tabIndex={menu ? 0 : -1}>
-          運送與退貨 Shipping
+          {t(lang, "shippingReturns")}
         </Link>
         <Link href="/admin" className="mobile-small staff-nav" tabIndex={menu ? 0 : -1}>
-          員工入口
+          {t(lang, "staff")}
         </Link>
       </div>
     </div>

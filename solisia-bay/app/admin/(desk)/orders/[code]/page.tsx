@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { setOrderStatus } from "@/app/actions/staff";
 import { getOrder } from "@/lib/orders";
 import { STATUS_ACTIONS, STATUS_LABEL } from "@/lib/staff-labels";
-import { formatUsd } from "@/lib/money";
+import { formatMoney } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +28,7 @@ export default async function OrderPage({ params }: Props) {
         <p>
           <span className={`staff-status status-${order.status}`}>{STATUS_LABEL[order.status]}</span>
           {" · "}
-          {formatUsd(order.total)}
+          {formatMoney(order.total, order.currency || "TWD", "zh")}
         </p>
       </header>
 
@@ -44,14 +44,15 @@ export default async function OrderPage({ params }: Props) {
                     {item.color} · {item.size} × {item.qty}
                   </small>
                 </span>
-                <span>{formatUsd(item.unitPrice * item.qty)}</span>
+                <span>{formatMoney(item.unitPrice * item.qty, order.currency || "TWD", "zh")}</span>
               </li>
             ))}
           </ul>
           <p className="fine">
-            小計 {formatUsd(order.subtotal)}
-            {order.discount > 0 ? ` · 折扣 -${formatUsd(order.discount)}${order.coupon ? `（${order.coupon}）` : ""}` : ""}
-            {" · "}運費 {order.shipping === 0 ? "免運" : formatUsd(order.shipping)}
+            小計 {formatMoney(order.subtotal, order.currency || "TWD", "zh")}
+            {order.discount > 0 ? ` · 折扣 -${formatMoney(order.discount, order.currency || "TWD", "zh")}${order.coupon ? `（${order.coupon}）` : ""}` : ""}
+            {" · "}運費 {order.shipping === 0 ? "免運" : formatMoney(order.shipping, order.currency || "TWD", "zh")}
+            {order.baseTotal > 0 && order.currency !== "TWD" ? ` · 新台幣 ${formatMoney(order.baseTotal, "TWD", "zh")}` : ""}
           </p>
         </div>
         <div>

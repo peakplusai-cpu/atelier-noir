@@ -1,9 +1,12 @@
 import Link from "next/link";
+import { t } from "@/lib/i18n";
+import { getMarket } from "@/lib/market-server";
 import { wallFrames } from "@/lib/wall";
 import type { WallPost } from "@/lib/promos";
 import type { Product } from "@/lib/types";
 
-export function PhotoWall({ posts, products }: { posts: WallPost[]; products: Product[] }) {
+export async function PhotoWall({ posts, products }: { posts: WallPost[]; products: Product[] }) {
+  const { lang } = await getMarket();
   const frames = wallFrames(posts, products);
   if (!frames.length) return null;
   const seconds = Math.max(28, frames.length * 6);
@@ -28,7 +31,7 @@ export function PhotoWall({ posts, products }: { posts: WallPost[]; products: Pr
       );
     });
   return (
-    <section className="bay-wall" aria-label="CLACK wall" style={{ ["--wall-duration" as string]: `${seconds}s` }}>
+    <section className="bay-wall" aria-label={t(lang, "wall")} style={{ ["--wall-duration" as string]: `${seconds}s` }}>
       <div className="bay-wall-viewport">
         <div className="bay-wall-track">
           <div className="bay-wall-set">{strip("a")}</div>

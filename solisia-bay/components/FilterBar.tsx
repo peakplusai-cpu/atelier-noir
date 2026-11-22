@@ -2,6 +2,8 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { t } from "@/lib/i18n";
+import { useMarket } from "./MarketProvider";
 
 type Option = { value: string; label: string };
 
@@ -24,6 +26,7 @@ export default function FilterBar({
   total: number;
   shown: number;
 }) {
+  const { lang } = useMarket();
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -52,26 +55,26 @@ export default function FilterBar({
     <div className="filters">
       <div className="filters-bar">
         <button type="button" className="filter-toggle" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-          篩選 Filter{active > 0 && <span className="filter-count">{active}</span>}
+          {t(lang, "filter")}{active > 0 && <span className="filter-count">{active}</span>}
           <span aria-hidden>{open ? "\u2212" : "+"}</span>
         </button>
         <p className="filters-result">
-          {shown === total ? `${total} pieces` : `${shown} of ${total} pieces`}
+          {shown === total ? t(lang, "pieces", { count: total }) : t(lang, "piecesOf", { shown, total })}
         </p>
         <label className="sort">
-          <span>Sort</span>
+          <span>{t(lang, "sort")}</span>
           <select value={sort} onChange={(e) => push({ sort: e.target.value })}>
-            <option value="featured">Featured</option>
-            <option value="newest">New arrivals</option>
-            <option value="price-asc">Price: low to high</option>
-            <option value="price-desc">Price: high to low</option>
+            <option value="featured">{t(lang, "featured")}</option>
+            <option value="newest">{t(lang, "newest")}</option>
+            <option value="price-asc">{t(lang, "priceAsc")}</option>
+            <option value="price-desc">{t(lang, "priceDesc")}</option>
           </select>
         </label>
       </div>
 
       <div className="filters-panel" data-open={open}>
         <div className="filter-group">
-          <h3>款式 Style</h3>
+          <h3>{t(lang, "style")}</h3>
           <div className="chips">
             {styles.map((s) => (
               <button
@@ -88,7 +91,7 @@ export default function FilterBar({
           </div>
         </div>
         <div className="filter-group">
-          <h3>尺寸 Size</h3>
+          <h3>{t(lang, "size")}</h3>
           <div className="chips">
             {sizes.map((s) => (
               <button
@@ -106,7 +109,7 @@ export default function FilterBar({
         </div>
         {brands.length > 0 && (
           <div className="filter-group">
-            <h3>品牌 Brand</h3>
+            <h3>{t(lang, "brand")}</h3>
             <div className="chips">
               {brands.map((brand) => (
                 <button
@@ -125,7 +128,7 @@ export default function FilterBar({
         )}
         {tags.length > 0 && (
           <div className="filter-group">
-            <h3>場景 Tag</h3>
+            <h3>{t(lang, "tag")}</h3>
             <div className="chips">
               {tags.map((tag) => (
                 <button
@@ -144,7 +147,7 @@ export default function FilterBar({
         )}
         {active > 0 && (
           <button type="button" className="link-btn" onClick={() => push({ size: [], style: [], brand: [], tag: [] })}>
-            Clear all filters
+            {t(lang, "clearFilters")}
           </button>
         )}
       </div>

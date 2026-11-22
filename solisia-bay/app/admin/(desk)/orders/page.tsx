@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { listOrders, StorageError, type Order } from "@/lib/orders";
 import { STATUS_LABEL } from "@/lib/staff-labels";
-import { formatUsd } from "@/lib/money";
+import { formatMoney } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
@@ -60,7 +60,7 @@ export default async function DeskPage() {
                 <td>
                   <span className={`staff-status status-${o.status}`}>{STATUS_LABEL[o.status]}</span>
                 </td>
-                <td>{formatUsd(o.total)}</td>
+                <td>{formatMoney(o.total, o.currency || "TWD", "zh")}</td>
               </tr>
             ))}
           </tbody>
