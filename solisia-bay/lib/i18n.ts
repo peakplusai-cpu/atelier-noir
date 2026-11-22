@@ -11,6 +11,7 @@ const M = {
   help: { zh: "說明", en: "Help" },
   shop: { zh: "選購", en: "Shop" },
   checkoutTitle: { zh: "結帳", en: "Checkout" },
+  secureCheckout: { zh: "安全結帳", en: "Secure checkout" },
   paypalNote: { zh: "付款由 PayPal 處理。CLACK 看不到、也不保存你的卡號。", en: "PayPal processes payment. CLACK never sees or stores your card number." },
   pricedIn: { zh: "以新台幣計價。", en: "Priced in TWD." },
   freeOver: { zh: "滿 {amount} 免運", en: "Free shipping over {amount}" },

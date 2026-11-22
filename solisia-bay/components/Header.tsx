@@ -1,8 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { convertAmount } from "@/lib/fx";
 import { t } from "@/lib/i18n";
 import { formatMoney } from "@/lib/money";
@@ -24,37 +25,72 @@ export default function Header({ announcement = "", freeShipping = SITE.freeShip
   const [menu, setMenu] = useState(false);
   const lang = market.lang;
   const threshold = convertAmount(freeShipping, market.currency, market.rates);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const openRef = useRef<HTMLButtonElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => setMenu(false), [pathname]);
+
+  useEffect(() => {
+    if (!menu) return;
+    const previous = document.activeElement as HTMLElement | null;
+    closeRef.current?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMenu(false);
+        return;
+      }
+      if (event.key !== "Tab" || !menuRef.current) return;
+      const items = [...menuRef.current.querySelectorAll<HTMLElement>("a, button, select")].filter((item) => !item.hasAttribute("disabled"));
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (!first || !last) return;
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      (previous && previous !== closeRef.current ? previous : openRef.current)?.focus?.();
+    };
+  }, [menu]);
 
   return (
     <div className="chrome">
       <div className="announce">
         <p>{announcement || t(lang, "freeOver", { amount: formatMoney(threshold, market.currency, lang) })}</p>
-        <LocaleSwitch />
+        <div className="announce-switch">
+          <LocaleSwitch />
+        </div>
       </div>
       <header className="header">
         <div className="header-inner">
           <button
+            ref={openRef}
             type="button"
             className="icon-btn menu-btn"
-            aria-label={menu ? t(lang, "closeMenu") : t(lang, "openMenu")}
+            aria-label={t(lang, "openMenu")}
             aria-expanded={menu}
-            onClick={() => setMenu((v) => !v)}
+            onClick={() => setMenu(true)}
           >
             <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.3">
-              {menu ? <path d="M5 5l12 12M17 5L5 17" /> : <path d="M3 7h16M3 15h16" />}
+              <path d="M3 7h16M3 15h16" />
             </svg>
           </button>
           <nav className="nav" aria-label={t(lang, "primary")}>
-            {NAV.map((n) => (
-              <Link key={n.href} href={n.href} data-active={pathname === n.href}>
-                {t(lang, n.key)}
+            {NAV.map((item) => (
+              <Link key={item.href} href={item.href} data-active={pathname === item.href}>
+                {t(lang, item.key)}
               </Link>
             ))}
           </nav>
           <Link href="/" className="logo" aria-label="CLACK home">
-            <img src="/clack-logo.png" alt="" />
+            <Image src="/clack-logo.png" alt="" width={528} height={530} priority sizes="(max-width: 900px) 140px, 220px" />
           </Link>
           <div className="header-actions">
             <Link href="/admin" className="nav-link-small staff-nav">
@@ -73,15 +109,37 @@ export default function Header({ announcement = "", freeShipping = SITE.freeShip
           </div>
         </div>
       </header>
-      <div className="mobile-nav" data-open={menu} aria-hidden={!menu}>
-        {NAV.map((n) => (
-          <Link key={n.href} href={n.href} tabIndex={menu ? 0 : -1}>
-            {t(lang, n.key)}
+      <div
+        ref={menuRef}
+        className="mobile-nav"
+        data-open={menu}
+        role="dialog"
+        aria-modal="true"
+        aria-hidden={!menu}
+        aria-label={t(lang, "openMenu")}
+      >
+        <div className="mobile-nav-bar">
+          <button ref={closeRef} type="button" className="icon-btn" aria-label={t(lang, "closeMenu")} onClick={() => setMenu(false)}>
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.3">
+              <path d="M5 5l12 12M17 5L5 17" />
+            </svg>
+          </button>
+        </div>
+        {NAV.map((item) => (
+          <Link key={item.href} href={item.href} tabIndex={menu ? 0 : -1} data-active={pathname === item.href}>
+            {t(lang, item.key)}
           </Link>
         ))}
+        <LocaleSwitch />
         <Link href="/policies/shipping-returns" className="mobile-small" tabIndex={menu ? 0 : -1}>
           {t(lang, "shippingReturns")}
         </Link>
+        <Link href="/policies/size-guide" className="mobile-small" tabIndex={menu ? 0 : -1}>
+          {t(lang, "sizeGuide")}
+        </Link>
+        <a className="mobile-small" href={`mailto:${SITE.email}`} tabIndex={menu ? 0 : -1}>
+          {SITE.email}
+        </a>
         <Link href="/admin" className="mobile-small staff-nav" tabIndex={menu ? 0 : -1}>
           {t(lang, "staff")}
         </Link>

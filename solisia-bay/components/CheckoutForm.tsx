@@ -212,7 +212,7 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
           <h2 className="serif">{t(lang, "shipAddress")}</h2>
           <label className="field">
             <span>{t(lang, "fullName")}</span>
-            <input name="name" autoComplete="name" required minLength={2} maxLength={100} />
+            <input name="name" autoComplete="name" autoCapitalize="words" required minLength={2} maxLength={100} />
           </label>
           <label className="field">
             <span>{t(lang, "country")}</span>
@@ -227,7 +227,7 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
           </label>
           <label className="field">
             <span>{t(lang, "address")}</span>
-            <input name="line1" autoComplete="address-line1" required minLength={3} maxLength={160} />
+            <input name="line1" autoComplete="address-line1" autoCapitalize="words" required minLength={3} maxLength={160} />
           </label>
           <label className="field">
             <span>{t(lang, "line2")}</span>
@@ -244,12 +244,12 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
             </label>
             <label className="field">
               <span>{t(lang, "postal")}</span>
-              <input name="postalCode" autoComplete="postal-code" required minLength={2} maxLength={20} />
+              <input name="postalCode" autoComplete="postal-code" inputMode="text" required minLength={2} maxLength={20} />
             </label>
           </div>
           <label className="field">
             <span>{t(lang, "phone")}</span>
-            <input name="phone" type="tel" autoComplete="tel" maxLength={40} />
+            <input name="phone" type="tel" autoComplete="tel" inputMode="tel" maxLength={40} />
           </label>
           <label className="field">
             <span>{t(lang, "coupon")}</span>
@@ -262,6 +262,7 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
             {error}
           </p>
         )}
+        <div className="checkout-pay">
         {locked ? (
           <div className="paypal-box">
             <p className="fine">
@@ -305,6 +306,7 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
             {busy ? t(lang, "preparing") : paymentLabel(lang, coupon, total, quote, (amount) => money(amount))}
           </button>
         )}
+        </div>
         <p className="fine">
           {t(lang, "payNote")}{" "}
           <Link href="/policies/shipping-returns">{t(lang, "policyLink")}</Link>.
