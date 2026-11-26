@@ -21,20 +21,20 @@ export function allowedImageUrl(url: string, storageOrigin = supabaseStorageOrig
 }
 
 export function contentSecurityPolicy(storageOrigin = supabaseStorageOrigin()): string {
-  const img = ["'self'", "data:", "blob:", "https://www.paypal.com", "https://www.paypalobjects.com", "https://images.unsplash.com"];
+  const img = ["'self'", "data:", "blob:", "https://images.unsplash.com"];
   if (storageOrigin) img.push(storageOrigin);
   return [
     "default-src 'self'",
     "base-uri 'self'",
     "object-src 'none'",
     "frame-ancestors 'none'",
-    "form-action 'self' https://www.paypal.com https://www.sandbox.paypal.com",
-    "script-src 'self' 'unsafe-inline' https://www.paypal.com https://www.sandbox.paypal.com https://www.paypalobjects.com",
+    "form-action 'self' https://core.newebpay.com https://ccore.newebpay.com",
+    "script-src 'self' 'unsafe-inline'",
     "style-src 'self' 'unsafe-inline'",
     `img-src ${img.join(" ")}`,
     "font-src 'self'",
-    "connect-src 'self' https://www.paypal.com https://www.sandbox.paypal.com https://api-m.paypal.com https://api-m.sandbox.paypal.com https://www.paypalobjects.com",
-    "frame-src https://www.paypal.com https://www.sandbox.paypal.com https://www.paypalobjects.com",
+    "connect-src 'self'",
+    "frame-src 'none'",
     "worker-src 'self' blob:",
   ].join("; ");
 }

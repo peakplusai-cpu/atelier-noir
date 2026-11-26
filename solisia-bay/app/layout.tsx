@@ -6,8 +6,6 @@ import { CatalogProvider } from "@/components/CatalogProvider";
 import { MarketProvider } from "@/components/MarketProvider";
 import { StoreChrome } from "@/components/StoreChrome";
 import { loadPublicShop } from "@/lib/expire-checkouts";
-import { getRates } from "@/lib/fx";
-import { getMarket } from "@/lib/market-server";
 import { publishedProducts } from "@/lib/shop";
 import { SITE, siteOrigin } from "@/lib/site";
 
@@ -41,11 +39,11 @@ export const viewport: Viewport = {
 export const dynamic = "force-dynamic";
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const [shop, market, rates] = await Promise.all([loadPublicShop(), getMarket(), getRates()]);
+  const shop = await loadPublicShop();
   return (
-    <html lang={market.lang === "zh" ? "zh-Hant" : "en"} className={sans.variable}>
+    <html lang="zh-Hant" className={sans.variable}>
       <body>
-        <MarketProvider value={{ ...market, rates }}>
+        <MarketProvider value={{ country: "TW", lang: "zh", currency: "TWD", rates: { TWD: 1 } }}>
           <CatalogProvider value={{ products: publishedProducts(shop), settings: shop.settings }}>
             <CartProvider>
               <StoreChrome announcement={shop.settings.announcement} freeShipping={shop.settings.freeShippingThreshold}>

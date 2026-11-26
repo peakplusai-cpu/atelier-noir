@@ -47,15 +47,9 @@ test("storefront browsing, cart and checkout validation", async ({ page }) => {
   await page.getByRole("button", { name: /加入購物袋/ }).click();
   await expect(page.getByRole("dialog", { name: "購物袋" })).toBeVisible();
   await page.getByRole("link", { name: /結帳/ }).click();
-  await page.getByLabel("電子郵件").fill("buyer@example.com");
-  await page.getByLabel("姓名").fill("Ann Lee");
-  await page.getByLabel("國家／地區").selectOption("Taiwan");
-  await page.getByLabel("地址", { exact: true }).fill("1 Harbor Road");
-  await page.getByLabel("城市").fill("Taipei");
-  await page.getByLabel("郵遞區號").fill("100");
-  await page.getByLabel("優惠碼（選填）").fill("NOT-A-CODE");
-  await page.getByRole("button", { name: /前往付款/ }).click();
-  await expect(page.getByText("這個優惠碼無法使用。")).toBeVisible();
+  await expect(page.getByText("付款功能尚未開通")).toBeVisible();
+  await expect(page.getByRole("button", { name: /前往付款/ })).toBeDisabled();
+  await expect(page.getByLabel("縣市")).toBeVisible();
 });
 
 test("policies, missing pages, and order lookup do not leak", async ({ page, request }) => {
@@ -90,8 +84,8 @@ test("home shows the centered mark and the shop underneath", async ({ page }) =>
   await expect(page.getByRole("heading", { name: "Box Tee" })).toBeVisible();
   await page.context().addCookies([{ name: "clack_pref", value: "en.USD", url: "http://127.0.0.1:3200" }]);
   await page.goto("/");
-  await expect(page.locator("html")).toHaveAttribute("lang", "en");
-  await expect(page.getByRole("link", { name: "Women" }).first()).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("lang", "zh-Hant");
+  await expect(page.getByRole("link", { name: "女裝" }).first()).toBeVisible();
   await page.context().clearCookies();
 });
 
