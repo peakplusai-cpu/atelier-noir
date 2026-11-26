@@ -175,9 +175,22 @@ export function getProduct(slug: string): Product | undefined {
   return products.find((p) => p.slug === slug);
 }
 
+export function productGenders(product: { gender?: string; genders?: string[] }): Gender[] {
+  const listed = Array.isArray(product.genders)
+    ? product.genders.filter((gender): gender is Gender => gender === "women" || gender === "men")
+    : [];
+  if (listed.length) return [...new Set(listed)];
+  return product.gender === "women" || product.gender === "men" ? [product.gender] : [];
+}
+
 export function productsFor(handle: string, source: Product[] = products): Product[] {
   const gender = COLLECTIONS[handle]?.gender;
-  return gender ? source.filter((p) => p.gender === gender) : source;
+  return gender ? source.filter((product) => productGenders(product).includes(gender)) : source;
+}
+
+/** Later catalog entries are newer. Home shows those first. */
+export function newestFirst(source: Product[]): Product[] {
+  return [...source].reverse();
 }
 
 export function bestsellers(limit = 8, source: Product[] = products): Product[] {

@@ -1,4 +1,4 @@
-import { products as seedProducts, sizeLabel, stockOf, validateSelection } from "./catalog";
+import { productGenders, products as seedProducts, sizeLabel, stockOf, validateSelection } from "./catalog";
 import { roundMoney, shippingFor, toCents } from "./money";
 import { quotePromotion, type Promotion } from "./promos";
 import { SITE } from "./site";
@@ -17,6 +17,7 @@ export type PricedItem = {
   unitPriceTwd?: number;
   qty: number;
   gender?: Gender;
+  genders?: Gender[];
 };
 
 export class PricingError extends Error {
@@ -112,6 +113,7 @@ export function priceCart(
         unitPrice: roundMoney(product.price),
         qty,
         gender: product.gender,
+        genders: productGenders(product),
       });
     }
   }

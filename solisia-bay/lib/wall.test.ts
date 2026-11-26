@@ -18,9 +18,9 @@ function post(partial: Partial<WallPost>): WallPost {
   };
 }
 
-test("the public wall repeats a short set and only links published products", () => {
+test("the public wall keeps each photo once and only links published products", () => {
   const frames = wallFrames([post({}), post({ id: "wall_2", slug: "javascript:alert(1)", caption: "Loose" })], [product]);
-  assert.ok(frames.length >= 6);
+  assert.equal(frames.length, 2);
   assert.equal(frames[0].href, "/products/clack-box-tee");
   assert.equal(frames[1].href, "");
   assert.equal(frames[1].caption, "Loose");

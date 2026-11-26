@@ -25,6 +25,8 @@ export type Product = {
   /** English name. Traditional Chinese uses `name`. */
   nameEn?: string;
   gender: Gender;
+  /** Extra storefront categories. A product in both lists is unisex. */
+  genders?: Gender[];
   style: StyleKey;
   price: number;
   compareAt?: number;

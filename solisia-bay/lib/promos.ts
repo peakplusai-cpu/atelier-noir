@@ -31,7 +31,7 @@ export type Promotion = {
   createdAt: string;
 };
 
-export type PromoLine = { slug: string; gender?: Gender; unitPrice: number; qty: number };
+export type PromoLine = { slug: string; gender?: Gender; genders?: Gender[]; unitPrice: number; qty: number };
 
 export type PromoQuote = {
   discount: number;
@@ -50,7 +50,7 @@ function eligibleCents(promo: Promotion, items: PromoLine[]): number {
   return items.reduce((sum, item) => {
     const matches =
       promo.scope === "all" ||
-      (promo.scope === "gender" && item.gender === promo.gender) ||
+      (promo.scope === "gender" && (item.genders?.includes(promo.gender as Gender) || item.gender === promo.gender)) ||
       (promo.scope === "product" && item.slug === promo.slug);
     return matches ? sum + toCents(item.unitPrice) * item.qty : sum;
   }, 0);

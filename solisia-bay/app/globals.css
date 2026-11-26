@@ -2555,48 +2555,46 @@ main {
 .bay-wall {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  background: var(--marine-deep);
-  border-block: 1px solid rgba(197, 160, 89, 0.45);
+  background: #fff;
   overflow: hidden;
   max-width: 100%;
+  padding: 12px var(--gutter) 0;
 }
 
 .bay-wall-viewport {
-  overflow: hidden;
+  overflow-x: auto;
+  max-width: 100%;
+  scroll-snap-type: x mandatory;
 }
 
-.bay-wall-track {
-  display: flex;
-  width: max-content;
-  animation: bay-wall-marquee var(--wall-duration, 42s) linear infinite;
-}
-
-.bay-wall:hover .bay-wall-track,
-.bay-wall:focus-within .bay-wall-track,
-.bay-wall:active .bay-wall-track {
-  animation-play-state: paused;
-}
-
+.bay-wall-track,
 .bay-wall-set {
   display: flex;
+  width: max-content;
+  max-width: 100%;
+  min-width: 0;
+  gap: 8px;
 }
 
 .bay-wall-item {
   position: relative;
   flex: 0 0 auto;
   display: block;
-  width: clamp(260px, 22vw, 340px);
-  height: clamp(440px, 58vh, 580px);
-  margin-right: 12px;
+  width: min(42vw, 220px);
+  aspect-ratio: 1;
+  height: auto;
+  min-height: 0;
+  margin: 0;
   overflow: hidden;
-  background: var(--marine);
+  scroll-snap-align: start;
+  background: #f4f4f4;
 }
 
 .bay-wall-item img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 18%;
+  object-position: center;
 }
 
 .bay-wall-caption {
@@ -2622,14 +2620,8 @@ main {
 
 @media (max-width: 760px) {
   .bay-wall-item {
-    width: 76vw;
-    height: min(68vh, 520px);
-    min-height: 360px;
-    margin-right: 8px;
-  }
-  .bay-wall-caption {
-    font-size: 15px;
-    padding: 48px 16px 16px;
+    width: calc((100vw - (var(--gutter) * 2) - 8px) / 2);
+    max-width: none;
   }
 }
 
@@ -3278,10 +3270,9 @@ html {
     height: 48px;
   }
 
-  .bay-wall-item {
-    width: min(78vw, 320px);
-    height: min(62vh, 460px);
-    min-height: 280px;
+  .home-products {
+    padding-top: 20px;
+    padding-bottom: 48px;
   }
 
   .staff-gate h1 {
