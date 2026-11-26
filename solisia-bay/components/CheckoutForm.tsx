@@ -2,15 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 import { useCart } from "./CartProvider";
 import ProductImage from "./ProductImage";
 import { FreeShippingBar } from "./CartDrawer";
 import { sizeLabel } from "@/lib/catalog";
 import { useCatalog } from "./CatalogProvider";
-import { COUNTRIES } from "@/lib/countries";
-import { chargeCurrency } from "@/lib/currency";
 import { previewTotals } from "@/lib/fx";
+import { TAIWAN_CITIES } from "@/lib/taiwan";
 import { colorLabel, localizedName, t } from "@/lib/i18n";
 import { formatMoney } from "@/lib/money";
 import { useMarket } from "./MarketProvider";
@@ -39,7 +37,7 @@ type SummaryLine = {
   cartKey?: string;
 };
 
-export default function CheckoutForm({ paypalClientId }: { paypalClientId: string }) {
+export default function CheckoutForm({ paymentsReady }: { paymentsReady: boolean }) {
   const { lines, ready, setQty, remove } = useCart();
   const { products, settings } = useCatalog();
   const market = useMarket();
@@ -83,7 +81,7 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
     market.currency,
     market.rates
   );
-  const payableCode = chargeCurrency(market.currency);
+  const payableCode = "TWD";
   const payablePreview = payableCode === market.currency ? preview : previewTotals(
     lines.map((line) => ({ unitPrice: products.find((item) => item.slug === line.slug)?.price ?? 0, qty: line.qty })),
     { threshold: settings.freeShippingThreshold, flat: settings.flatShipping },
@@ -121,7 +119,7 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (busy || locked || lines.length === 0) return;
+    if (busy || locked || lines.length === 0 || !paymentsReady) return;
     const form = new FormData(e.currentTarget);
     const get = (key: string) => String(form.get(key) ?? "");
     setBusy(true);
@@ -133,7 +131,7 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
         body: JSON.stringify({
           email: get("email"),
           name: get("name"),
-          phone: get("phone"),
+          phone: get("phone").replace(/\s/g, ""),
           address: {
             country: get("country"),
             line1: get("line1"),
@@ -165,8 +163,20 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
         setBusy(false);
         return;
       }
-      if (data.demo) {
-        window.location.assign(`/checkout/success?order=${encodeURIComponent(data.code)}&token=${encodeURIComponent(data.token)}`);
+      const gateway = data as { action?: string; fields?: Record<string, string> };
+      if (gateway.action && gateway.fields) {
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = gateway.action;
+        for (const [name, value] of Object.entries(gateway.fields)) {
+          const input = document.createElement("input");
+          input.type = "hidden";
+          input.name = name;
+          input.value = value;
+          form.appendChild(input);
+        }
+        document.body.appendChild(form);
+        form.submit();
         return;
       }
       setLocked({
@@ -214,42 +224,33 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
             <span>{t(lang, "fullName")}</span>
             <input name="name" autoComplete="name" autoCapitalize="words" required minLength={2} maxLength={100} />
           </label>
-          <label className="field">
-            <span>{t(lang, "country")}</span>
-            <select name="country" autoComplete="country-name" required defaultValue="">
-              <option value="" disabled>
-                {t(lang, "select")}
-              </option>
-              {COUNTRIES.map((country) => (
-                <option key={country}>{country}</option>
-              ))}
-            </select>
-          </label>
-          <label className="field">
-            <span>{t(lang, "address")}</span>
-            <input name="line1" autoComplete="address-line1" autoCapitalize="words" required minLength={3} maxLength={160} />
-          </label>
-          <label className="field">
-            <span>{t(lang, "line2")}</span>
-            <input name="line2" autoComplete="address-line2" maxLength={160} />
-          </label>
           <div className="field-row">
             <label className="field">
-              <span>{t(lang, "city")}</span>
-              <input name="city" autoComplete="address-level2" required minLength={2} maxLength={80} />
+              <span>縣市</span>
+              <select name="city" autoComplete="address-level1" required defaultValue="">
+                <option value="" disabled>請選擇</option>
+                {TAIWAN_CITIES.map((city) => (
+                  <option key={city}>{city}</option>
+                ))}
+              </select>
             </label>
             <label className="field">
-              <span>{t(lang, "state")}</span>
-              <input name="state" autoComplete="address-level1" maxLength={80} />
+              <span>區</span>
+              <input name="state" autoComplete="address-level2" required minLength={2} maxLength={20} />
             </label>
             <label className="field">
-              <span>{t(lang, "postal")}</span>
-              <input name="postalCode" autoComplete="postal-code" inputMode="text" required minLength={2} maxLength={20} />
+              <span>郵遞區號</span>
+              <input name="postalCode" autoComplete="postal-code" inputMode="numeric" required minLength={3} maxLength={6} pattern="[0-9]{3,6}" />
             </label>
           </div>
           <label className="field">
-            <span>{t(lang, "phone")}</span>
-            <input name="phone" type="tel" autoComplete="tel" inputMode="tel" maxLength={40} />
+            <span>地址</span>
+            <input name="line1" autoComplete="street-address" autoCapitalize="words" required minLength={3} maxLength={160} />
+          </label>
+          <input type="hidden" name="line2" value="" />
+          <label className="field">
+            <span>手機</span>
+            <input name="phone" type="tel" autoComplete="tel" inputMode="tel" required minLength={10} maxLength={10} pattern="09[0-9]{8}" placeholder="09xxxxxxxx" />
           </label>
           <label className="field">
             <span>{t(lang, "coupon")}</span>
@@ -263,53 +264,16 @@ export default function CheckoutForm({ paypalClientId }: { paypalClientId: strin
           </p>
         )}
         <div className="checkout-pay">
-        {locked ? (
-          <div className="paypal-box">
-            <p className="fine">
-              {t(lang, "orderLine", { code: locked.code, amount: money(locked.total, locked.currency) })}
-            </p>
-            <PayPalScriptProvider options={{ clientId: paypalClientId, currency: locked.currency, intent: "capture" }}>
-              <PayPalButtons
-                style={{ layout: "vertical", shape: "rect", label: "pay" }}
-                createOrder={async () => {
-                  const res = await fetch("/api/paypal/order", {
-                    method: "POST",
-                    headers: { "content-type": "application/json" },
-                    body: JSON.stringify({ code: locked.code, token: locked.token }),
-                  });
-                  const data = (await res.json().catch(() => ({}))) as { id?: string; error?: string };
-                  if (!res.ok || !data.id) throw new Error(data.error ?? t(lang, "payStart"));
-                  return data.id;
-                }}
-                onApprove={async (data) => {
-                  const res = await fetch("/api/paypal/capture", {
-                    method: "POST",
-                    headers: { "content-type": "application/json" },
-                    body: JSON.stringify({ code: locked.code, token: locked.token, paypalOrderId: data.orderID }),
-                  });
-                  const payload = (await res.json().catch(() => ({}))) as { error?: string };
-                  if (!res.ok) {
-                    setError(payload.error ?? t(lang, "payFailed"));
-                    return;
-                  }
-                  window.location.assign(
-                    `/checkout/success?order=${encodeURIComponent(locked.code)}&token=${encodeURIComponent(locked.token)}`
-                  );
-                }}
-                onCancel={() => setError(t(lang, "payCancelled"))}
-                onError={() => setError(t(lang, "payProblem"))}
-              />
-            </PayPalScriptProvider>
-          </div>
-        ) : (
-          <button type="submit" className="btn btn-solid btn-block" disabled={busy || !ready}>
+          {!paymentsReady ? (
+            <p className="form-error" role="status">付款功能尚未開通</p>
+          ) : null}
+          <button type="submit" className="btn btn-solid btn-block" disabled={busy || !ready || !paymentsReady || Boolean(locked)}>
             {busy ? t(lang, "preparing") : paymentLabel(lang, coupon, total, quote, (amount) => money(amount))}
           </button>
-        )}
         </div>
         <p className="fine">
-          {t(lang, "payNote")}{" "}
-          <Link href="/policies/shipping-returns">{t(lang, "policyLink")}</Link>.
+          付款由藍新金流處理。繼續即表示你同意{" "}
+          <Link href="/policies/shipping-returns">運送與退貨</Link>。
         </p>
       </form>
 

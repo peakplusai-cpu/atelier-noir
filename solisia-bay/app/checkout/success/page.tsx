@@ -98,10 +98,13 @@ export default async function SuccessPage({ searchParams }: Props) {
             <dd>{money(order.total, currency)}</dd>
           </div>
         </dl>
-        {order.displayCurrency && order.displayCurrency !== currency && (
-          <p className="fine">{t(lang, "paypalCharges", { amount: money(order.total, currency) })}</p>
-        )}
-        {currency !== "TWD" && order.baseTotal > 0 && <p className="fine">{t(lang, "baseTwd", { amount: money(order.baseTotal, "TWD") })}</p>}
+        {order.payment?.codeNo ? (
+          <p className="fine">
+            {order.payment.method === "VACC" ? "ATM 轉帳" : "超商代碼"}
+            {order.payment.bankCode ? `　銀行代碼 ${order.payment.bankCode}` : ""}　繳費代碼 {order.payment.codeNo}
+            {order.payment.expireDate ? `　期限 ${order.payment.expireDate}` : ""}
+          </p>
+        ) : null}
         <p className="fine">
           {t(lang, "shippingTo")} {order.name}, {order.address.line1}
           {order.address.line2 ? `, ${order.address.line2}` : ""}, {order.address.city} {order.address.postalCode}, {order.address.country}

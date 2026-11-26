@@ -49,16 +49,9 @@ export function parsePref(value: string | null | undefined): { lang: Lang; curre
   return { lang, currency };
 }
 
-/** Cookie wins over the IP country. Missing geo defaults to Taiwan. */
-export function resolveMarket(countryHeader: string | null | undefined, pref: string | null | undefined): Market {
-  const raw = (countryHeader ?? "").trim().toUpperCase();
-  const country = /^[A-Z]{2}$/.test(raw) ? raw : "TW";
-  const chosen = parsePref(pref);
-  return {
-    country,
-    lang: chosen?.lang ?? languageFor(country),
-    currency: chosen?.currency ?? currencyFor(country),
-  };
+/** The shop ships only inside Taiwan, in Traditional Chinese and TWD. Geo and the old cookie are ignored. */
+export function resolveMarket(_countryHeader?: string | null, _pref?: string | null): Market {
+  return { country: "TW", lang: "zh", currency: "TWD" };
 }
 
 export function readCookie(header: string | null, name: string): string | null {

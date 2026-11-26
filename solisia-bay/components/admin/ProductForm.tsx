@@ -11,10 +11,8 @@ const STYLES = Object.keys(STYLE_LABELS) as StyleKey[];
 export function ProductForm({ product }: { product?: Product }) {
   const [error, action, pending] = useActionState(saveProduct, "");
   const [name, setName] = useState(product?.name ?? "");
-  const [nameEn, setNameEn] = useState(product?.nameEn ?? "");
   const [tagline, setTagline] = useState(product?.tagline ?? "");
   const [description, setDescription] = useState(product?.description ?? "");
-  const [descriptionEn, setDescriptionEn] = useState(product?.descriptionEn ?? "");
   const [details, setDetails] = useState((product?.details ?? []).join("\n"));
   const [price, setPrice] = useState(product ? String(product.price) : "");
   const [compareAt, setCompareAt] = useState(product?.compareAt ? String(product.compareAt) : "");
@@ -47,10 +45,8 @@ export function ProductForm({ product }: { product?: Product }) {
 
   const payload = JSON.stringify({
     name,
-    nameEn,
     tagline,
     description,
-    descriptionEn,
     details,
     price: Number(price),
     compareAt: Number(compareAt || 0),
@@ -93,12 +89,10 @@ export function ProductForm({ product }: { product?: Product }) {
       <section className="admin-panel">
         <h2>基本資料</h2>
         <label className="field"><span>名稱</span><input name="visible-name" value={name} onChange={(e) => setName(e.target.value)} required maxLength={120} /></label>
-        <label className="field"><span>英文名稱 name_en</span><input value={nameEn} onChange={(e) => setNameEn(e.target.value)} maxLength={120} /></label>
         <label className="field"><span>一句話</span><input value={tagline} onChange={(e) => setTagline(e.target.value)} maxLength={160} /></label>
         <label className="field"><span>品牌 brand</span><input value={brand} onChange={(e) => setBrand(e.target.value)} maxLength={40} placeholder="CLACK" /></label>
         <label className="field"><span>標籤 tags</span><input value={tags} onChange={(e) => setTags(e.target.value)} maxLength={160} placeholder="滑板, 街舞" /></label>
         <label className="field"><span>說明</span><textarea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} maxLength={2000} /></label>
-        <label className="field"><span>英文說明 description_en</span><textarea rows={4} value={descriptionEn} onChange={(e) => setDescriptionEn(e.target.value)} maxLength={2000} /></label>
         <label className="field"><span>細節（一行一項）</span><textarea rows={4} value={details} onChange={(e) => setDetails(e.target.value)} /></label>
         <div className="field-row">
           <label className="field"><span>分類</span>

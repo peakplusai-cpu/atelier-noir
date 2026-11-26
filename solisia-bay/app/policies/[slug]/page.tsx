@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { StandaloneSizeGuide } from "@/components/SizeGuide";
-import { convertAmount, getRates } from "@/lib/fx";
 import { t } from "@/lib/i18n";
-import { getMarket } from "@/lib/market-server";
 import { formatMoney } from "@/lib/money";
 import { returnsCopy, shippingCopy } from "@/lib/policies";
 import { getShop } from "@/lib/shop";
@@ -20,16 +18,14 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const market = await getMarket();
-  if (slug === "size-guide") return { title: t(market.lang, "sizeGuide") };
-  if (slug === "shipping-returns") return { title: t(market.lang, "shippingReturns") };
+  if (slug === "size-guide") return { title: t("zh", "sizeGuide") };
+  if (slug === "shipping-returns") return { title: t("zh", "shippingReturns") };
   return {};
 }
 
 export default async function PolicyPage({ params }: Props) {
   const { slug } = await params;
-  const market = await getMarket();
-  const lang = market.lang;
+  const lang = "zh" as const;
 
   if (slug === "size-guide") {
     return (
@@ -45,9 +41,9 @@ export default async function PolicyPage({ params }: Props) {
   }
 
   if (slug !== "shipping-returns") notFound();
-  const [rates, shop] = await Promise.all([getRates(), getShop()]);
-  const threshold = formatMoney(convertAmount(shop.settings.freeShippingThreshold, market.currency, rates), market.currency, lang);
-  const flat = formatMoney(convertAmount(shop.settings.flatShipping, market.currency, rates), market.currency, lang);
+  const shop = await getShop();
+  const threshold = formatMoney(shop.settings.freeShippingThreshold, "TWD", lang);
+  const flat = formatMoney(shop.settings.flatShipping, "TWD", lang);
   const sections = [
     { heading: t(lang, "shipping"), body: shippingCopy(lang, threshold, flat) },
     { heading: t(lang, "returns"), body: returnsCopy(lang) },

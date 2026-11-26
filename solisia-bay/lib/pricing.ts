@@ -148,6 +148,22 @@ export function priceCart(
   };
 }
 
+/** NewebPay charges whole TWD. Round the priced cart without trusting a client total. */
+export function wholeTwd(cart: PricedCart): PricedCart {
+  const items = cart.items.map((item) => ({
+    ...item,
+    unitPrice: Math.round(item.unitPrice),
+    unitPriceTwd: Math.round(item.unitPriceTwd ?? item.unitPrice),
+  }));
+  const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.qty, 0);
+  const shipThreshold = Math.round(cart.shipThreshold);
+  const shipFlat = Math.round(cart.shipFlat);
+  const shipping = cart.shippingWaived ? 0 : shippingFor(subtotal, { threshold: shipThreshold, flat: shipFlat });
+  const discount = Math.min(subtotal, Math.round(cart.discount));
+  const total = subtotal - discount + shipping;
+  return { ...cart, items, subtotal, shipping, discount, total, shipThreshold, shipFlat };
+}
+
 /** Recomputes the payable total from the stored lines. Returns null when the record is inconsistent. */
 export function chargeCents(order: {
   items: { unitPrice: number; qty: number }[];

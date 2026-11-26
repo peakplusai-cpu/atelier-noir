@@ -4,12 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { convertAmount } from "@/lib/fx";
 import { t } from "@/lib/i18n";
 import { formatMoney } from "@/lib/money";
 import { SITE } from "@/lib/site";
 import { useCart } from "./CartProvider";
-import { LocaleSwitch } from "./LocaleSwitch";
 import { useMarket } from "./MarketProvider";
 
 const NAV = [
@@ -24,7 +22,7 @@ export default function Header({ announcement = "", freeShipping = SITE.freeShip
   const market = useMarket();
   const [menu, setMenu] = useState(false);
   const lang = market.lang;
-  const threshold = convertAmount(freeShipping, market.currency, market.rates);
+  const threshold = freeShipping;
   const menuRef = useRef<HTMLDivElement>(null);
   const openRef = useRef<HTMLButtonElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -63,10 +61,7 @@ export default function Header({ announcement = "", freeShipping = SITE.freeShip
   return (
     <div className="chrome">
       <div className="announce">
-        <p>{announcement || t(lang, "freeOver", { amount: formatMoney(threshold, market.currency, lang) })}</p>
-        <div className="announce-switch">
-          <LocaleSwitch />
-        </div>
+        <p>{announcement || t(lang, "freeOver", { amount: formatMoney(threshold, "TWD", "zh") })}</p>
       </div>
       <header className="header">
         <div className="header-inner">
@@ -130,7 +125,6 @@ export default function Header({ announcement = "", freeShipping = SITE.freeShip
             {t(lang, item.key)}
           </Link>
         ))}
-        <LocaleSwitch />
         <Link href="/policies/shipping-returns" className="mobile-small" tabIndex={menu ? 0 : -1}>
           {t(lang, "shippingReturns")}
         </Link>

@@ -54,11 +54,12 @@ export type Order = {
   shippingWaived: boolean;
   shipThreshold: number;
   shipFlat: number;
+  payment?: { method: string; bankCode?: string; codeNo?: string; expireDate?: string; tradeNo?: string } | null;
 };
 
 const TABLE = "solisia_orders";
 const FILE = process.env.SOLISIA_DATA_FILE || join(process.cwd(), "data", "orders.json");
-const CODE_RE = /^SB-\d{6}-[A-F0-9]{6}$/;
+const CODE_RE = /^SB[-_]\d{6}[-_][A-F0-9]{6}$/;
 
 export class StorageError extends Error {}
 
@@ -127,6 +128,7 @@ function fromRow(r: Row): Order {
     displayCurrency: typeof meta.displayCurrency === "string" ? meta.displayCurrency : r.currency,
     displayTotal: Number(meta.displayTotal ?? r.total),
     fxRate: Number(meta.fxRate ?? (r.currency === "TWD" ? 1 : 0)),
+    payment: meta.payment && typeof meta.payment === "object" ? (meta.payment as Order["payment"]) : null,
   };
 }
 
@@ -164,6 +166,7 @@ function toRow(o: Order): Row {
       displayCurrency: o.displayCurrency,
       displayTotal: o.displayTotal,
       fxRate: o.fxRate,
+      payment: o.payment ?? null,
     },
   };
 }
@@ -205,7 +208,7 @@ function newCode(): string {
   const d = new Date();
   const stamp = `${String(d.getUTCFullYear()).slice(2)}${String(d.getUTCMonth() + 1).padStart(2, "0")}${String(d.getUTCDate()).padStart(2, "0")}`;
   const rand = randomBytes(3).toString("hex").toUpperCase();
-  return `SB-${stamp}-${rand}`;
+  return `SB_${stamp}_${rand}`;
 }
 
 export type NewOrder = Pick<
@@ -327,7 +330,7 @@ export async function getOrder(code: string): Promise<Order | null> {
 }
 
 type Patch = Partial<
-  Pick<Order, "status" | "paymentOrderId" | "paymentCaptureId" | "amountPaidCents" | "paidAt" | "stockHeld" | "discount" | "coupon" | "promoId" | "shippingWaived" | "shipThreshold" | "shipFlat">
+  Pick<Order, "status" | "paymentOrderId" | "paymentCaptureId" | "amountPaidCents" | "paidAt" | "stockHeld" | "discount" | "coupon" | "promoId" | "shippingWaived" | "shipThreshold" | "shipFlat" | "payment">
 >;
 
 export type UpdateGuard = {
@@ -356,7 +359,8 @@ export async function updateOrder(code: string, patch: Patch, onlyFrom?: OrderSt
       patch.promoId !== undefined ||
       patch.shippingWaived !== undefined ||
       patch.shipThreshold !== undefined ||
-      patch.shipFlat !== undefined
+      patch.shipFlat !== undefined ||
+      patch.payment !== undefined
     ) {
       const current = await getOrder(code);
       row.meta = {
@@ -367,6 +371,14 @@ export async function updateOrder(code: string, patch: Patch, onlyFrom?: OrderSt
         shippingWaived: patch.shippingWaived ?? current?.shippingWaived ?? false,
         shipThreshold: patch.shipThreshold ?? current?.shipThreshold ?? SITE.freeShippingThreshold,
         shipFlat: patch.shipFlat ?? current?.shipFlat ?? SITE.flatShipping,
+        baseSubtotal: current?.baseSubtotal ?? 0,
+        baseShipping: current?.baseShipping ?? 0,
+        baseDiscount: current?.baseDiscount ?? 0,
+        baseTotal: current?.baseTotal ?? 0,
+        displayCurrency: current?.displayCurrency ?? "TWD",
+        displayTotal: current?.displayTotal ?? 0,
+        fxRate: current?.fxRate ?? 1,
+        payment: patch.payment !== undefined ? patch.payment : current?.payment ?? null,
       };
     }
     let query = supabaseAdmin().from(TABLE).update(row).eq("code", code);
