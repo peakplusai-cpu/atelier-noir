@@ -7,6 +7,13 @@ import { MEN_SIZES, STYLE_LABELS, WOMEN_SIZES, selectionCombos, variantKey } fro
 import type { Colorway, Gender, Product, StyleKey } from "@/lib/types";
 
 const STYLES = Object.keys(STYLE_LABELS) as StyleKey[];
+type CategoryChoice = Gender | "unisex";
+
+function initialCategory(product?: Product): CategoryChoice {
+  const listed = product?.genders ?? [];
+  if (listed.includes("women") && listed.includes("men")) return "unisex";
+  return product?.gender === "men" ? "men" : "women";
+}
 
 export function ProductForm({ product }: { product?: Product }) {
   const [error, action, pending] = useActionState(saveProduct, "");
@@ -16,7 +23,7 @@ export function ProductForm({ product }: { product?: Product }) {
   const [details, setDetails] = useState((product?.details ?? []).join("\n"));
   const [price, setPrice] = useState(product ? String(product.price) : "");
   const [compareAt, setCompareAt] = useState(product?.compareAt ? String(product.compareAt) : "");
-  const [gender, setGender] = useState<Gender>(product?.gender === "men" ? "men" : "women");
+  const [gender, setGender] = useState<CategoryChoice>(initialCategory(product));
   const [style, setStyle] = useState<StyleKey>(product && product.style in STYLE_LABELS ? product.style : "tee");
   const [colors, setColors] = useState<Colorway[]>(product?.colors ?? [{ name: "", hex: "#C5A059" }]);
   const [herSizes, setHerSizes] = useState(sizeText(product, "women"));
@@ -37,7 +44,7 @@ export function ProductForm({ product }: { product?: Product }) {
 
   const draft = useMemo(() => {
     const selectors =
-      [{ key: "size", label: "Size", options: splitSizes(gender === "men" ? hisSizes : herSizes, gender === "men" ? MEN_SIZES : WOMEN_SIZES) }];
+      [{ key: "size", label: "Size", options: splitSizes(gender === "women" ? herSizes : hisSizes, gender === "women" ? WOMEN_SIZES : MEN_SIZES) }];
     return { selectors, colors: colors.filter((color) => color.name.trim()) } as Pick<Product, "selectors" | "colors">;
   }, [gender, herSizes, hisSizes, colors]);
 
@@ -96,9 +103,10 @@ export function ProductForm({ product }: { product?: Product }) {
         <label className="field"><span>細節（一行一項）</span><textarea rows={4} value={details} onChange={(e) => setDetails(e.target.value)} /></label>
         <div className="field-row">
           <label className="field"><span>分類</span>
-            <select value={gender} onChange={(e) => setGender(e.target.value as Gender)}>
-              <option value="women">女裝 Women</option>
-              <option value="men">男裝 Men</option>
+            <select value={gender} onChange={(e) => setGender(e.target.value as CategoryChoice)}>
+              <option value="women">女裝</option>
+              <option value="men">男裝</option>
+              <option value="unisex">女裝與男裝</option>
             </select>
           </label>
           <label className="field"><span>款式</span>
@@ -127,8 +135,8 @@ export function ProductForm({ product }: { product?: Product }) {
           </div>
         ))}
         <button type="button" className="btn btn-outline" onClick={() => setColors((list) => [...list, { name: "", hex: "#1B365D" }])}>新增顏色</button>
-        {gender !== "men" && <label className="field"><span>尺寸</span><input value={herSizes} onChange={(e) => setHerSizes(e.target.value)} placeholder={WOMEN_SIZES.join(", ")} /></label>}
-        {gender === "men" && <label className="field"><span>尺寸</span><input value={hisSizes} onChange={(e) => setHisSizes(e.target.value)} placeholder={MEN_SIZES.join(", ")} /></label>}
+        {gender === "women" && <label className="field"><span>尺寸</span><input value={herSizes} onChange={(e) => setHerSizes(e.target.value)} placeholder={WOMEN_SIZES.join(", ")} /></label>}
+        {gender !== "women" && <label className="field"><span>尺寸</span><input value={hisSizes} onChange={(e) => setHisSizes(e.target.value)} placeholder={MEN_SIZES.join(", ")} /></label>}
         <div className="stock-grid">
           {draft.colors.flatMap((color) => slots.map((slot) => {
             const key = variantKey(color.name, slot.label);

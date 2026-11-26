@@ -1,20 +1,23 @@
-import CategoryTiles from "@/components/CategoryTiles";
-import BestsellerCarousel from "@/components/BestsellerCarousel";
+import ProductCard from "@/components/ProductCard";
 import { PhotoWall } from "@/components/PhotoWall";
-import { bestsellers } from "@/lib/catalog";
+import { newestFirst } from "@/lib/catalog";
 import { getShop, publishedProducts } from "@/lib/shop";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function HomePage() {
   const shop = await getShop();
-  const products = publishedProducts(shop);
+  const products = newestFirst(publishedProducts(shop));
   return (
     <>
       <PhotoWall posts={shop.wall} products={products} />
-      <CategoryTiles />
-      <section className="section">
-        <BestsellerCarousel items={bestsellers(8, products)} />
+      <section className="section home-products">
+        <div className="grid">
+          {products.map((product, index) => (
+            <ProductCard key={product.slug} product={product} priority={index < 4} />
+          ))}
+        </div>
       </section>
     </>
   );

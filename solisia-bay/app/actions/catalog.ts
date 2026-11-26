@@ -60,7 +60,8 @@ export async function saveProduct(_prev: string, form: FormData): Promise<string
   const slug = text(form.get("slug"), 80);
   const name = text(payload.name, 120);
   if (name.length < 2) return "請輸入商品名稱";
-  const gender = GENDERS.includes(payload.gender as Gender) ? (payload.gender as Gender) : null;
+  const unisex = payload.gender === "unisex";
+  const gender = unisex ? "men" : GENDERS.includes(payload.gender as Gender) ? (payload.gender as Gender) : null;
   const style = STYLES.includes(payload.style as StyleKey) ? (payload.style as StyleKey) : null;
   if (!gender || !style) return "請選擇分類";
   const price = Math.round(num(payload.price) * 100) / 100;
@@ -77,6 +78,7 @@ export async function saveProduct(_prev: string, form: FormData): Promise<string
     .slice(0, 8);
   if (!colors.length) return "請至少設定一個顏色";
   const selectors = selectorsFor(gender, parseList(payload.herSizes), parseList(payload.hisSizes));
+  const genders: Gender[] = unisex ? ["women", "men"] : [gender];
   const inventoryIn = payload.inventory && typeof payload.inventory === "object" ? (payload.inventory as Record<string, unknown>) : {};
   const photos = (Array.isArray(payload.photos) ? payload.photos : [])
     .filter((url): url is string => typeof url === "string" && allowedImageUrl(url))
@@ -113,6 +115,8 @@ export async function saveProduct(_prev: string, form: FormData): Promise<string
       name,
       nameEn: typeof payload.nameEn === "string" ? nameEn || undefined : existing?.nameEn,
       gender,
+      genders,
+      charts: unisex ? ["women", "men"] : [gender === "men" ? "men" : "women"],
       style,
       price,
       compareAt: compareAt > price ? compareAt : undefined,

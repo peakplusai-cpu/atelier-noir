@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { deleteProduct, setProductStatus } from "@/app/actions/catalog";
 import { ConfirmSubmit } from "@/components/admin/ConfirmSubmit";
-import { totalStock } from "@/lib/catalog";
+import { productGenders, totalStock } from "@/lib/catalog";
 import { formatUsd } from "@/lib/money";
 import { getShop } from "@/lib/shop";
 
@@ -38,7 +38,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
               return (
                 <tr key={product.slug}>
                   <td><Link href={`/admin/products/${product.slug}`}>{product.name}</Link><small>{product.slug}</small></td>
-                  <td>{product.gender}</td>
+                  <td>{productGenders(product).length > 1 ? "女裝與男裝" : product.gender === "men" ? "男裝" : "女裝"}</td>
                   <td>{formatUsd(product.price)}</td>
                   <td>{stock === null ? "不追蹤" : stock}</td>
                   <td>{status === "published" ? "上架" : "草稿"}</td>

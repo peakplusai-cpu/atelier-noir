@@ -10,7 +10,7 @@ export type WallFrame = {
   href: string;
 };
 
-/** Repeats a short wall until the marquee has enough frames to scroll. */
+/** Published wall photos, once each. The home strip does not repeat them. */
 export function wallFrames(posts: WallPost[], products: Product[]): WallFrame[] {
   const live = new Map(products.filter(isPublished).map((product) => [product.slug, product]));
   const frames: WallFrame[] = [];
@@ -25,8 +25,5 @@ export function wallFrames(posts: WallPost[], products: Product[]): WallFrame[] 
       href: product ? `/products/${product.slug}` : "",
     });
   }
-  if (!frames.length) return [];
-  const unit = [...frames];
-  while (unit.length < 6) unit.push(...frames);
-  return unit;
+  return frames;
 }
